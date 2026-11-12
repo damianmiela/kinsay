@@ -1,0 +1,15 @@
+# Never into the image: secrets, private notes, the database
+.env
+.env.*
+_docs
+CLAUDE.md
+data
+backups
+
+# Not needed to build (tests/ is: the build runs npm run check)
+.git
+**/node_modules
+**/dist
+desktop
+test-results
+playwright-report

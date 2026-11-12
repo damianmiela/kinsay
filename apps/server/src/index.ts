@@ -46,7 +46,7 @@ const server = await createServer({
   secret,
   dbFile: resolve(root, env.DATA_DIR ?? 'data', 'translate.db'),
   speech: env.SONIOX_API_KEY ? sonioxConnect(env.SONIOX_API_KEY) : null,
-  streams: Number(env.SONIOX_STREAMS ?? 5),
+  streams: Number(env.SONIOX_STREAMS ?? 10),
   defaults: {
     pricePerHour: price,
     monthlyLimit: euro('MONTHLY_LIMIT_EUR', 5),

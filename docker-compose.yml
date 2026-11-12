@@ -1,0 +1,29 @@
+# On the server: /srv/translate (the deploy hook checks the code out there).
+# /srv/translate/.env (never in git): see .env.example.
+services:
+  translate:
+    build: .
+    container_name: translate
+    restart: unless-stopped
+    env_file: .env
+    # the database lives on the server, so a redeploy never loses it; the folder belongs to uid 1000
+    # (the image's `node` user)
+    volumes:
+      - ./data:/app/data
+    # a ceiling: a flood can't take the whole VPS, and the logs (with addresses) don't grow without end
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    environment:
+      # no port is published: only Nginx Proxy Manager (on the proxy network) can reach it, so its
+      # X-Forwarded-For can be trusted
+      TRUST_PROXY: 'true'
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
