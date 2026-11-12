@@ -16,3 +16,5 @@ data/
 # Private notes (plans with real names)
 _docs/
 CLAUDE.md
+# Browser tests' output
+test-results/

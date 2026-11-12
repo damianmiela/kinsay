@@ -7,7 +7,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig([
-  globalIgnores(['**/dist', '**/coverage', '_docs', 'data']),
+  globalIgnores(['**/dist', '**/coverage', '_docs', 'data', 'test-results']),
   js.configs.recommended,
   // Type-aware rules: catch unhandled promises in async socket handlers, etc.
   tseslint.configs.recommendedTypeChecked,
@@ -21,7 +21,7 @@ export default defineConfig([
     extends: [tseslint.configs.disableTypeChecked],
   },
   {
-    files: ['apps/server/**/*.ts', '*.js', '**/*.config.ts'],
+    files: ['apps/server/**/*.ts', 'tests/**/*.{ts,mjs}', '*.js', '**/*.config.ts'],
     languageOptions: { globals: globals.node },
   },
   {

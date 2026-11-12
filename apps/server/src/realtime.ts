@@ -61,6 +61,8 @@ interface Channel {
   row?: number;
   cost: number;
   written: number;
+  /** The balance at the last write (the credits run out between writes too). */
+  balanceAt: number;
   seconds: number;
   flushedAt: number;
   micSocket?: string;
@@ -140,6 +142,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       hostLang: null,
       cost: 0,
       written: 0,
+      balanceAt: 0,
       seconds: 0,
       flushedAt: now(),
       micAt: 0,
@@ -205,7 +208,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       const price = o.store.settings().pricePerHour;
       c.cost += (ms * streams * price) / 3_600_000;
       c.seconds += ms / 1000;
-      if (now() - c.flushedAt >= FLUSH_MS) flush(c);
+      // (written every FLUSH_MS, and at once when the credits run out: never minutes past zero)
+      if (now() - c.flushedAt >= FLUSH_MS || c.balanceAt - (c.cost - c.written) <= 0) flush(c);
     } catch (e) {
       warn(`credits: ${String(e)}`);
     }
@@ -228,6 +232,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         if (check) return stop(c, 'blocked', false);
       }
     }
+    c.balanceAt = o.store.balance(c.personId);
     if (!check) return;
     const why = cannotRun(c.personId);
     if (why) stop(c, why);
@@ -279,6 +284,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     if (!c) return;
     const p = o.store.person(personId);
     if (!p || p.blocked) return drop(c);
+    c.balanceAt = o.store.balance(personId); // (a grant or a correction: the new balance)
     const why = cannotRun(personId);
     if (c.running && why) stop(c, why);
     else stateAll(c);
@@ -397,6 +403,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         c.running = true;
         c.stopped = undefined;
         c.flushedAt = now();
+        c.balanceAt = o.store.balance(c.personId);
         // (a new day: a new code, the old one no longer lets anyone in)
         if (c.codeUntil < now()) {
           byCode.delete(c.code);

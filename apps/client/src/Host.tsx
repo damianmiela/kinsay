@@ -157,7 +157,7 @@ export function HostPage() {
         {low && (
           <div className="note warn" onClick={() => setLowSeen(true)}>
             <b>{t.lowTitle}</b>
-            {t.lowBody(view.balance ?? 0)}
+            {t.lowBody(Math.max(0, view.balance ?? 0))}
           </div>
         )}
         {!mic.sending && (

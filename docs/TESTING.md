@@ -1,5 +1,7 @@
 # What to test before a commit reaches the server
 
+The automatic tests (PowerShell, in this folder): `npm run check` (format, lint, types, unit and server tests), `npm run test:e2e` (the browser tests, builds first), `npm run test:load` (200 readers). They use a test server with throwaway data and a fake speech service; the checks below are what only a person can see.
+
 ## 1. The first version, locally (2026-11-12)
 
 Prepare `.env` from `.env.example`: an admin password (12+ characters), a session secret (32+), `PRICE_EUR_PER_STREAM_HOUR` (e.g. `0.20`), and the new app's Soniox key for real captions. Then in PowerShell, in this folder:

@@ -557,6 +557,15 @@ export class Engine {
         const heard = heardToo ? this.heard : undefined;
         const current = this.streams.get(target) === stream;
         const previews = [own.preview, heard?.preview ?? ''] as const;
+        // (the language first: a line finished by these very tokens is labelled with it)
+        const spokenNow = tokens.findLast(
+          (t) =>
+            t.translation_status !== 'translation' &&
+            !!t.language &&
+            !!t.text.trim() &&
+            !isMarker(t.text),
+        )?.language;
+        if (current && heardToo && spokenNow) this.speaking = spokenNow;
         const spoken = applyTokens(tokens, own, heard);
         if (this.failures) {
           this.failures = 0;
