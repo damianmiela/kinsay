@@ -44,6 +44,7 @@ export function CaptionsView({
   const translatedList = (
     <CaptionsList
       text={translated}
+      turned={faceToFace}
       note={t.note}
       waiting={reader ? t.waitingReader : t.waitingWords}
       latest={t.latest}

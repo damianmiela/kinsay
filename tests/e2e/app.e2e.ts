@@ -166,3 +166,39 @@ test('the pages ask nothing of any other site, and every text is 16 px or more',
   }
   expect(elsewhere).toEqual([]);
 });
+
+test('face to face: both halves follow their newest line alike; scrolled back, "Latest" returns', async ({
+  browser,
+  baseURL,
+}) => {
+  test.setTimeout(90_000);
+  const admin = await adminApi(browser, baseURL!);
+  const { page } = await signedInPhone(browser, baseURL!, admin);
+  await pickLang(page, 'pol', 'Polski');
+  await page.getByRole('button', { name: 'Start' }).click();
+  // (more lines than a half holds: a sentence a second)
+  await expect(page.locator('.half.across .cap-line')).toHaveCount(14, { timeout: 40_000 });
+  for (const half of ['.half.across', '.half:not(.across)']) {
+    const box = page.locator(`${half} .cap-scroll`);
+    // the newest line in sight, as far from the half's reading edge as the bottom half's is from
+    // its own (the top half's is the screen's top, under the bar)
+    const gap = () =>
+      box.evaluate((b, turned) => {
+        const lines = b.querySelectorAll('.cap-line');
+        const r = lines[lines.length - 1]!.getBoundingClientRect();
+        const h = b.getBoundingClientRect();
+        return turned ? r.top - h.top : h.bottom - r.bottom;
+      }, half === '.half.across');
+    await expect.poll(gap).toBeGreaterThan(10);
+    expect(await gap()).toBeLessThan(80);
+    // scrolled back: "Latest"; tapped: the newest line again
+    await box.hover();
+    await page.mouse.wheel(0, -400);
+    const latest = page.locator(`${half} .cap-latest`);
+    await expect(latest).toBeVisible();
+    await latest.click();
+    await expect(latest).toBeHidden();
+    await expect.poll(gap).toBeGreaterThan(10);
+    expect(await gap()).toBeLessThan(80);
+  }
+});

@@ -21,13 +21,22 @@ const BELOW_NEWEST = 24;
 /** How far below its place the newest line may be and still count as "on screen" (px). */
 const NEAR = 40;
 
+// (Positions are measured on screen, so a list turned upside down (`turned`: face to face's top
+// half) reads them mirrored: its own top is the screen's bottom.)
+
 /** Where a line starts in the list (px, exact: whole pixels would add up as lines go). */
-const topIn = (list: HTMLElement, line: HTMLElement) =>
-  line.getBoundingClientRect().top - list.getBoundingClientRect().top;
+const topIn = (list: HTMLElement, line: HTMLElement, turned: boolean) => {
+  const l = list.getBoundingClientRect();
+  const r = line.getBoundingClientRect();
+  return turned ? l.bottom - r.bottom : r.top - l.top;
+};
 
 /** How far the scroll must go down to put the newest line in its place (negative: above it). */
-const toNewest = (box: HTMLElement, end: HTMLElement) =>
-  end.getBoundingClientRect().top - box.getBoundingClientRect().bottom + BELOW_NEWEST;
+const toNewest = (box: HTMLElement, end: HTMLElement, turned: boolean) => {
+  const b = box.getBoundingClientRect();
+  const e = end.getBoundingClientRect();
+  return (turned ? b.top - e.bottom : e.top - b.bottom) + BELOW_NEWEST;
+};
 
 export function CaptionsList({
   text,
@@ -35,8 +44,11 @@ export function CaptionsList({
   waiting,
   latest,
   labels,
+  turned = false,
 }: {
   text: CaptionText;
+  /** Shown turned round (face to face's top half, for the person across). */
+  turned?: boolean;
   /** A small label before a line, by its number (what was heard: its language). */
   labels?: Record<number, string>;
   /** Above everything said ("Translated automatically…"). */
@@ -60,27 +72,30 @@ export function CaptionsList({
   const frame = useRef(0);
 
   /** Down to the newest line: a glide, or at once (a new size, the first view, "reduce motion"). */
-  const catchUp = useCallback((atOnce: boolean) => {
-    cancelAnimationFrame(frame.current);
-    let last = performance.now();
-    const step = (now: number) => {
-      const b = box.current;
-      const e = end.current;
-      if (!b || !e) return;
-      const by = toNewest(b, e);
-      if (by <= 0.5) return; // there, or the line got shorter: never back up
-      const to = b.scrollTop + by;
-      if (atOnce || prefersReducedMotion()) {
-        b.scrollTop = to;
-        return;
-      }
-      b.scrollTop = glideStep(b.scrollTop, to, Math.min(now - last, 50));
-      last = now;
-      frame.current = requestAnimationFrame(step);
-    };
-    if (atOnce) step(last);
-    else frame.current = requestAnimationFrame(step);
-  }, []);
+  const catchUp = useCallback(
+    (atOnce: boolean) => {
+      cancelAnimationFrame(frame.current);
+      let last = performance.now();
+      const step = (now: number) => {
+        const b = box.current;
+        const e = end.current;
+        if (!b || !e) return;
+        const by = toNewest(b, e, turned);
+        if (by <= 0.5) return; // there, or the line got shorter: never back up
+        const to = b.scrollTop + by;
+        if (atOnce || prefersReducedMotion()) {
+          b.scrollTop = to;
+          return;
+        }
+        b.scrollTop = glideStep(b.scrollTop, to, Math.min(now - last, 50));
+        last = now;
+        frame.current = requestAnimationFrame(step);
+      };
+      if (atOnce) step(last);
+      else frame.current = requestAnimationFrame(step);
+    },
+    [turned],
+  );
 
   // after every change of the text, before it shows: (1) the phone dropped its oldest lines (it
   // keeps 400): what is on screen stays where it is (Safari keeps no scroll anchor, the others'
@@ -99,7 +114,7 @@ export function CaptionsList({
       const anchor = l.querySelector<HTMLElement>(`[data-n="${was.n}"]`);
       if (anchor) {
         // (a box scrolls by whole pixels: what one correction can't place goes into the next)
-        const to = b.scrollTop + topIn(l, anchor) - was.top + carry.current;
+        const to = b.scrollTop + topIn(l, anchor, turned) - was.top + carry.current;
         b.scrollTop = to;
         carry.current = to - b.scrollTop;
       }
@@ -115,7 +130,7 @@ export function CaptionsList({
           first: text.first,
           count: text.lines.length,
           n: Number(last.dataset.n),
-          top: topIn(l!, last),
+          top: topIn(l!, last, turned),
         }
       : null;
   });
@@ -153,7 +168,7 @@ export function CaptionsList({
       const theirs = performance.now() < ownUntil.current;
       // (a glide after the finger lifts keeps going as long as the box keeps moving)
       if (theirs) own();
-      if (end.current && toNewest(b, end.current) <= NEAR) setFollowing(true);
+      if (end.current && toNewest(b, end.current, turned) <= NEAR) setFollowing(true);
       else if (theirs && top < lastTop - 2) setFollowing(false);
       lastTop = top;
     };
@@ -170,7 +185,7 @@ export function CaptionsList({
       b.removeEventListener('scroll', onScroll);
       cancelAnimationFrame(frame.current);
     };
-  }, [setFollowing]);
+  }, [setFollowing, turned]);
 
   // the newest lines bright, what came before softer
   const recent = text.lines.length - 2;
