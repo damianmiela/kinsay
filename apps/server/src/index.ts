@@ -74,6 +74,10 @@ const server = await createServer({
   mail,
   google,
   publicUrl,
+  contact:
+    env.CONTACT_NAME && env.CONTACT_EMAIL
+      ? { name: env.CONTACT_NAME, email: env.CONTACT_EMAIL }
+      : undefined,
   clientDist: resolve(root, 'apps/client/dist'),
   logger: true,
 });

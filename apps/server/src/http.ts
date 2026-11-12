@@ -35,6 +35,7 @@ export interface HttpOptions {
   adminPassword: string;
   secret: string;
   trustProxy: TrustProxy;
+  contact?: { name: string; email: string };
   /** Sign-in links by email (none: not offered). */
   mail?: Mailer;
   /** Google's sign-in (none: not offered). */
@@ -148,6 +149,7 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     ok: true,
     email: !!o.mail && !!o.publicUrl,
     google: !!o.google,
+    contact: o.contact ?? null,
   }));
 
   /**

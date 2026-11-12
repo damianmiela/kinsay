@@ -1,10 +1,11 @@
 // The pages, chosen by the address (no router needed): / (sign in, or your own captions), /signin
-// (a code from the admin), /join (someone's captions by code), /account, /admin.
+// (a code from the admin), /join (someone's captions by code), /account, /admin, /privacy.
 import { useEffect, useState } from 'react';
 import { AccountPage } from './Account';
 import { AdminPage } from './Admin';
 import { api } from './api';
 import { HostPage } from './Host';
+import { PrivacyPage } from './Privacy';
 import { ReaderPage } from './Reader';
 import { CodePage, SignInPage } from './SignIn';
 import { t } from './texts';
@@ -42,7 +43,9 @@ const Page =
         ? AccountPage
         : path === '/admin'
           ? AdminPage
-          : Home;
+          : path === '/privacy'
+            ? PrivacyPage
+            : Home;
 
 export function App() {
   return <Page />;

@@ -52,6 +52,9 @@ export function SignInPage() {
             {t.askInvite}
           </button>
         )}
+        <a className="link small-link" href="/privacy">
+          {t.privacy}
+        </a>
       </div>
     </div>
   );

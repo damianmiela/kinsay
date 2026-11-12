@@ -54,6 +54,7 @@ const server = await createServer({
   streams: Number(env.E2E_STREAMS ?? 5),
   defaults: { pricePerHour: 0.2 * EUR, monthlyLimit: 5 * EUR, globalLimit: 20 * EUR },
   trustProxy: env.TRUST_PROXY === 'true',
+  contact: { name: 'A. Example', email: 'privacy@example.com' },
   clientDist: resolve(import.meta.dirname, '../apps/client/dist'),
 });
 await server.app.listen({ port: Number(env.E2E_PORT ?? 3297), host: '127.0.0.1' });

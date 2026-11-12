@@ -134,6 +134,58 @@ export const t = {
   signOutAll: 'Sign out everywhere',
   deleteAccount: 'Delete my account',
   deleteSure: 'Delete your account and its history? This can’t be undone.',
+  privacy: 'Privacy',
+} as const;
+
+/**
+ * The privacy page (/privacy): plain words, what is kept and what never is. Google asks for it before
+ * everyone may sign in with Google. Who is responsible comes from the server (CONTACT_NAME,
+ * CONTACT_EMAIL), never from the code.
+ */
+export const privacyPage = {
+  title: 'Privacy',
+  updated: 'Last updated: 12 November 2026',
+  intro: (who: string) =>
+    `Translate is a small app for live captions, by invitation only, run by ${who}. This page says what it keeps about you, why, and how to have it deleted.`,
+  sections: [
+    {
+      h: 'What is never kept',
+      p: [
+        'What is said. While captions run, the sound goes from your device through our server to Soniox, the speech service that turns it into text and translates it, and the text comes back to the screens reading it. We save none of it: no recordings, no transcripts. Soniox processes live audio in memory only; it does not store it or use it to train its models.',
+      ],
+    },
+    {
+      h: 'What is kept',
+      p: [
+        'Your name and email address, from your invitation.',
+        'Your credits: what was added, and for each session its date, its length, its languages and what it cost.',
+        'The devices you are signed in on: what kind (for example “Chrome on Android”) and when each was last used. A cookie keeps a device signed in; it is the only cookie, and there are no ads, no tracking and no analytics. Your choices on a page (the language, the text size) stay on your device.',
+        'If you ask for an invitation: the name and email you give, until it is answered.',
+        'For a short time only: sign-in codes and links (15 minutes at most), the codes that let others read your captions (a day), and, in the server’s memory only, addresses counted against abuse.',
+        'The web server in front of the app keeps standard access logs (address, time, page), used only to keep the service working and safe.',
+      ],
+    },
+    {
+      h: 'Who else handles it',
+      p: [
+        'Hetzner (Germany) runs the server. Soniox turns speech into text and translates it, as above. Brevo (France) sends the sign-in emails, so it sees your email address. Google, only if you sign in with Google: it tells us your name and email address, nothing else.',
+      ],
+    },
+    {
+      h: 'Why',
+      p: [
+        'To give you the service you were invited to (your account, your credits, signing in), and to keep it safe from abuse.',
+      ],
+    },
+    {
+      h: 'How long, and deleting it',
+      p: [
+        'As long as you have an account. On your Account page, “Delete my account” removes your name, your email address, your devices and your history at once. What past sessions cost stays, without your name, only in the monthly totals.',
+        'You may ask to see what is kept about you, to correct it or to delete it, by writing to the address below. You may also complain to a data protection authority.',
+      ],
+    },
+  ],
+  contactTitle: 'Contact',
 } as const;
 
 export const stopText = (r: StopReason): readonly [string, string] | null =>

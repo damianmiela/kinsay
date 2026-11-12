@@ -537,3 +537,16 @@ a.btn {
 .or:empty {
   gap: 0;
 }
+
+/* ---------- a page of text (/privacy) ---------- */
+.prose section p {
+  margin: 10px 0 0;
+  font-size: 17px;
+  line-height: 1.55;
+} /* the privacy link at the foot of a page */
+.small-link {
+  margin-top: auto;
+  padding-top: 18px;
+  align-self: flex-start;
+  font-size: 16px;
+}

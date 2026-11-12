@@ -170,6 +170,9 @@ export function AccountPage() {
         >
           {t.deleteAccount}
         </button>
+        <a className="link small-link" href="/privacy">
+          {t.privacy}
+        </a>
       </div>
     </div>
   );

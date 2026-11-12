@@ -407,3 +407,34 @@ describe('audit 31', () => {
     expect((await post('/admin/login', { password: ADMIN })).cookie).toMatch(/;\s*Secure/i);
   });
 });
+
+describe('the privacy page', () => {
+  it('an invitation request keeps its name and email only while it waits', async () => {
+    const { server, post, admin } = await start();
+    const rows = () =>
+      server.store.db.prepare(`select count(*) n from requests where kind = 'invite'`).get() as {
+        n: number;
+      };
+    await post('/api/invite-request', { name: 'Ola', email: 'ola@example.com' });
+    await post('/api/invite-request', { name: 'Ula', email: 'ula@example.com' });
+    expect(rows().n).toBe(2);
+    const id = (
+      server.store.waitingRequests().find((r) => r.email === 'ula@example.com') as {
+        id: number;
+      }
+    ).id;
+    await post('/admin/api/decline', { requestId: id }, admin);
+    await post('/admin/api/invite', { name: 'Ola', email: 'ola@example.com' }, admin);
+    expect(rows().n).toBe(0);
+  });
+
+  it('is a page anyone may open; the config names who is responsible', async () => {
+    const { get } = await start(fakeSpeech(), 0.36 * EUR, {
+      contact: { name: 'A. Example', email: 'privacy@example.com' },
+    });
+    expect((await get('/api/config')).json.contact).toEqual({
+      name: 'A. Example',
+      email: 'privacy@example.com',
+    });
+  });
+});

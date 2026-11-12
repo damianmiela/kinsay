@@ -159,7 +159,7 @@ test('the pages ask nothing of any other site, and every text is 16 px or more',
   page.on('request', (r) => {
     if (!r.url().startsWith(baseURL!) && !r.url().startsWith('data:')) elsewhere.push(r.url());
   });
-  for (const path of ['/', '/signin', '/join', '/admin']) {
+  for (const path of ['/', '/signin', '/join', '/admin', '/privacy']) {
     await page.goto(path);
     await page.waitForLoadState('networkidle');
     expect((await smallestText(page)).px, path).toBeGreaterThanOrEqual(16);

@@ -19,6 +19,8 @@ export interface Config {
   streams: number;
   defaults: Settings;
   trustProxy: TrustProxy;
+  /** Who is responsible for the data, on the privacy page (CONTACT_NAME, CONTACT_EMAIL). */
+  contact?: { name: string; email: string };
   mail?: Mailer;
   google?: GoogleConfig;
   publicUrl?: string;
@@ -30,7 +32,7 @@ export interface Config {
 }
 
 /** The pages (the client picks the screen by its path). */
-const PAGES = new Set(['/', '/join', '/signin', '/account', '/admin']);
+const PAGES = new Set(['/', '/join', '/signin', '/account', '/admin', '/privacy']);
 
 export async function createServer(c: Config) {
   // (one hop, the proxy's own: request.ip and protocol agree with clientIp(); audit 31)
@@ -74,6 +76,7 @@ export async function createServer(c: Config) {
     mail: c.mail,
     google: c.google,
     publicUrl: c.publicUrl,
+    contact: c.contact,
     fetch: c.fetch,
     now: c.now,
     warn: (m) => app.log.warn(m),

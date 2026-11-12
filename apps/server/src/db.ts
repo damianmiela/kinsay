@@ -106,6 +106,8 @@ export class Store {
     this.db = new DatabaseSync(file);
     this.db.exec('pragma journal_mode = wal; pragma foreign_keys = on;');
     this.db.exec(SCHEMA);
+    // (invitation requests answered before answering deleted them, 2026-11-12)
+    this.db.exec(`delete from requests where kind = 'invite' and state != 'waiting'`);
   }
 
   close() {
@@ -157,11 +159,12 @@ export class Store {
       .run(name.trim(), email?.trim() || null, at);
     const id = Number(r.lastInsertRowid);
     this.add(id, 'welcome', WELCOME);
-    // a waiting invitation request for this email is answered
+    // a waiting invitation request for this email is answered: gone (its name and email are
+    // kept only while it waits; the privacy page says so)
     if (email) {
       this.db
         .prepare(
-          `update requests set state = 'granted' where kind = 'invite' and state = 'waiting' and email = ? collate nocase`,
+          `delete from requests where kind = 'invite' and state = 'waiting' and email = ? collate nocase`,
         )
         .run(email.trim());
     }
@@ -407,6 +410,8 @@ export class Store {
   }
 
   answer(id: number, state: Exclude<RequestState, 'waiting'>) {
+    // (an invitation request answered is gone: its name and email are kept only while it waits)
+    this.db.prepare(`delete from requests where id = ? and kind = 'invite'`).run(id);
     this.db
       .prepare(`update requests set state = ? where id = ? and state = 'waiting'`)
       .run(state, id);
