@@ -39,7 +39,7 @@ In `.env`: `PUBLIC_URL=http://localhost:3300` (later the real address), `BREVO_A
 
 ## 3. The desktop app (2026-11-12)
 
-Unzip `desktop/out/Translate-win-x64.zip` (made with `node desktop/pack-win.mjs`) anywhere and start `Translate.exe`. It opens translate.dendigital.de's subtitles window. Signed in already on this computer's browser or not, both should work.
+Open translate.dendigital.de/download (or "Windows app" at any page's foot), download `Translate.exe` (one file, made with `node desktop/pack-win.mjs`) and start it: Windows warns once ("More info", "Run anyway": not signed yet). It opens translate.dendigital.de's subtitles window. Signed in already on this computer's browser or not, both should work.
 
 - [ ] The window: dark glass, "Sign in to Translate", "Sign in in the browser". Pressing it opens the computer's normal browser at a "Sign in the desktop app?" page; the window shows six numbers.
 - [ ] Not signed in in that browser: the sign-in page with "the desktop app is waiting for it"; after signing in (email, Google or a code) it comes back to the question by itself.

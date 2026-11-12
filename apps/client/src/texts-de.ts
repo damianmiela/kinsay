@@ -255,4 +255,19 @@ export const de: Texts = {
     gone: 'Diese Anmeldung ist abgelaufen (sie dauert 10 Minuten). Starte sie in der App noch einmal.',
     first: 'Melde dich zuerst hier an: Die Desktop-App wartet darauf.',
   },
+  download: {
+    title: 'Translate für Windows',
+    body: 'Untertitel über jedem Anruf oder Video, in einem Fenster, das oben bleibt. Es hört den Ton des Computers, also erscheinen auch die Worte der anderen Person. Für Windows 10 und 11.',
+    button: 'Translate herunterladen',
+    small: 'Eine Datei, nichts zu installieren.',
+    then: 'Danach',
+    steps: [
+      'Öffne Translate.exe aus deinen Downloads.',
+      'Wenn Windows „Der Computer wurde durch Windows geschützt“ sagt, tipp auf „Weitere Informationen“, dann auf „Trotzdem ausführen“: Die App ist neu und noch nicht signiert.',
+      'Tipp in ihrem Fenster auf „Im Browser anmelden“ und sag in deinem Browser Ja.',
+    ],
+    elsewhere: 'Auf einem Handy oder Mac? Translate funktioniert hier im Browser.',
+    open: 'Translate öffnen',
+    foot: 'Windows-App',
+  },
 };

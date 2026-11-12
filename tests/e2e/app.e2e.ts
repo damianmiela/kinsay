@@ -159,7 +159,7 @@ test('the pages ask nothing of any other site, and every text is 16 px or more',
   page.on('request', (r) => {
     if (!r.url().startsWith(baseURL!) && !r.url().startsWith('data:')) elsewhere.push(r.url());
   });
-  for (const path of ['/', '/signin', '/join', '/admin', '/privacy']) {
+  for (const path of ['/', '/signin', '/join', '/admin', '/privacy', '/download']) {
     await page.goto(path);
     await page.waitForLoadState('networkidle');
     expect((await smallestText(page)).px, path).toBeGreaterThanOrEqual(16);
@@ -301,4 +301,26 @@ test('the pages in the browser’s language (Polish here); the switch at the foo
   await expect(page.getByText('Live-Untertitel, in deiner Sprache')).toBeVisible();
   await page.getByLabel('Sprache der Seite').selectOption('en');
   await expect(page.getByText('Live captions, in your language')).toBeVisible();
+});
+
+test('the download page: the desktop app as one file, saved as a download', async ({
+  browser,
+  baseURL,
+}) => {
+  const ctx = await browser.newContext({ baseURL, viewport: { width: 1000, height: 800 } });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Windows app' }).click();
+  await expect(page.getByRole('heading', { name: 'Translate for Windows' })).toBeVisible();
+  expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
+  const [file] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('link', { name: 'Download Translate' }).click(),
+  ]);
+  expect(file.suggestedFilename()).toBe('Translate.exe');
+  const r = await ctx.request.get('/download/Translate.exe');
+  expect(r.headers()['content-disposition']).toBe('attachment');
+  const body = await r.body();
+  expect(body.subarray(0, 2).toString()).toBe('MZ'); // (a Windows program)
+  expect(body.length).toBeGreaterThan(500_000);
 });

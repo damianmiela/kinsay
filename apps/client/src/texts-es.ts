@@ -247,4 +247,19 @@ export const es: Texts = {
     gone: 'Este acceso ha terminado (dura 10 minutos). Empiézalo de nuevo en la aplicación.',
     first: 'Entra aquí primero: la aplicación de escritorio lo está esperando.',
   },
+  download: {
+    title: 'Translate para Windows',
+    body: 'Subtítulos sobre cualquier llamada o vídeo, en una ventana que se queda delante. Oye el sonido del ordenador, así que también salen las palabras de la otra persona. Para Windows 10 y 11.',
+    button: 'Descargar Translate',
+    small: 'Un solo archivo, nada que instalar.',
+    then: 'Después',
+    steps: [
+      'Abre Translate.exe desde tus descargas.',
+      'Si Windows dice «Windows protegió su PC», pulsa «Más información» y luego «Ejecutar de todas formas»: la aplicación es nueva y aún no está firmada.',
+      'Pulsa «Entrar en el navegador» en su ventana y di que sí en tu navegador.',
+    ],
+    elsewhere: '¿En un móvil o un Mac? Translate funciona aquí mismo, en el navegador.',
+    open: 'Abrir Translate',
+    foot: 'Aplicación para Windows',
+  },
 };

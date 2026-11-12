@@ -1,7 +1,7 @@
 // Small pieces every page uses.
 import { useEffect, type ReactNode } from 'react';
 import { euros, LOW_BALANCE } from '@translate/shared';
-import { t } from './texts';
+import { download, t } from './texts';
 import { setUi, ui, UI_LANGS, UI_NAMES, type UiLang } from './ui';
 
 export function Logo() {
@@ -124,6 +124,9 @@ export function Foot() {
     <div className="foot">
       <a className="link" href="/privacy">
         {t.privacy}
+      </a>
+      <a className="link" href="/download">
+        {download.foot}
       </a>
       <UiLangSelect />
     </div>

@@ -15,6 +15,19 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Version>0.1.0</Version>
   </PropertyGroup>
+  <!-- One file to download (Damian, 2026-11-12): the libraries go inside Translate.exe as resources
+       (Program.cs loads them from there; WebView2's native loader is unpacked to the app's own folder
+       on first start). Not the WPF part of WebView2: the app is WinForms. -->
+  <Target Name="EmbedLibraries" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <EmbeddedResource Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll' And '%(ReferenceCopyLocalPaths.Filename)' != 'Microsoft.Web.WebView2.Wpf' And '%(ReferenceCopyLocalPaths.Filename)' != 'WebView2Loader'">
+        <LogicalName>%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="$(NuGetPackageRoot)microsoft.web.webview2\1.0.4258.31\runtimes\win-x64\native\WebView2Loader.dll">
+        <LogicalName>native.WebView2Loader.dll</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
     <PackageReference Include="NAudio.Wasapi" Version="2.4.0" />

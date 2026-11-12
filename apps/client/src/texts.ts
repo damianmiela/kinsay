@@ -275,7 +275,30 @@ const appSignIn_en = {
   first: 'Sign in here first: the desktop app is waiting for it.',
 } as const;
 
-const en = { t: t_en, privacyPage: privacy_en, tw: tw_en, appSignIn: appSignIn_en };
+/** The download page for the desktop app (/download). */
+const download_en = {
+  title: 'Translate for Windows',
+  body: 'Captions over any call or video, in a window that stays on top. It hears this computer’s sound, so the other person’s words show too. For Windows 10 and 11.',
+  button: 'Download Translate',
+  small: 'One file, nothing to install.',
+  then: 'Then',
+  steps: [
+    'Open Translate.exe from your downloads.',
+    'If Windows says “Windows protected your PC”, press “More info”, then “Run anyway”: the app is new and not signed yet.',
+    'Press “Sign in in the browser” in its window, and say yes in your browser.',
+  ],
+  elsewhere: 'On a phone or a Mac? Translate works right here in the browser.',
+  open: 'Open Translate',
+  foot: 'Windows app',
+} as const;
+
+const en = {
+  t: t_en,
+  privacyPage: privacy_en,
+  tw: tw_en,
+  appSignIn: appSignIn_en,
+  download: download_en,
+};
 
 /** The English texts' shape with every text a plain string: what each language must give. */
 type Widen<T> = T extends string
@@ -295,6 +318,7 @@ export const t = chosen.t;
 export const privacyPage = chosen.privacyPage;
 export const tw = chosen.tw;
 export const appSignIn = chosen.appSignIn;
+export const download = chosen.download;
 
 export const stopText = (r: StopReason): readonly [string, string] | null =>
   r === 'ended' ? null : t[`stop_${r}`];

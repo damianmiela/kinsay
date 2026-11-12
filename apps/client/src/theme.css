@@ -585,3 +585,15 @@ a.btn {
   color: var(--lw-ink);
   border-color: var(--lw-line);
 }
+/* the download page's steps */
+.steps {
+  margin: 0;
+  padding-left: 24px;
+  display: grid;
+  gap: 10px;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.foot {
+  flex-wrap: wrap;
+}

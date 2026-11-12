@@ -246,4 +246,19 @@ export const ca: Texts = {
     gone: 'Aquest accés ha acabat (dura 10 minuts). Torna’l a començar a l’aplicació.',
     first: 'Entra aquí primer: l’aplicació d’escriptori ho està esperant.',
   },
+  download: {
+    title: 'Translate per a Windows',
+    body: 'Subtítols sobre qualsevol trucada o vídeo, en una finestra que es queda al davant. Sent el so de l’ordinador, així que també hi surten les paraules de l’altra persona. Per a Windows 10 i 11.',
+    button: 'Baixa Translate',
+    small: 'Un sol fitxer, res per instal·lar.',
+    then: 'Després',
+    steps: [
+      'Obre Translate.exe des de les teves baixades.',
+      'Si Windows diu «Windows ha protegit el vostre PC», prem «Més informació» i després «Executa igualment»: l’aplicació és nova i encara no està signada.',
+      'Prem «Entra al navegador» a la seva finestra i digues que sí al navegador.',
+    ],
+    elsewhere: 'En un mòbil o un Mac? Translate funciona aquí mateix, al navegador.',
+    open: 'Obre Translate',
+    foot: 'Aplicació per a Windows',
+  },
 };

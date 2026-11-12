@@ -29,6 +29,47 @@ namespace TranslateApp
         [STAThread]
         static void Main()
         {
+            // (the libraries live inside this one file: loaded from there before anything uses them)
+            AppDomain.CurrentDomain.AssemblyResolve += (s, e) => Embedded(new System.Reflection.AssemblyName(e.Name).Name + ".dll");
+            Run();
+        }
+
+        static System.Reflection.Assembly Embedded(string file)
+        {
+            using (var res = typeof(Program).Assembly.GetManifestResourceStream(file))
+            {
+                if (res == null) return null;
+                var bytes = new byte[res.Length];
+                int read = 0;
+                while (read < bytes.Length) read += res.Read(bytes, read, bytes.Length - read);
+                return System.Reflection.Assembly.Load(bytes);
+            }
+        }
+
+        /// WebView2's native loader can't load from memory: unpacked once into the app's folder (by its
+        /// size: a new version of the app with a new loader writes it again).
+        public static string LoaderFolder()
+        {
+            using (var res = typeof(Program).Assembly.GetManifestResourceStream("native.WebView2Loader.dll"))
+            {
+                if (res == null) return null; // (built with the loader next to the exe)
+                var dir = Path.Combine(Folder, "bin", res.Length.ToString(CultureInfo.InvariantCulture));
+                var file = Path.Combine(dir, "WebView2Loader.dll");
+                if (!File.Exists(file) || new FileInfo(file).Length != res.Length)
+                {
+                    Directory.CreateDirectory(dir);
+                    var tmp = file + ".tmp";
+                    using (var f = File.Create(tmp)) res.CopyTo(f);
+                    if (File.Exists(file)) File.Delete(file);
+                    File.Move(tmp, file);
+                }
+                return dir;
+            }
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        static void Run()
+        {
             // (one window: a second start brings the first one forward)
             using (var one = new Mutex(true, "Translate-subtitles-one-window", out bool first))
             {
@@ -165,6 +206,8 @@ namespace TranslateApp
             var port = Environment.GetEnvironmentVariable("TRANSLATE_DEBUG_PORT");
             var options = new CoreWebView2EnvironmentOptions(
                 test && int.TryParse(port, out int n) ? "--remote-debugging-port=" + n : null);
+            var loader = Program.LoaderFolder();
+            if (loader != null) CoreWebView2Environment.SetLoaderDllFolderPath(loader);
             var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Program.Folder, "web"), options);
             await web.EnsureCoreWebView2Async(env);
             var core = web.CoreWebView2;

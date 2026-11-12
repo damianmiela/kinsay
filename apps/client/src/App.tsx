@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { AccountPage } from './Account';
 import { AppSignInPage } from './AppSignIn';
+import { DownloadPage } from './Download';
 import { waitingAppSignIn } from './store';
 import { AdminPage } from './Admin';
 import { api } from './api';
@@ -58,7 +59,9 @@ const Page =
               ? WindowPage
               : path === '/app-signin'
                 ? AppSignInPage
-                : Home;
+                : path === '/download'
+                  ? DownloadPage
+                  : Home;
 
 export function App() {
   return <Page />;

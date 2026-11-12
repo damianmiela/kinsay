@@ -243,4 +243,19 @@ export const pl: Texts = {
     gone: 'To logowanie się skończyło (trwa 10 minut). Zacznij je od nowa w aplikacji.',
     first: 'Najpierw zaloguj się tutaj: aplikacja na komputerze na to czeka.',
   },
+  download: {
+    title: 'Translate na Windows',
+    body: 'Napisy nad każdą rozmową lub filmem, w oknie, które zostaje na wierzchu. Słyszy dźwięk z komputera, więc widać też słowa drugiej osoby. Dla Windows 10 i 11.',
+    button: 'Pobierz Translate',
+    small: 'Jeden plik, nic do instalowania.',
+    then: 'Potem',
+    steps: [
+      'Otwórz Translate.exe z pobranych plików.',
+      'Jeśli Windows powie „System Windows ochronił ten komputer”, naciśnij „Więcej informacji”, a potem „Uruchom mimo to”: aplikacja jest nowa i jeszcze niepodpisana.',
+      'Naciśnij „Zaloguj się w przeglądarce” w jej oknie i zgódź się w przeglądarce.',
+    ],
+    elsewhere: 'Na telefonie albo Macu? Translate działa tutaj, w przeglądarce.',
+    open: 'Otwórz Translate',
+    foot: 'Aplikacja na Windows',
+  },
 };

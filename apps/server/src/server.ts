@@ -41,6 +41,7 @@ const PAGES = new Set([
   '/privacy',
   '/window',
   '/app-signin',
+  '/download',
 ]);
 
 export async function createServer(c: Config) {
@@ -105,6 +106,8 @@ export async function createServer(c: Config) {
           'Cache-Control',
           top === 'assets' ? 'public, max-age=31536000, immutable' : 'no-cache',
         );
+        // (the desktop app: saved as a file, never opened in the tab)
+        if (top === 'download') reply.header('Content-Disposition', 'attachment');
       },
     });
   }

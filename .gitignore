@@ -21,4 +21,3 @@ test-results/
 # The desktop app's build output and its zip (built on Damian's PC)
 desktop/win/bin/
 desktop/win/obj/
-desktop/out/

@@ -8,3 +8,6 @@
 *.exr binary
 # (the 3D view's estate data: offsets into them must never shift with a line ending)
 *.bin binary
+
+# the desktop app, served by /download: never touched by line endings
+*.exe binary
