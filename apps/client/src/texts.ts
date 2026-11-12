@@ -38,6 +38,7 @@ export const t = {
   badCode: 'That code doesn’t work. Ask for a new one: a code works once, for 10 minutes.',
   tooMany: 'Too many tries. Wait a few minutes and try again.',
   offline: 'No connection. Check the internet and try again.',
+  signInAgainHere: 'Try again',
   // home
   startTitle: 'Start captions',
   phoneListens: 'This device listens to the people around it.',
@@ -159,7 +160,7 @@ export const privacyPage = {
       p: [
         'Your name and email address, from your invitation.',
         'Your credits: what was added, and for each session its date, its length, its languages and what it cost.',
-        'The devices you are signed in on: what kind (for example “Chrome on Android”) and when each was last used. A cookie keeps a device signed in; it is the only cookie, and there are no ads, no tracking and no analytics. Your choices on a page (the language, the text size) stay on your device.',
+        'The devices you are signed in on: what kind (for example “Chrome on Android”) and when each was last used. A cookie keeps a device signed in; the only other one lasts the ten minutes of a sign-in with Google. There are no ads, no tracking and no analytics. Your choices on a page (the language, the text size) stay on your device.',
         'If you ask for an invitation: the name and email you give, until it is answered.',
         'For a short time only: sign-in codes and links (15 minutes at most), the codes that let others read your captions (a day), and, in the server’s memory only, addresses counted against abuse.',
         'The web server in front of the app keeps standard access logs (address, time, page), used only to keep the service working and safe.',
@@ -198,3 +199,65 @@ export function duration(seconds: number): string {
   const m = Math.round(s / 60);
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
 }
+
+/** The subtitles window (/window: the desktop app, or a browser tab; mockups batch 1 and part 7). */
+export const tw = {
+  title: 'Translate',
+  listenTo: 'Listen to',
+  system: 'This computer’s sound',
+  systemHint: 'a call',
+  mic: 'Microphone',
+  micHint: 'people here',
+  thisComputer: 'This computer',
+  translateInto: 'Translate into',
+  waitingSound: 'Waiting for sound…',
+  waitingSoundBody:
+    'Nothing plays on this computer yet. Start the call, or switch to the microphone.',
+  waitingVoice: 'Waiting for someone to speak…',
+  soundProblem: 'This computer’s sound didn’t start. Try again, or use the microphone.',
+  offline: 'No connection.',
+  offlineBody: 'What is said now is kept and caught up when the internet is back.',
+  smaller: 'Smaller text',
+  bigger: 'Bigger text',
+  menu: 'Settings',
+  seeThrough: 'See-through',
+  lock: 'Lock in place',
+  unlock: 'Unlock',
+  showQr: 'Show the QR code',
+  readAlong: 'Read along on a phone',
+  readAlongBody: (code: string) =>
+    `Scan it, or type the code ${code} at translate.dendigital.de/join.`,
+  account: 'Account and credits',
+  closeWindow: 'Close the window',
+  closeQr: 'Close the QR code',
+  failed: 'That didn’t work. Try again.',
+  resume: 'The captions run, but this window doesn’t listen.',
+  // signing in (part 7)
+  signInTitle: 'Sign in to Translate',
+  signInBody:
+    'Your browser opens. Sign in there, then come back: this window carries on by itself.',
+  signInButton: 'Sign in in the browser',
+  signInDigits: 'The browser shows these numbers too:',
+  signInWaiting: 'Waiting for the browser…',
+  signInNo: 'The sign-in was refused in the browser.',
+  signInAgain: 'Try again',
+  readOnly: 'Only reading someone’s captions?',
+  enterTheirCode: 'Enter their code',
+} as const;
+
+/** The browser's side of the desktop app's sign-in (/app-signin, part 7). */
+export const appSignIn = {
+  title: 'Sign in the desktop app?',
+  body: 'A Translate app asks to sign in as',
+  check:
+    'Say yes only if you just pressed “Sign in in the browser” in Translate’s window on this computer, and it shows the same numbers.',
+  elsewhere:
+    'This sign-in was started on another internet connection, not here. If someone sent you this link, press No. If it’s your own app, start the sign-in again from its window on this computer.',
+  yes: 'Yes, sign it in',
+  no: 'No',
+  done: 'Done.',
+  doneBody: 'You can close this tab and go back to the app.',
+  refused: 'Not signed in. You can close this tab.',
+  gone: 'This sign-in has ended (it lasts 10 minutes). Start it again in the app.',
+  first: 'Sign in here first: the desktop app is waiting for it.',
+} as const;

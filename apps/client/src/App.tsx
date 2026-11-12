@@ -1,13 +1,17 @@
 // The pages, chosen by the address (no router needed): / (sign in, or your own captions), /signin
-// (a code from the admin), /join (someone's captions by code), /account, /admin, /privacy.
+// (a code from the admin), /join (someone's captions by code), /account, /admin, /privacy,
+// /window (the subtitles window, the desktop app's page), /app-signin (its sign-in, in the browser).
 import { useEffect, useState } from 'react';
 import { AccountPage } from './Account';
+import { AppSignInPage } from './AppSignIn';
+import { waitingAppSignIn } from './store';
 import { AdminPage } from './Admin';
 import { api } from './api';
 import { HostPage } from './Host';
 import { PrivacyPage } from './Privacy';
 import { ReaderPage } from './Reader';
 import { CodePage, SignInPage } from './SignIn';
+import { WindowPage } from './Window';
 import { t } from './texts';
 
 function Home() {
@@ -18,6 +22,11 @@ function Home() {
     );
   }, []);
   if (state === 'wait') return <div className="page" />;
+  // (signed in for a desktop app's sign-in: back to its question)
+  if (state === 'in' && waitingAppSignIn()) {
+    window.location.replace('/app-signin');
+    return null;
+  }
   if (state === 'offline') {
     return (
       <div className="page">
@@ -45,7 +54,11 @@ const Page =
           ? AdminPage
           : path === '/privacy'
             ? PrivacyPage
-            : Home;
+            : path === '/window'
+              ? WindowPage
+              : path === '/app-signin'
+                ? AppSignInPage
+                : Home;
 
 export function App() {
   return <Page />;

@@ -32,7 +32,16 @@ export interface Config {
 }
 
 /** The pages (the client picks the screen by its path). */
-const PAGES = new Set(['/', '/join', '/signin', '/account', '/admin', '/privacy']);
+const PAGES = new Set([
+  '/',
+  '/join',
+  '/signin',
+  '/account',
+  '/admin',
+  '/privacy',
+  '/window',
+  '/app-signin',
+]);
 
 export async function createServer(c: Config) {
   // (one hop, the proxy's own: request.ip and protocol agree with clientIp(); audit 31)

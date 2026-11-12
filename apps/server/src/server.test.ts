@@ -438,3 +438,106 @@ describe('the privacy page', () => {
     });
   });
 });
+
+describe("the desktop app's sign-in", () => {
+  it('the window asks, the browser signed in says yes with the same digits, the window gets a device', async () => {
+    const { post, get, person } = await start();
+    const p = await person('Marta');
+    const w = await post('/api/app-signin/start', {});
+    const { poll, token, digits } = w.json as { poll: string; token: string; digits: string };
+    expect(digits).toMatch(/^\d{6}$/);
+    // nobody signed in can't see or answer it
+    expect((await post('/api/app-signin/ask', { token })).status).toBe(401);
+    expect((await post('/api/app-signin/answer', { token, yes: true })).status).toBe(401);
+    expect((await post('/api/app-signin/poll', { poll })).json.state).toBe('waiting');
+    // the browser: the same digits, then yes (once)
+    expect((await post('/api/app-signin/ask', { token }, p.cookie)).json.digits).toBe(digits);
+    expect((await post('/api/app-signin/answer', { token, yes: true }, p.cookie)).status).toBe(200);
+    expect((await post('/api/app-signin/answer', { token, yes: true }, p.cookie)).status).toBe(404);
+    // the window: signed in as her, once; the browser's token alone never signs anyone in
+    expect((await post('/api/app-signin/poll', { poll: token })).json.state).toBe('gone');
+    const done = await post('/api/app-signin/poll', { poll });
+    expect(done.json.state).toBe('yes');
+    const cookie = done.cookie.split(';')[0]!;
+    expect((await get('/api/me', cookie)).json.name).toBe('Marta');
+    expect((await post('/api/app-signin/poll', { poll })).json.state).toBe('gone');
+  });
+
+  it('no in the browser: the window is told no; an ask ends after 10 minutes', async () => {
+    const { post, person, t } = await start();
+    const p = await person('Marta');
+    const a = (await post('/api/app-signin/start', {})).json as { poll: string; token: string };
+    await post('/api/app-signin/answer', { token: a.token, yes: false }, p.cookie);
+    expect((await post('/api/app-signin/poll', { poll: a.poll })).json.state).toBe('no');
+    const b = (await post('/api/app-signin/start', {})).json as { poll: string; token: string };
+    t.now += 10 * 60_000 + 1;
+    expect((await post('/api/app-signin/ask', { token: b.token }, p.cookie)).status).toBe(404);
+    expect((await post('/api/app-signin/poll', { poll: b.poll })).json.state).toBe('gone');
+  });
+});
+
+describe('audit 32', () => {
+  /** A POST from a given address (the test server trusts X-Forwarded-For here). */
+  const from =
+    (url: string) =>
+    async (path: string, body: unknown, ip: string, cookie = '') => {
+      const r = await fetch(url + path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: url, cookie, 'x-forwarded-for': ip },
+        body: JSON.stringify(body),
+      });
+      return { status: r.status, json: (await r.json()) as Record<string, unknown> };
+    };
+
+  it("a link sent to someone else never signs the sender's app in as them", async () => {
+    const { url, person } = await start(fakeSpeech(), 0.36 * EUR, { trustProxy: true });
+    const p = await person('Marta');
+    const at = from(url);
+    const a = (await at('/api/app-signin/start', {}, '198.51.100.7')).json as {
+      poll: string;
+      token: string;
+    };
+    // the victim, elsewhere: told so, and a yes is refused; a no still counts
+    expect(
+      (await at('/api/app-signin/ask', { token: a.token }, '203.0.113.9', p.cookie)).json.elsewhere,
+    ).toBe(true);
+    expect(
+      (await at('/api/app-signin/answer', { token: a.token, yes: true }, '203.0.113.9', p.cookie))
+        .status,
+    ).toBe(403);
+    expect((await at('/api/app-signin/poll', { poll: a.poll }, '198.51.100.7')).json.state).toBe(
+      'waiting',
+    );
+    // the same computer: fine
+    expect(
+      (await at('/api/app-signin/ask', { token: a.token }, '198.51.100.7', p.cookie)).json
+        .elsewhere,
+    ).toBe(false);
+    expect(
+      (await at('/api/app-signin/answer', { token: a.token, yes: true }, '198.51.100.7', p.cookie))
+        .status,
+    ).toBe(200);
+  });
+
+  it('one address can hold only three waiting sign-ins (IPv6 per /48)', async () => {
+    const { url } = await start(fakeSpeech(), 0.36 * EUR, { trustProxy: true });
+    const at = from(url);
+    const codes: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      codes.push((await at('/api/app-signin/start', {}, `2001:db8:5:${i}::1`)).status);
+    }
+    expect(codes).toEqual([200, 200, 200, 429]);
+    expect((await at('/api/app-signin/start', {}, '2001:db8:6::1')).status).toBe(200);
+  });
+
+  it('a browser tab already signed in as them gets no second device', async () => {
+    const { post, get, person } = await start();
+    const p = await person('Marta');
+    const a = (await post('/api/app-signin/start', {})).json as { poll: string; token: string };
+    await post('/api/app-signin/answer', { token: a.token, yes: true }, p.cookie);
+    const done = await post('/api/app-signin/poll', { poll: a.poll }, p.cookie);
+    expect(done.json.state).toBe('yes');
+    expect(done.cookie).toBe('');
+    expect(((await get('/api/me', p.cookie)).json.devices as unknown[]).length).toBe(1);
+  });
+});

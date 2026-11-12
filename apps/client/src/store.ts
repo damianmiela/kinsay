@@ -22,3 +22,13 @@ export function useStored<T>(key: string, initial: T): [T, (v: T) => void] {
     },
   ];
 }
+
+/** A desktop app's sign-in waiting in this browser (AppSignIn.tsx; Home sends a signed-in page back). */
+export const APP_SIGNIN_KEY = 'tr-app-signin';
+export function waitingAppSignIn(): string | null {
+  try {
+    return localStorage.getItem(APP_SIGNIN_KEY);
+  } catch {
+    return null;
+  }
+}

@@ -202,3 +202,63 @@ test('face to face: both halves follow their newest line alike; scrolled back, "
     expect(await gap()).toBeLessThan(80);
   }
 });
+
+test('the subtitles window: signed in through the person’s own browser, then its captions', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  const { page: phone } = await signedInPhone(browser, baseURL!, admin);
+  // the window (a computer, nobody signed in): it opens the browser at /app-signin
+  const ctx = await browser.newContext({
+    baseURL,
+    viewport: { width: 760, height: 300 },
+    permissions: ['microphone'],
+  });
+  const win = await ctx.newPage();
+  await win.goto('/window');
+  const [tab] = await Promise.all([
+    win.waitForEvent('popup'),
+    win.getByRole('button', { name: 'Sign in in the browser' }).click(),
+  ]);
+  const digits = (await win.locator('.lw-digits').textContent())!.replace(/\s/g, '');
+  expect(digits).toMatch(/^\d{6}$/);
+  expect((await smallestText(win)).px).toBeGreaterThanOrEqual(16);
+  // the person's own browser (here: the signed-in phone) gets the link: the same digits, yes
+  const link = tab.url();
+  await tab.close();
+  await phone.goto(link.replace(/^https?:\/\/[^/]+/, ''));
+  await expect(phone.locator('.app-digits')).toHaveText(`${digits.slice(0, 3)} ${digits.slice(3)}`);
+  await phone.getByRole('button', { name: 'Yes, sign it in' }).click();
+  await expect(phone.getByText('Done.')).toBeVisible();
+  // the window carries on by itself: the start panel, then captions from the microphone
+  await expect(win.getByRole('button', { name: 'Start' })).toBeVisible({ timeout: 10_000 });
+  await win.getByRole('button', { name: /^Microphone/ }).click();
+  await win.getByRole('button', { name: 'Start' }).click();
+  await expect(win.locator('.lw-ln').last()).toContainText('Sentence', { timeout: 10_000 });
+  expect((await smallestText(win)).px).toBeGreaterThanOrEqual(16);
+  await win.getByRole('button', { name: /Stop/ }).click();
+  await expect(win.getByRole('button', { name: 'Start' })).toBeVisible();
+});
+
+test('a browser that isn’t signed in signs in first, then answers the desktop app', async ({
+  browser,
+  baseURL,
+}) => {
+  const ctx = await browser.newContext({ ...PHONE, baseURL });
+  const page = await ctx.newPage();
+  const r = await ctx.request.post('/api/app-signin/start', { headers: { origin: baseURL! } });
+  const { token } = (await r.json()) as { token: string };
+  await page.goto(`/app-signin#t=${token}`);
+  await expect(page.getByText('the desktop app is waiting for it', { exact: false })).toBeVisible();
+  // signed in with the admin's code (the code page returns to /, which goes back to the question)
+  const admin = await adminApi(browser, baseURL!);
+  const inv = await admin.post('/admin/api/invite', { name: 'Desk Example' });
+  const code = await admin.post('/admin/api/signin-code', {
+    id: (inv.json.person as { id: number }).id,
+  });
+  await page.goto('/signin');
+  await page.getByLabel('Type the sign-in code').fill(String(code.json.digits));
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByText('Sign in the desktop app?')).toBeVisible({ timeout: 10_000 });
+});

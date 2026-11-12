@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Translate's desktop app (2026-11-12, from the wedding app's small subtitles app): a window of
+       Windows' own browser engine (WebView2) round translate.dendigital.de/window, and this computer's
+       sound from Windows' audio loopback. .NET Framework 4.8 is part of Windows 10 and 11: nothing else
+       to install. Build: dotnet build -c Release (desktop\win); pack: node desktop\pack-win.mjs -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>Translate</AssemblyName>
+    <RootNamespace>TranslateApp</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.4.0" />
+  </ItemGroup>
+</Project>

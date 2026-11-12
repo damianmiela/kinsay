@@ -21,7 +21,7 @@ import {
   DEVICE_COOKIE,
   RateLimiter,
   clientIp,
-  ipBucket,
+  wideBucket,
   isSameOrigin,
   isSessionCode,
   parseCookies,
@@ -94,12 +94,7 @@ export interface RealtimeOptions {
   warn?: (m: string) => void;
 }
 
-/** IPv6 per /48 for reader codes (one home or a provider's block has many /64s). */
-function codeBucket(ip: string): string {
-  const b = ipBucket(ip);
-  if (!b.endsWith('::/64')) return b;
-  return `${b.slice(0, -5).split(':').slice(0, 3).join(':')}::/48`;
-}
+const codeBucket = wideBucket;
 
 export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   const now = o.now ?? Date.now;

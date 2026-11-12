@@ -24,7 +24,13 @@ export function useSession(code?: string) {
     };
     const onCaptions = (u: CaptionsUpdate) => setUpdate((was) => mergeUpdate(was, u));
     const onError = (e: Error) => setError(e.message);
+    // (the server closed this page: signed out, blocked, the account or its session gone; Socket.IO
+    // never comes back by itself then: the page starts again and shows where it stands, audit 32)
+    const onGone = (reason: string) => {
+      if (reason === 'io server disconnect') window.location.reload();
+    };
     socket.on('state:session', onState);
+    socket.on('disconnect', onGone);
     socket.on('captions', onCaptions);
     socket.on('connect_error', onError);
     socket.connect();
@@ -32,6 +38,7 @@ export function useSession(code?: string) {
       socket.off('state:session', onState);
       socket.off('captions', onCaptions);
       socket.off('connect_error', onError);
+      socket.off('disconnect', onGone);
       socket.disconnect();
     };
   }, [code]);

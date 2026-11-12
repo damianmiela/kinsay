@@ -12,6 +12,7 @@ import {
   clientIp,
   cookie,
   ipBucket,
+  wideBucket,
   isAdmin,
   isSameOrigin,
   parseCookies,
@@ -27,6 +28,7 @@ import {
   type GoogleConfig,
   type Mailer,
 } from './signin';
+import { AppSignIns } from './appSignIn';
 import type { Realtime } from './realtime';
 
 export interface HttpOptions {
@@ -97,7 +99,7 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
           : /Mac/.test(ua)
             ? 'Mac'
             : 'Device';
-    const app = /LiveSubtitles|WebView2/.test(ua)
+    const app = /TranslateDesktop/.test(ua)
       ? 'Desktop app'
       : /Edg\//.test(ua)
         ? 'Edge'
@@ -132,6 +134,48 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
       return fail(reply, 401, 'bad-code');
     }
     return signedIn(req, reply, person);
+  });
+
+  // ---------- the desktop app's sign-in (appSignIn.ts) ----------
+  const appAsks = new AppSignIns(now);
+  const appIp = new RateLimiter(10, 15 * 60_000);
+  app.post('/api/app-signin/start', (req, reply) => {
+    const addr = clientIp(req.raw, o.trustProxy);
+    if (!appIp.take(wideBucket(addr), now())) return fail(reply, 429, 'too-many');
+    const a = appAsks.start(ipBucket(addr), wideBucket(addr));
+    return a ? Promise.resolve({ ok: true, ...a }) : fail(reply, 429, 'too-many');
+  });
+  app.post('/api/app-signin/ask', (req, reply) => {
+    const d = me(req);
+    if (!d) return fail(reply, 401, 'signed-out');
+    const a = appAsks.waiting(text(body(req).token, 64), ip(req));
+    if (!a) return fail(reply, 404, 'gone');
+    return Promise.resolve({
+      ok: true,
+      digits: a.digits,
+      elsewhere: a.elsewhere,
+      name: d.person.name,
+      email: d.person.email,
+    });
+  });
+  app.post('/api/app-signin/answer', (req, reply) => {
+    const d = me(req);
+    if (!d) return fail(reply, 401, 'signed-out');
+    const yes = body(req).yes === true;
+    const r = appAsks.answer(text(body(req).token, 64), yes ? d.person.id : null, ip(req));
+    if (r === 'gone') return fail(reply, 404, 'gone');
+    if (r === 'elsewhere') return fail(reply, 403, 'elsewhere');
+    return Promise.resolve({ ok: true });
+  });
+  app.post('/api/app-signin/poll', (req, reply) => {
+    const r = appAsks.poll(text(body(req).poll, 64));
+    if (typeof r === 'string') return Promise.resolve({ ok: true, state: r });
+    const person = store.person(r.personId);
+    if (!person || person.blocked) return Promise.resolve({ ok: true, state: 'no' });
+    // (a browser tab already signed in as them (/window in a tab shares the browser's cookie): no
+    // second device for the same browser, audit 32)
+    if (me(req)?.person.id === person.id) return Promise.resolve({ ok: true, state: 'yes' });
+    return { ...signedIn(req, reply, person), state: 'yes' };
   });
 
   function signedIn(

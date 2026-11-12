@@ -1,0 +1,370 @@
+/* The subtitles window (/window; mockups batch 1, from the wedding app's): dark glass, white text,
+   only the captions until the mouse is over it. In the desktop app the page fills a see-through
+   window (its background transparent, the app's own opacity on top); in a browser tab it fills the
+   tab. Its own class names (lw-…). Every text 16 px or more, as on every page here. */
+html:has(.lw),
+html:has(.lw) body {
+  background: transparent;
+  /* (the window is its own size: no scrollbars; the corners make it bigger) */
+  overflow: hidden;
+}
+.lw {
+  --lw-ink: #ffffff;
+  --lw-soft: rgba(255, 255, 255, 0.74);
+  --lw-faint: rgba(255, 255, 255, 0.52);
+  --lw-line: rgba(255, 255, 255, 0.16);
+  --lw-hi: rgba(255, 255, 255, 0.12);
+  --lw-live: #f3dc9a;
+  --lw-warn: #ffd08a;
+  --lw-bad: #ff9aa6;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 100vh;
+  border-radius: 14px;
+  border: 1px solid var(--lw-line);
+  background: rgba(18, 16, 22, var(--lw-glass, 0.72));
+  color: var(--lw-ink);
+  font-family: var(--f-body);
+  overflow: hidden;
+  user-select: none;
+}
+.lw.in-app {
+  min-height: 100vh;
+}
+.lw *,
+.lw *::before,
+.lw *::after {
+  box-sizing: border-box;
+}
+/* the controls: shown while the mouse is over the window (and on a touch screen, always) */
+.lw-ctl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--lw-line);
+  background: var(--lw-hi);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.lw:hover .lw-ctl,
+.lw:focus-within .lw-ctl {
+  opacity: 1;
+}
+@media (hover: none) {
+  .lw-ctl {
+    opacity: 1;
+  }
+}
+.lw-grip {
+  width: 22px;
+  height: 22px;
+  margin-right: 4px;
+  opacity: 0.6;
+  background: radial-gradient(circle, #fff 1.4px, transparent 1.6px) 0 0 / 7px 7px;
+  -webkit-app-region: drag;
+  app-region: drag;
+  cursor: move;
+}
+.lw-ctl button,
+.lw-menu .r,
+.lw-small {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font: 600 16px var(--f-body);
+  color: var(--lw-ink);
+  cursor: pointer;
+}
+.lw-ctl button:hover,
+.lw-ctl button.on,
+.lw-ctl button:focus-visible,
+.lw-menu .r:hover,
+.lw-small {
+  background: rgba(255, 255, 255, 0.14);
+}
+.lw-ctl button:focus-visible,
+.lw-panel button:focus-visible {
+  outline: 2px solid var(--lw-live);
+}
+.lw-ctl .stop {
+  background: rgba(255, 120, 120, 0.22);
+}
+.lw-gap {
+  flex: 1;
+  align-self: stretch;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.lw-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lw-faint);
+}
+.lw-dot.on {
+  background: var(--lw-live);
+  box-shadow: 0 0 0 3px rgba(243, 220, 154, 0.25);
+}
+/* the captions */
+.lw-band {
+  padding: 12px 20px 14px;
+}
+.lw-band + .lw-band {
+  border-top: 1px solid var(--lw-line);
+}
+.lw-ln {
+  margin: 0;
+  font-size: calc(22px * var(--lw-size, 1));
+  line-height: 1.4;
+}
+.lw-ln.old {
+  font-size: calc(19px * var(--lw-size, 1));
+  color: var(--lw-faint);
+}
+.lw-ln .coming {
+  color: var(--lw-soft);
+}
+.lw-note {
+  padding: 14px 20px;
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--lw-soft);
+}
+.lw-note b {
+  color: var(--lw-ink);
+}
+.lw-note.warn b {
+  color: var(--lw-warn);
+}
+.lw-note.bad b {
+  color: var(--lw-bad);
+}
+/* the start panel and the languages */
+.lw-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px 20px 18px;
+  /* (scrolls inside the window when it can't fit: the language list open, a low window) */
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+.lw-panel h3 {
+  margin: 0;
+  font: 700 22px var(--f-body);
+}
+.lw-row {
+  display: grid;
+  gap: 8px;
+}
+.lw-row .k {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--lw-faint);
+}
+.lw-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lw-seg button {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--lw-line);
+  font-size: 16px;
+  cursor: pointer;
+}
+.lw-seg button.sel {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.lw-seg small {
+  color: var(--lw-faint);
+  font-size: 16px;
+}
+.lw-go {
+  all: unset;
+  justify-self: start;
+  padding: 11px 26px;
+  border-radius: 12px;
+  background: var(--foil);
+  color: var(--on-foil);
+  font: 800 17px var(--f-body);
+  cursor: pointer;
+}
+.lw-go:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* the menu, the QR code, the lock */
+.lw-menu {
+  position: absolute;
+  top: 48px;
+  right: 10px;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  width: 280px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--lw-line);
+  background: rgba(30, 27, 36, 0.97);
+  font-size: 16px;
+}
+.lw-menu .r {
+  justify-content: space-between;
+}
+.lw-menu input[type='range'] {
+  width: 120px;
+  accent-color: var(--lw-live);
+}
+.lw-menu b {
+  color: var(--lw-live);
+}
+.lw-qr {
+  all: unset;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: rgba(18, 16, 22, 0.97);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 20px;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--lw-soft);
+  cursor: pointer;
+}
+.lw-qr b {
+  color: var(--lw-ink);
+}
+.lw-qr svg {
+  padding: 6px;
+  border-radius: 8px;
+  background: #fff;
+}
+.lw-lock {
+  all: unset;
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  display: flex;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 16px;
+  color: var(--lw-faint);
+  cursor: pointer;
+}
+.lw-lock span {
+  display: none;
+}
+.lw-lock:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--lw-ink);
+}
+.lw-lock:hover span {
+  display: inline;
+}
+.lw-corner {
+  position: absolute;
+  bottom: 3px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.lw:hover .lw-corner {
+  opacity: 1;
+}
+.lw-corner.br {
+  right: 3px;
+  border-left: 0;
+  border-top: 0;
+  border-radius: 0 0 6px 0;
+  cursor: nwse-resize;
+}
+.lw-corner.bl {
+  left: 3px;
+  border-right: 0;
+  border-top: 0;
+  border-radius: 0 0 0 6px;
+  cursor: nesw-resize;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lw-ctl,
+  .lw-corner {
+    transition: none;
+  }
+}
+.lw-go-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.lw-go-row .picker {
+  flex: 1;
+}
+.lw-go-row .lw-go {
+  flex: none;
+  padding: 0 26px;
+  line-height: 46px;
+}
+.lw-panel .picker-field {
+  height: 46px;
+}
+.lw-panel .picker-list {
+  max-height: 150px;
+}
+/* the panel's language picker, in the window's dark glass */
+.lw-panel .picker {
+  --surface: #2a2631;
+  --bg: #221f29;
+  --text: var(--lw-ink);
+  --text-soft: var(--lw-soft);
+  --text-faint: var(--lw-faint);
+  --line: var(--lw-line);
+  --accent-tint: rgba(255, 255, 255, 0.16);
+  max-width: 420px;
+}
+.lw-panel p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--lw-soft);
+}
+.lw-panel .input {
+  max-width: 220px;
+  border-color: var(--lw-line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lw-ink);
+}
+.lw-digits {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--lw-live);
+}
+.lw-panel .lw-link {
+  all: unset;
+  color: var(--lw-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.lw-qr .qr-bg {
+  fill: #ffffff;
+}
+.lw-qr .qr-ink {
+  fill: #111111;
+}

@@ -36,3 +36,20 @@ In `.env`: `PUBLIC_URL=http://localhost:3300` (later the real address), `BREVO_A
 - [ ] The link opens "Sign in on this device?": one tap signs in. The same link again: "doesn't work any more".
 - [ ] An email that isn't invited: the same "Check your email" answer, and no email arrives.
 - [ ] Google with an invited email: straight into Home. With another Google account: "no invitation yet" and the invitation form open.
+
+## 3. The desktop app (2026-11-12)
+
+Unzip `desktop/out/Translate-win-x64.zip` (made with `node desktop/pack-win.mjs`) anywhere and start `Translate.exe`. It opens translate.dendigital.de's subtitles window. Signed in already on this computer's browser or not, both should work.
+
+- [ ] The window: dark glass, "Sign in to Translate", "Sign in in the browser". Pressing it opens the computer's normal browser at a "Sign in the desktop app?" page; the window shows six numbers.
+- [ ] Not signed in in that browser: the sign-in page with "the desktop app is waiting for it"; after signing in (email, Google or a code) it comes back to the question by itself.
+- [ ] The browser shows the same six numbers and the email. "Yes, sign it in": "Done." In a few seconds the window carries on by itself: Listen to, Translate into, Start. "No" in the browser: the window says it was refused.
+- [ ] Account in the browser: the devices list "Windows · Desktop app".
+- [ ] The browser link opened on another internet connection (e.g. a phone on mobile data): "started on another internet connection", no Yes button.
+- [ ] Signing the desktop app out from Account (or Block in the admin): the window goes back to "Sign in to Translate" by itself.
+- [ ] Listen to "This computer's sound", a language, Start; play a video or join a call: its words appear in the window (and nothing is asked first). Nothing playing for a while: "Waiting for sound…".
+- [ ] "This computer" in the bar switches to the microphone while it runs, and back.
+- [ ] The language in the bar opens the list; another language goes on in it.
+- [ ] A− and A+, the gear's See-through slider, Lock in place (clicks go through to the call; the lock badge top right unlocks), the QR code (a phone scanning it reads along), Account (opens in the browser), ✕ closes it. A corner drag resizes it; the next start keeps its place and size.
+- [ ] Stop; close and start again: still signed in, the same language and source.
+- [ ] "Only reading someone's captions? Enter their code" in a signed-out window: someone's captions by their code.

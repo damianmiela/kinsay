@@ -550,3 +550,11 @@ a.btn {
   align-self: flex-start;
   font-size: 16px;
 }
+/* the desktop app's sign-in: the digits to compare with the window's */
+.app-digits {
+  margin: 4px 0;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-strong);
+}

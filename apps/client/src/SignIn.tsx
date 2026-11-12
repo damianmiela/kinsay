@@ -5,7 +5,8 @@ import { api } from './api';
 import { Logo } from './bits';
 import { t } from './texts';
 
-export function SignInPage() {
+/** `note`: why this page is asked for (the desktop app waiting for a sign-in). */
+export function SignInPage({ note }: { note?: string } = {}) {
   const [ways, setWays] = useState<{ email: boolean; google: boolean } | null>(null);
   const why = window.location.hash;
   const [asking, setAsking] = useState(why === '#not-invited');
@@ -21,6 +22,7 @@ export function SignInPage() {
       </div>
       <div className="body">
         <h1 className="t">{t.signInTitle}</h1>
+        {note && <div className="note info">{note}</div>}
         {why === '#not-invited' && <div className="note warn">{t.googleNotInvited}</div>}
         {why === '#google-failed' && <div className="note bad">{t.googleFailed}</div>}
         {ways?.email && <EmailSignIn />}

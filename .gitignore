@@ -18,3 +18,7 @@ _docs/
 CLAUDE.md
 # Browser tests' output
 test-results/
+# The desktop app's build output and its zip (built on Damian's PC)
+desktop/win/bin/
+desktop/win/obj/
+desktop/out/

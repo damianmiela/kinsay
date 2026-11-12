@@ -78,6 +78,13 @@ export function ipBucket(ip: string): string {
     .join(':')}::/64`;
 }
 
+/** IPv6 per /48 (one home or a provider's block has many /64s): reader codes, desktop sign-ins. */
+export function wideBucket(ip: string): string {
+  const b = ipBucket(ip);
+  if (!b.endsWith('::/64')) return b;
+  return `${b.slice(0, -5).split(':').slice(0, 3).join(':')}::/48`;
+}
+
 const RATE_LIMIT_MAX_KEYS = 10_000;
 
 /** At most `max` events per key within the window. Memory-bounded: the least active keys go first. */
