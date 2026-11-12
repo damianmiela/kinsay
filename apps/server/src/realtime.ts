@@ -1,5 +1,5 @@
 // Live captions over Socket.IO. Every signed-in person has one channel: their own captions, their
-// own code for readers (5 characters, a day). A host's page sends the audio; every page (the host's
+// own code for readers (6 characters, a day). A host's page sends the audio; every page (the host's
 // and the readers') reads one language, or only what is heard. Each language read is one stream,
 // paid from the host's credits as the audio goes (one ledger row per session, brought up to date
 // every few seconds); no credits or a reached limit stops the session.
@@ -17,6 +17,7 @@ import {
 } from '@translate/shared';
 import {
   CODE_ALPHABET,
+  CODE_LENGTH,
   DEVICE_COOKIE,
   RateLimiter,
   clientIp,
@@ -36,9 +37,15 @@ export const CHANNEL_LANGS_MAX = 3;
 export const FLUSH_MS = 10_000;
 /** One microphone at a time: another page of the same host takes over after this much quiet. */
 export const MIC_QUIET_MS = 2_000;
+/** Language switches a page may make per minute (each opens and closes a paid stream: audit 30). */
+export const LANG_SWITCHES_PER_MIN = 10;
+/** Wrong reader codes an address may try per 10 minutes (IPv6 per /48: audit 30). */
+export const CODE_FAILS_MAX = 20;
 /** A channel nobody uses is forgotten after this long (its code with it). */
 const IDLE_CHANNEL_MS = 10 * 60_000;
 const TEXT_EVERY_MS = 150;
+/** Audio streams of a page remembered per channel (their last chunk number; audit 30). */
+const SEQS_MAX = 20;
 
 interface Channel {
   personId: number;
@@ -50,15 +57,18 @@ interface Channel {
   /** The host's language (kept over a reconnect; null: what is heard only). */
   hostLang: Target | null;
   stopped?: StopReason;
-  /** The running session's ledger row, its cost and audio so far. */
+  /** The running session's ledger row, its cost so far, and what of it is written. */
   row?: number;
   cost: number;
+  written: number;
   seconds: number;
   flushedAt: number;
   micSocket?: string;
   micAt: number;
   /** The last chunk number per audio stream of the page (a resend is confirmed, not used twice). */
   seqs: Map<string, number>;
+  /** Its pages, host's and readers' (audit 30: never a scan of every socket). */
+  sockets: Set<S>;
   textTimer?: NodeJS.Timeout;
   idleSince: number;
 }
@@ -68,6 +78,7 @@ interface Data {
   role: 'host' | 'reader';
   lang: Target | null;
   personId?: number;
+  deviceId?: number;
 }
 type S = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, Data>;
 
@@ -78,6 +89,13 @@ export interface RealtimeOptions {
   trustProxy: boolean;
   now?: () => number;
   warn?: (m: string) => void;
+}
+
+/** IPv6 per /48 for reader codes (one home or a provider's block has many /64s). */
+function codeBucket(ip: string): string {
+  const b = ipBucket(ip);
+  if (!b.endsWith('::/64')) return b;
+  return `${b.slice(0, -5).split(':').slice(0, 3).join(':')}::/48`;
 }
 
 export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
@@ -95,16 +113,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   );
   const byPerson = new Map<number, Channel>();
   const byCode = new Map<string, Channel>();
-  const codeTries = new RateLimiter(20, 10 * 60_000);
-
-  const room = (c: Channel) => `ch:${c.personId}`;
-  const sockets = (c: Channel) =>
-    [...io.sockets.sockets.values()].filter((s) => s.data.channel === c);
+  const codeFails = new RateLimiter(CODE_FAILS_MAX, 10 * 60_000);
+  const langSwitches = new RateLimiter(LANG_SWITCHES_PER_MIN, 60_000);
 
   function newCode(): string {
     for (;;) {
       let code = '';
-      for (let i = 0; i < 5; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
+      for (let i = 0; i < CODE_LENGTH; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
       if (!byCode.has(code)) return code;
     }
   }
@@ -124,10 +139,12 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       running: false,
       hostLang: null,
       cost: 0,
+      written: 0,
       seconds: 0,
       flushedAt: now(),
       micAt: 0,
       seqs: new Map(),
+      sockets: new Set(),
       idleSince: now(),
       engine: undefined as unknown as Engine,
     };
@@ -147,7 +164,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
 
   /** The languages a channel's pages read: the host's first (its stream also gives what is heard). */
   function langsOf(c: Channel): Target[] {
-    const all = [c.hostLang, ...sockets(c).map((s) => s.data.lang)].filter(
+    const all = [c.hostLang, ...[...c.sockets].map((s) => s.data.lang)].filter(
       (l): l is Target => !!l && l !== HEARD,
     );
     return [...new Set(all)];
@@ -166,40 +183,51 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     };
     if (s.data.role === 'host') {
       v.code = c.code;
-      v.balance = o.store.balance(c.personId) - unflushed(c);
+      v.balance = o.store.balance(c.personId) - (c.cost - c.written);
     }
     return v;
   }
-  const unflushed = (c: Channel) => c.cost - (c.row ? (flushedCost.get(c) ?? 0) : 0);
-  const flushedCost = new WeakMap<Channel, number>();
 
   function stateAll(c: Channel) {
-    for (const s of sockets(c)) s.emit('state:session', view(s));
+    for (const s of c.sockets) s.emit('state:session', view(s));
   }
 
   function textSoon(c: Channel) {
     c.textTimer ??= setTimeout(() => {
       c.textTimer = undefined;
-      for (const s of sockets(c)) s.emit('captions', c.engine.update(s.data.lang));
+      for (const s of c.sockets) s.emit('captions', c.engine.update(s.data.lang));
     }, TEXT_EVERY_MS);
   }
 
-  /** Audio went to the speech service: its cost counts now, written every FLUSH_MS. */
+  /** Audio went to the speech service: its cost counts now, written every FLUSH_MS. Never throws. */
   function sent(c: Channel, ms: number, streams: number) {
-    const price = o.store.settings().pricePerHour;
-    c.cost += (ms * streams * price) / 3_600_000;
-    c.seconds += ms / 1000;
-    if (now() - c.flushedAt >= FLUSH_MS) flush(c);
+    try {
+      const price = o.store.settings().pricePerHour;
+      c.cost += (ms * streams * price) / 3_600_000;
+      c.seconds += ms / 1000;
+      if (now() - c.flushedAt >= FLUSH_MS) flush(c);
+    } catch (e) {
+      warn(`credits: ${String(e)}`);
+    }
   }
 
-  /** Writes the session's use so far; `check`: and stops it when it may not go on. */
+  /**
+   * Writes the session's use so far; `check`: and stops it when it may not go on. A write that
+   * fails (the person was deleted meanwhile) ends the session, never the server (audit 30).
+   */
   function flush(c: Channel, check = true) {
     c.flushedAt = now();
-    if (!c.cost) return;
-    const lang = langsOf(c).join(', ') || HEARD;
-    if (!c.row) c.row = o.store.add(c.personId, 'use', -c.cost, { lang, seconds: c.seconds });
-    else o.store.setUse(c.row, c.cost, lang, c.seconds);
-    flushedCost.set(c, c.cost);
+    if (c.cost) {
+      try {
+        const lang = langsOf(c).join(', ') || HEARD;
+        if (!c.row) c.row = o.store.add(c.personId, 'use', -c.cost, { lang, seconds: c.seconds });
+        else o.store.setUse(c.row, c.cost, lang, c.seconds);
+        c.written = c.cost;
+      } catch (e) {
+        warn(`credits: the use could not be written (${String(e)})`);
+        if (check) return stop(c, 'blocked', false);
+      }
+    }
     if (!check) return;
     const why = cannotRun(c.personId);
     if (why) stop(c, why);
@@ -218,12 +246,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     return undefined;
   }
 
-  function stop(c: Channel, why?: StopReason) {
-    if (c.running) flush(c, false);
+  function stop(c: Channel, why?: StopReason, write = true) {
+    if (c.running && write) flush(c, false);
     c.running = false;
     c.stopped = why;
     c.row = undefined;
     c.cost = 0;
+    c.written = 0;
     c.seconds = 0;
     c.seqs.clear();
     c.engine.discard();
@@ -232,19 +261,45 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     textSoon(c);
   }
 
-  /** Stops every session of a person (blocked, signed out everywhere, deleted). */
+  /** A channel goes for good: its pages are closed, its code no longer lets anyone in. */
+  function drop(c: Channel) {
+    stop(c, 'blocked', false);
+    for (const s of [...c.sockets]) s.disconnect(true);
+    c.engine.close();
+    byPerson.delete(c.personId);
+    byCode.delete(c.code);
+  }
+
+  /**
+   * A person changed (credits, limits, blocked, deleted). Blocked or deleted: their channel goes,
+   * every page of it closed (audit 30: a socket outlived the person); else it is told the news.
+   */
   function personChanged(personId: number) {
     const c = byPerson.get(personId);
     if (!c) return;
+    const p = o.store.person(personId);
+    if (!p || p.blocked) return drop(c);
     const why = cannotRun(personId);
     if (c.running && why) stop(c, why);
     else stateAll(c);
   }
 
+  /** Devices were signed out (one, or all of a person's): their host pages are closed at once. */
+  function signedOut(which: { deviceId?: number; personId?: number }) {
+    const c = which.personId !== undefined ? byPerson.get(which.personId) : undefined;
+    const all = c ? [...c.sockets] : [...byPerson.values()].flatMap((ch) => [...ch.sockets]);
+    for (const s of all) {
+      if (s.data.role !== 'host') continue;
+      if (which.deviceId !== undefined && s.data.deviceId !== which.deviceId) continue;
+      if (which.personId !== undefined && s.data.personId !== which.personId) continue;
+      s.disconnect(true);
+    }
+  }
+
   // forget channels nobody uses
   const tidy = setInterval(() => {
     for (const c of byPerson.values()) {
-      if (c.running || sockets(c).length) {
+      if (c.running || c.sockets.size) {
         c.idleSince = now();
         continue;
       }
@@ -261,26 +316,38 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     const auth = (s.handshake.auth ?? {}) as { code?: unknown };
     const code = typeof auth.code === 'string' ? auth.code.toUpperCase() : undefined;
     if (code !== undefined) {
-      const ip = ipBucket(
+      const ip = codeBucket(
         clientIp({ headers: s.handshake.headers, socket: s.request.socket }, o.trustProxy),
       );
-      if (!codeTries.take(ip, now())) return next(new Error('too-many'));
+      // only wrong codes count (readers reconnect often, many share one address: audit 30)
+      if (codeFails.blocked(ip, now())) return next(new Error('too-many'));
       const c = isSessionCode(code) ? byCode.get(code) : undefined;
-      if (!c || c.codeUntil < now()) return next(new Error('no-session'));
+      if (!c || c.codeUntil < now()) {
+        codeFails.record(ip, now());
+        return next(new Error('no-session'));
+      }
       s.data = { channel: c, role: 'reader', lang: null };
       return next();
     }
     const d = o.store.device(cookies[DEVICE_COOKIE]);
     if (!d) return next(new Error('signed-out'));
-    s.data = { channel: channelOf(d.person), role: 'host', lang: null, personId: d.person.id };
+    s.data = {
+      channel: channelOf(d.person),
+      role: 'host',
+      lang: null,
+      personId: d.person.id,
+      deviceId: d.deviceId,
+    };
     next();
   });
 
   io.on('connection', (s) => {
     const c = s.data.channel;
+    // (a channel dropped while this socket was being let in)
+    if (byPerson.get(c.personId) !== c) return void s.disconnect(true);
+    c.sockets.add(s);
     // (a host gets their own language back; a reader starts in the host's)
     s.data.lang = c.hostLang;
-    void s.join(room(c));
     s.emit('state:session', view(s));
     s.emit('captions', c.engine.update(s.data.lang, true));
 
@@ -293,8 +360,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     function setLang(lang: unknown): Ack {
       const next = lang === null || lang === HEARD ? null : lang;
       if (next !== null && !isTarget(next)) return { ok: false, error: 'bad-lang' };
-      const before = s.data.lang;
-      if (next === before) return { ok: true };
+      if (next === s.data.lang) return { ok: true };
+      if (!langSwitches.take(s.id, now())) return { ok: false, error: 'too-many' };
       const langs = new Set(langsOf(c));
       if (next && !langs.has(next)) {
         if (langs.size >= CHANNEL_LANGS_MAX) return { ok: false, error: 'too-many-langs' };
@@ -324,6 +391,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       }
       const r = setLang((p as { lang?: unknown } | undefined)?.lang ?? null);
       if (!r.ok) return reply(cb, r);
+      // (the languages as the pages read them now: none left over from pages gone since)
+      c.engine.setLangs(langsOf(c));
       if (!c.running) {
         c.running = true;
         c.stopped = undefined;
@@ -371,7 +440,12 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       if (seq) {
         s.emit('captions:ack', seq);
         if (seq <= (c.seqs.get(stream) ?? 0)) return; // (sent again after a break: it came already)
+        c.seqs.delete(stream);
         c.seqs.set(stream, seq);
+        for (const oldest of c.seqs.keys()) {
+          if (c.seqs.size <= SEQS_MAX) break;
+          c.seqs.delete(oldest);
+        }
       }
       const bytes = chunk instanceof Buffer ? chunk : new Uint8Array(chunk);
       if (bytes.length % 2) return;
@@ -379,8 +453,9 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     });
 
     s.on('disconnect', () => {
-      // (a reader's language nobody reads any more: its stream ends)
-      if (c.running) c.engine.setLangs(langsOf(c));
+      c.sockets.delete(s);
+      // (a language nobody reads any more: its stream ends; never one left for the next Start)
+      c.engine.setLangs(langsOf(c));
       c.idleSince = now();
     });
   });
@@ -388,6 +463,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   return {
     io,
     personChanged,
+    signedOut,
     /** For the admin: sessions running now. */
     running: () => [...byPerson.values()].filter((c) => c.running).length,
     close() {

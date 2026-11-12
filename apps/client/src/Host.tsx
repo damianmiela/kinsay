@@ -56,7 +56,13 @@ export function HostPage() {
     }
   };
 
-  const running = view.running && mic.sending;
+  // (the session runs on the server even when this page's microphone isn't on: after a reload,
+  // a second tab; Stop is always in reach, audit 30)
+  const running = view.running;
+  const resumeMic = async () => {
+    setProblem(null);
+    if ((await mic.startSending()) === 'failed') setProblem('mic');
+  };
   const note = (k: string | null) => {
     if (!k) return null;
     if (k === 'mic')
@@ -152,6 +158,14 @@ export function HostPage() {
           <div className="note warn" onClick={() => setLowSeen(true)}>
             <b>{t.lowTitle}</b>
             {t.lowBody(view.balance ?? 0)}
+          </div>
+        )}
+        {!mic.sending && (
+          <div className="note info">
+            <b>{t.micOff}</b>
+            <button className="btn main" style={{ marginTop: 8 }} onClick={() => void resumeMic()}>
+              {t.micOn}
+            </button>
           </div>
         )}
         {note(problem)}

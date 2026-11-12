@@ -107,9 +107,19 @@ function Admin() {
     const every = setInterval(() => setTick((n) => n + 1), 15_000);
     return () => clearInterval(every);
   }, []);
+  const [busy, setBusy] = useState(false);
   const act = async (path: string, body: object) => {
+    if (busy) return false;
+    setBusy(true);
     const r = await api(path, body);
-    setMsg(r.ok ? null : `That didn't work (${r.error}).`);
+    setBusy(false);
+    setMsg(
+      r.ok
+        ? null
+        : r.error === 'request-answered'
+          ? 'That request was answered already.'
+          : `That didn't work (${r.error}).`,
+    );
     setTick((n) => n + 1);
     return r.ok;
   };
@@ -149,7 +159,7 @@ function Admin() {
   const waiting = s.requests.length;
 
   return (
-    <div className="admin">
+    <div className={`admin${busy ? ' busy' : ''}`}>
       <nav className="side">
         <Logo />
         {(['requests', 'people', 'settings'] as const).map((k) => (

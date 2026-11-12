@@ -10,7 +10,7 @@ import { LangPicker } from './LangPicker';
 import { t } from './texts';
 import { ask, useSession } from './useSession';
 
-const codeOf = (hash: string) => /^#([A-Za-z2-9]{5})$/.exec(hash)?.[1]?.toUpperCase();
+const codeOf = (hash: string) => /^#([A-Za-z2-9]{6})$/.exec(hash)?.[1]?.toUpperCase();
 
 export function ReaderPage() {
   const [code, setCode] = useState(() => codeOf(window.location.hash));
@@ -39,14 +39,14 @@ function CodeForm({ onCode, bad }: { onCode: (c: string) => void; bad?: boolean 
         <p className="s">{t.codeHelp}</p>
         <input
           className="input code"
-          maxLength={5}
+          maxLength={6}
           autoCapitalize="characters"
           autoComplete="off"
           value={value}
           aria-label={t.codeLabel}
           onChange={(e) => setValue(e.target.value.replace(/[^A-Za-z0-9]/g, ''))}
         />
-        <button className="btn main" disabled={value.length !== 5}>
+        <button className="btn main" disabled={value.length !== 6}>
           {t.join}
         </button>
         {bad && <div className="note bad">{t.noSession}</div>}

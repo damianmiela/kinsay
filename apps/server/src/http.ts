@@ -113,23 +113,32 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     const link = text(b.link, 100);
     if (!digits && !link) return fail(reply, 400, 'bad-code');
     const t = now();
+    // a link is 32 random bytes: nothing to guess, never held up by the digits' limits (audit 30)
+    if (link) {
+      const person = store.useCode('link', link);
+      if (!person) return fail(reply, 401, 'bad-code');
+      return signedIn(req, reply, person);
+    }
     if (codeIp.blocked(ip(req), t) || codeAll.blocked('all', t))
       return fail(reply, 429, 'too-many');
-    const person =
-      digits.length === 6
-        ? store.useCode('digits', digits)
-        : link
-          ? store.useCode('link', link)
-          : undefined;
+    const person = digits.length === 6 ? store.useCode('digits', digits) : undefined;
     if (!person) {
       codeIp.record(ip(req), t);
       codeAll.record('all', t);
       return fail(reply, 401, 'bad-code');
     }
+    return signedIn(req, reply, person);
+  });
+
+  function signedIn(
+    req: FastifyRequest,
+    reply: FastifyReply,
+    person: { id: number; name: string },
+  ) {
     const secret = store.signIn(person.id, label(req));
     reply.header('set-cookie', cookie(DEVICE_COOKIE, secret, DEVICE_DAYS * 86_400, secure(req)));
     return { ok: true, name: person.name };
-  });
+  }
 
   /** Which ways in this server offers (the sign-in page shows only those). */
   app.get('/api/config', () => ({
@@ -142,7 +151,7 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
    * An email's one-time link. The answer is the same whether the email is on the list or not
    * (nobody learns who is invited); a few a time per address and per email.
    */
-  app.post('/api/signin/email', async (req, reply) => {
+  app.post('/api/signin/email', (req, reply) => {
     if (!o.mail || !o.publicUrl) return fail(reply, 404, 'not-offered');
     const email = text(body(req).email, 254).toLowerCase();
     if (!EMAIL.test(email)) return fail(reply, 400, 'bad-email');
@@ -150,15 +159,17 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     if (!mailIp.take(ip(req), t)) return fail(reply, 429, 'too-many');
     const person = store.byEmail(email);
     if (person && !person.blocked && mailTo.take(email, t)) {
-      const { link } = store.newCode(person.id, MAIL_LINK_MS);
+      const { link } = store.newCode(person.id, MAIL_LINK_MS, false);
       const m = signInMail(
         person.name.split(/\s+/)[0] ?? person.name,
         `${o.publicUrl}/signin#t=${link}`,
       );
-      if (!(await o.mail(email, m.subject, m.text, m.html)))
-        warn('a sign-in email could not be sent');
+      // (never awaited: the time of the answer must not tell who is invited, audit 30)
+      void o.mail(email, m.subject, m.text, m.html).then((sent) => {
+        if (!sent) warn('a sign-in email could not be sent');
+      });
     }
-    return { ok: true };
+    return Promise.resolve({ ok: true });
   });
 
   // Google: off to Google with a cookie that remembers this sign-in's state, nonce and verifier
@@ -199,7 +210,10 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
 
   app.post('/api/signout', async (req, reply) => {
     const d = me(req);
-    if (d) store.signOut(d.deviceId);
+    if (d) {
+      store.signOut(d.deviceId);
+      o.realtime().signedOut({ deviceId: d.deviceId });
+    }
     reply.header('set-cookie', cookie(DEVICE_COOKIE, '', 0, secure(req)));
     return { ok: true };
   });
@@ -211,7 +225,7 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     const email = text(b.email, 254);
     if (!name || !EMAIL.test(email)) return fail(reply, 400, 'bad-request');
     if (!askIp.take(ip(req), now())) return fail(reply, 429, 'too-many');
-    store.askInvite(name, email);
+    if (!store.askInvite(name, email)) return fail(reply, 429, 'too-many');
     return { ok: true };
   });
 
@@ -219,6 +233,11 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
   app.get('/api/me', async (req, reply) => {
     const d = me(req);
     if (!d) return fail(reply, 401, 'signed-out');
+    // (a year from its last use, as the database keeps it: audit 30)
+    reply.header(
+      'set-cookie',
+      cookie(DEVICE_COOKIE, cookies(req)[DEVICE_COOKIE]!, DEVICE_DAYS * 86_400, secure(req)),
+    );
     return { ok: true, ...store.account(d.person.id, d.deviceId) };
   });
 
@@ -237,9 +256,10 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     const id = Number(body(req).id);
     if (body(req).all === true) {
       store.signOutAll(d.person.id);
+      o.realtime().signedOut({ personId: d.person.id });
       reply.header('set-cookie', cookie(DEVICE_COOKIE, '', 0, secure(req)));
-    } else if (Number.isSafeInteger(id)) {
-      store.signOut(id, d.person.id);
+    } else if (Number.isSafeInteger(id) && store.signOut(id, d.person.id)) {
+      o.realtime().signedOut({ deviceId: id, personId: d.person.id });
       if (id === d.deviceId) reply.header('set-cookie', cookie(DEVICE_COOKIE, '', 0, secure(req)));
     }
     return { ok: true };
@@ -276,8 +296,10 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
   });
 
   // (every /admin/api route: the admin only)
+  // (the route Fastify matched, decoded: "/admin/%61pi/…" is /admin/api/… too, audit 30)
   app.addHook('preHandler', async (req, reply) => {
-    if (req.url.startsWith('/admin/api/') && !admin(req)) return fail(reply, 401, 'admin-only');
+    const route = req.routeOptions.url ?? '';
+    if (route.startsWith('/admin/api/') && !admin(req)) return fail(reply, 401, 'admin-only');
   });
 
   app.get('/admin/api/state', () => ({
@@ -313,9 +335,15 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     ) {
       return fail(reply, 400, 'bad-amount');
     }
+    const requestId = b.requestId === undefined ? undefined : Number(b.requestId);
+    if (requestId !== undefined) {
+      const r = store.request(requestId);
+      if (!r || r.state !== 'waiting' || r.kind !== 'credits' || r.person_id !== personId) {
+        return fail(reply, 409, 'request-answered');
+      }
+      store.answer(requestId, 'granted');
+    }
     store.add(personId, kind, amount, { note: text(b.note, 200) || undefined });
-    const requestId = Number(b.requestId);
-    if (Number.isSafeInteger(requestId)) store.answer(requestId, 'granted');
     o.realtime().personChanged(personId);
     return { ok: true };
   });
@@ -349,7 +377,10 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
       ...(limit !== undefined ? { monthlyLimit: limit } : {}),
       ...(text(b.name, 80) ? { name: text(b.name, 80) } : {}),
     });
-    if (b.signOutAll === true) store.signOutAll(id);
+    if (b.signOutAll === true) {
+      store.signOutAll(id);
+      o.realtime().signedOut({ personId: id });
+    }
     o.realtime().personChanged(id);
     return { ok: true };
   });

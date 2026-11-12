@@ -36,7 +36,7 @@
   border-radius: 999px;
   background: var(--warn);
   color: #fff;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 22px;
 }
 .admin-main {
@@ -154,4 +154,9 @@
   .tbl td:nth-child(5) {
     display: none;
   }
+}
+/* (an action on its way: the buttons wait for it) */
+.admin.busy .admin-main .btn {
+  pointer-events: none;
+  opacity: 0.6;
 }

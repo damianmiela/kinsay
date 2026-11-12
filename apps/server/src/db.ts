@@ -15,6 +15,8 @@ export const token = () => randomBytes(32).toString('base64url');
 export const DEVICE_DAYS = 365;
 /** A sign-in code (6 digits or its QR link) works once, for this long. */
 export const CODE_MS = 10 * 60_000;
+/** Invitation requests waiting at once, at most. */
+export const INVITES_WAITING_MAX = 100;
 /** An email's sign-in link: once, for this long. */
 export const MAIL_LINK_MS = 15 * 60_000;
 
@@ -39,7 +41,7 @@ export interface Settings {
 
 const SCHEMA = `
 create table if not exists people (
-  id integer primary key,
+  id integer primary key autoincrement,
   name text not null,
   email text unique collate nocase,
   created text not null,
@@ -63,7 +65,8 @@ create table if not exists codes (
 );
 create table if not exists ledger (
   id integer primary key,
-  person_id integer not null references people(id) on delete cascade,
+  -- (null: a person deleted since: their use still counts for everyone's monthly limit)
+  person_id integer references people(id) on delete set null,
   at text not null,
   kind text not null,
   amount integer not null,
@@ -220,10 +223,15 @@ export class Store {
     return { person, deviceId: d.id };
   }
 
-  signOut(deviceId: number, personId?: number) {
-    if (personId === undefined) this.db.prepare('delete from devices where id = ?').run(deviceId);
-    else
-      this.db.prepare('delete from devices where id = ? and person_id = ?').run(deviceId, personId);
+  /** True when that device was signed in (and, with `personId`, theirs). */
+  signOut(deviceId: number, personId?: number): boolean {
+    const r =
+      personId === undefined
+        ? this.db.prepare('delete from devices where id = ?').run(deviceId)
+        : this.db
+            .prepare('delete from devices where id = ? and person_id = ?')
+            .run(deviceId, personId);
+    return Number(r.changes) > 0;
   }
   signOutAll(personId: number) {
     this.db.prepare('delete from devices where person_id = ?').run(personId);
@@ -231,16 +239,26 @@ export class Store {
 
   // ---------- sign-in codes (Damian signs a device in for someone) ----------
   /** A new code for a person: 6 digits to type, a link for the QR code. Older ones of theirs go. */
-  newCode(personId: number, ms = CODE_MS): { digits: string; link: string; expires: number } {
-    const digits = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  newCode(
+    personId: number,
+    ms = CODE_MS,
+    withDigits = true,
+  ): { digits: string; link: string; expires: number } {
+    const digits = withDigits ? String(randomInt(0, 1_000_000)).padStart(6, '0') : '';
     const link = token();
     const expires = this.now() + ms;
-    this.db
-      .prepare('delete from codes where person_id = ? or expires < ?')
-      .run(personId, this.now());
+    // an email's link has no digits to type (they would be more codes to guess, audit 30) and
+    // leaves the codes Damian made alone; the admin's new code replaces the person's older ones
+    if (withDigits) {
+      this.db
+        .prepare('delete from codes where person_id = ? or expires < ?')
+        .run(personId, this.now());
+    } else {
+      this.db.prepare('delete from codes where expires < ?').run(this.now());
+    }
     this.db
       .prepare('insert into codes (person_id, digits_hash, link_hash, expires) values (?, ?, ?, ?)')
-      .run(personId, sha256(digits), sha256(link), expires);
+      .run(personId, withDigits ? sha256(digits) : `none.${token()}`, sha256(link), expires);
     return { digits, link, expires };
   }
 
@@ -335,17 +353,23 @@ export class Store {
     return true;
   }
 
-  askInvite(name: string, email: string): void {
-    if (this.byEmail(email)) return;
+  /** False when too many invitations wait already (anyone can ask: audit 30). */
+  askInvite(name: string, email: string): boolean {
+    if (this.byEmail(email)) return true;
     const waiting = this.db
       .prepare(
         `select 1 from requests where kind = 'invite' and state = 'waiting' and email = ? collate nocase`,
       )
       .get(email.trim());
-    if (waiting) return;
+    if (waiting) return true;
+    const all = this.db
+      .prepare(`select count(*) n from requests where kind = 'invite' and state = 'waiting'`)
+      .get() as { n: number };
+    if (Number(all.n) >= INVITES_WAITING_MAX) return false;
     this.db
       .prepare(`insert into requests (email, name, kind, at) values (?, ?, 'invite', ?)`)
       .run(email.trim(), name.trim(), iso(this.now()));
+    return true;
   }
 
   waitingRequests() {

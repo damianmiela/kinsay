@@ -141,7 +141,8 @@ export function isSameOrigin(origin: string | undefined, host: string | undefine
   }
 }
 
-/** Readers' session codes: 5 characters without 0/O/1/I/L (as the wedding's links). */
+/** Readers' session codes: 6 characters without 0/O/1/I/L (887 million: audit 30). */
 export const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+export const CODE_LENGTH = 6;
 export const isSessionCode = (v: unknown): v is string =>
-  typeof v === 'string' && new RegExp(`^[${CODE_ALPHABET}]{5}$`).test(v);
+  typeof v === 'string' && new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`).test(v);

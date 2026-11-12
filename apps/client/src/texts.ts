@@ -81,6 +81,8 @@ export const t = {
   lowBody: (b: number) => `${euros(b)} left. Ask for more now so the captions don’t stop.`,
   askForMore: 'Ask for more',
   micProblem: 'The microphone didn’t start.',
+  micOff: 'This device’s microphone is off.',
+  micOn: 'Turn the microphone on',
   // readers
   hostsCaptions: (name: string) => `${name}’s captions`,
   waitingHost: (name: string) => `Waiting for ${name}`,

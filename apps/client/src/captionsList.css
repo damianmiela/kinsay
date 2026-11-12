@@ -129,7 +129,7 @@ html:has(.cap-page) body {
   border-radius: 999px;
   background: var(--accent-tint);
   color: var(--accent-strong);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   vertical-align: 3px;
 }

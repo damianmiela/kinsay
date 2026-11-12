@@ -80,7 +80,11 @@ async function start(speech = fakeSpeech(), price = 0.36 * EUR) {
     });
     return s;
   };
-  return { server, url, post, admin, person, sock, speech, t };
+  const get = async (path: string, cookie = '') => {
+    const r = await fetch(url + path, { headers: { cookie } });
+    return { status: r.status, json: (await r.json()) as Record<string, unknown> };
+  };
+  return { server, url, post, get, admin, person, sock, speech, t };
 }
 
 const next = <T>(s: Socket, ev: string, ok: (v: T) => boolean = () => true) =>
@@ -153,7 +157,7 @@ describe('captions', () => {
     const host = sock({ cookie: p.cookie });
     const first = await next<SessionView>(host, 'state:session');
     expect(first.role).toBe('host');
-    expect(first.code).toMatch(/^[A-Z2-9]{5}$/);
+    expect(first.code).toMatch(/^[A-Z2-9]{6}$/);
     expect(await ask(host, 'session:start', { lang: 'tl' })).toEqual({ ok: true });
     host.emit('host:audio', new Uint8Array(3200).buffer, {
       age: 0,
@@ -195,7 +199,7 @@ describe('captions', () => {
 
   it('a wrong code lets nobody in; a reader can never start or send audio', async () => {
     const { person, sock, speech } = await start();
-    const bad = sock({ code: 'ZZZZZ' });
+    const bad = sock({ code: 'ZZZZZZ' });
     await expect(new Promise((_, rej) => bad.on('connect_error', rej))).rejects.toThrow(
       'no-session',
     );
@@ -278,4 +282,93 @@ describe('captions', () => {
       });
     },
   );
+});
+
+describe('audit 30', () => {
+  it('an encoded address never gets round the admin gate', async () => {
+    const { url, post, person } = await start();
+    const p = await person('Marta');
+    for (const path of ['/admin/%61pi/state', '/%61dmin/api/state', '/admin/ap%69/state']) {
+      expect((await fetch(url + path)).status).toBe(401);
+    }
+    expect((await post('/admin/%61pi/signin-code', { id: p.id })).status).toBe(401);
+    expect((await post('/admin/%61pi/grant', { personId: p.id, amount: EUR })).status).toBe(401);
+  });
+
+  it("a grant for a request must be that person's waiting request, once", async () => {
+    const { post, get, admin, person } = await start();
+    const a = await person('Marta');
+    const b = await person('Ola');
+    expect((await post('/api/ask', { amount: 2 * EUR }, a.cookie)).status).toBe(200);
+    const st = await get('/admin/api/state', admin);
+    const id = (st.json.requests as { id: number }[])[0]!.id;
+    const grant = (personId: number) =>
+      post('/admin/api/grant', { personId, amount: 2 * EUR, requestId: id }, admin);
+    expect((await grant(b.id)).status).toBe(409);
+    expect((await grant(a.id)).status).toBe(200);
+    expect((await grant(a.id)).status).toBe(409); // (a double tap adds nothing)
+    const me = await get('/api/me', a.cookie);
+    expect(me.json.balance).toBe(3 * EUR);
+  });
+
+  it("an email link has no digits to type; the admin's code stays", async () => {
+    const { server, post, admin, person } = await start();
+    const p = await person('Marta');
+    const code = await post('/admin/api/signin-code', { id: p.id }, admin);
+    server.store.newCode(p.id, 15 * 60_000, false);
+    const rows = server.store.db.prepare('select digits_hash from codes').all() as {
+      digits_hash: string;
+    }[];
+    expect(rows.filter((r) => r.digits_hash.startsWith('none.'))).toHaveLength(1);
+    expect((await post('/api/signin/code', { digits: code.json.digits })).status).toBe(200);
+  });
+
+  it('signing a device out closes its page; deleting an account mid-session stops it, the server goes on', async () => {
+    const { post, person, sock, speech } = await start();
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    await next(host, 'state:session');
+    const gone = new Promise((r) => host.on('disconnect', r));
+    await post('/api/signout', {}, p.cookie);
+    await gone;
+
+    const q = await person('Ola');
+    const h2 = sock({ cookie: q.cookie });
+    const v = await next<SessionView>(h2, 'state:session');
+    await ask(h2, 'session:start', { lang: 'en' });
+    h2.emit('host:audio', new Uint8Array(3200).buffer, { age: 0, seq: 1, stream: 'mic-eeeeeeee' });
+    await next(h2, 'captions:ack');
+    const reader = sock({ code: v.code! });
+    await next(reader, 'state:session');
+    const closed = new Promise((r) => h2.on('disconnect', r));
+    expect((await post('/api/delete-account', {}, q.cookie)).status).toBe(200);
+    await closed;
+    // its code lets nobody in any more; the server still answers
+    const again = sock({ code: v.code! });
+    await expect(new Promise((_, rej) => again.on('connect_error', rej))).rejects.toThrow(
+      'no-session',
+    );
+    expect(speech.open()).toHaveLength(0);
+    const r = await person('Pia');
+    expect(r.cookie).toMatch(/^tr_device=/);
+  });
+
+  it('readers reconnecting often are never locked out; wrong codes are', async () => {
+    const { person, sock } = await start();
+    const host = sock({ cookie: (await person('Marta')).cookie });
+    const v = await next<SessionView>(host, 'state:session');
+    for (let i = 0; i < 25; i++) {
+      const r = sock({ code: v.code! });
+      await next(r, 'state:session');
+      r.close();
+    }
+    for (let i = 0; i < 20; i++) {
+      const bad = sock({ code: 'ZZZZZZ' });
+      await new Promise((res) => bad.on('connect_error', res));
+    }
+    const late = sock({ code: v.code! });
+    await expect(new Promise((_, rej) => late.on('connect_error', rej))).rejects.toThrow(
+      'too-many',
+    );
+  });
 });
