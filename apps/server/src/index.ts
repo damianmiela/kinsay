@@ -1,8 +1,10 @@
 // Starts the server from the environment (.env in the project root; see .env.example).
+import { lookup } from 'node:dns/promises';
 import { resolve } from 'node:path';
 import { EUR } from '@translate/shared';
 import { sonioxConnect } from './engine';
 import { brevoMailer } from './signin';
+import type { TrustProxy } from './auth';
 import { createServer } from './server';
 
 const env = process.env;
@@ -28,7 +30,7 @@ if (price < 0)
 
 // this app's own address: the links in emails and Google's way back
 const publicUrl = env.PUBLIC_URL?.replace(/\/+$/, '') || undefined;
-if (publicUrl && !/^https?:\/\/[^/]+$/.test(publicUrl))
+if (publicUrl && !/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(publicUrl))
   fail('PUBLIC_URL must look like https://translate.example.com');
 const mail =
   env.BREVO_API_KEY && env.MAIL_FROM
@@ -38,6 +40,22 @@ const google =
   env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && publicUrl
     ? { clientId: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET, publicUrl }
     : undefined;
+
+// whose X-Forwarded-For counts: with TRUST_PROXY_FROM (the proxy's container name, e.g.
+// proxy-npm-1) only that container's addresses, looked up with Docker's DNS and again every minute
+// (a restarted proxy may get a new one); the other containers on the same network never (audit 31)
+let trustProxy: TrustProxy = env.TRUST_PROXY === 'true';
+const proxyName = env.TRUST_PROXY_FROM;
+if (trustProxy && proxyName) {
+  let proxies = new Set<string>();
+  const find = async () => {
+    const found = await lookup(proxyName, { all: true });
+    proxies = new Set(found.map((a) => a.address));
+  };
+  await find().catch(() => fail(`TRUST_PROXY_FROM: ${proxyName} can't be found.`));
+  setInterval(() => void find().catch(() => {}), 60_000).unref();
+  trustProxy = (address) => proxies.has(address);
+}
 
 const root = resolve(import.meta.dirname, '../../..');
 const port = Number(env.PORT ?? 3300);
@@ -52,7 +70,7 @@ const server = await createServer({
     monthlyLimit: euro('MONTHLY_LIMIT_EUR', 5),
     globalLimit: euro('GLOBAL_LIMIT_EUR', 20),
   },
-  trustProxy: env.TRUST_PROXY === 'true',
+  trustProxy,
   mail,
   google,
   publicUrl,

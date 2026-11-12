@@ -25,6 +25,7 @@ import {
   isSameOrigin,
   isSessionCode,
   parseCookies,
+  type TrustProxy,
 } from './auth';
 import type { Person, Store } from './db';
 import { Engine, isTarget, StreamPool, type SpeechConnect } from './engine';
@@ -88,7 +89,7 @@ export interface RealtimeOptions {
   store: Store;
   speech: SpeechConnect | null;
   streams: number;
-  trustProxy: boolean;
+  trustProxy: TrustProxy;
   now?: () => number;
   warn?: (m: string) => void;
 }

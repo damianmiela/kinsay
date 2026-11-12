@@ -17,10 +17,19 @@ services:
       options:
         max-size: 10m
         max-file: '3'
+    # hardening (audit 31): nothing written outside data/, no privileges, a share of the 4 cores
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    pids_limit: 256
+    cpus: 2
     environment:
-      # no port is published: only Nginx Proxy Manager (on the proxy network) can reach it, so its
-      # X-Forwarded-For can be trusted
+      # no port is published, but the other projects' containers on the proxy network can reach this
+      # one too: only Nginx Proxy Manager's own X-Forwarded-For counts (its container's name, looked
+      # up with Docker's DNS; audit 31)
       TRUST_PROXY: 'true'
+      TRUST_PROXY_FROM: proxy-npm-1
     networks:
       - proxy
 

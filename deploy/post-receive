@@ -5,6 +5,8 @@
 # The code goes to /srv/translate; its .env and data/ (never in git) stay as they are.
 #
 set -e
+# (the hook's own exit is the deploy's, not tee's: a failed one says so; audit 31)
+set -o pipefail
 
 APP_NAME="translate"
 REPO_DIR="/opt/${APP_NAME}-deploy.git"
@@ -40,7 +42,8 @@ export COMPOSE_DOCKER_CLI_BUILD=1
         chown 1000:1000 data
 
         echo ">>> Building (with the tests) and restarting the container..."
-        docker compose build
+        # (--pull: the base image's security updates come with every deploy; audit 31)
+        docker compose build --pull
         docker compose up -d --remove-orphans
 
         echo ">>> Waiting for the health check..."
@@ -63,4 +66,7 @@ export COMPOSE_DOCKER_CLI_BUILD=1
         echo ">>> Branch $LAST_REF ignored: only main deploys."
     fi
 
-} 2>&1 | tee -a "${LOG_FILE}"
+} 2>&1 | tee -a "${LOG_FILE}" || {
+    echo ">>> DEPLOY FAILED: see above (the app that was running keeps running unless it said unhealthy)" | tee -a "${LOG_FILE}"
+    exit 1
+}

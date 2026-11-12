@@ -4,6 +4,7 @@
 _docs
 CLAUDE.md
 data
+deploy.log
 backups
 
 # Not needed to build (tests/ is: the build runs npm run check)

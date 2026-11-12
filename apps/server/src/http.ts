@@ -16,6 +16,7 @@ import {
   isSameOrigin,
   parseCookies,
   samePassword,
+  type TrustProxy,
 } from './auth';
 import { DEVICE_DAYS, MAIL_LINK_MS, type Store } from './db';
 import {
@@ -33,7 +34,7 @@ export interface HttpOptions {
   realtime: () => Realtime;
   adminPassword: string;
   secret: string;
-  trustProxy: boolean;
+  trustProxy: TrustProxy;
   /** Sign-in links by email (none: not offered). */
   mail?: Mailer;
   /** Google's sign-in (none: not offered). */
@@ -64,8 +65,10 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
   const GOOGLE_COOKIE = 'tr_google';
 
   const ip = (req: FastifyRequest) => ipBucket(clientIp(req.raw, o.trustProxy));
+  // (Fastify reads X-Forwarded-Proto only from the trusted proxy; an https PUBLIC_URL is always
+  // reached through TLS, whatever a header says: audit 31)
   const secure = (req: FastifyRequest) =>
-    req.protocol === 'https' || (o.trustProxy && req.headers['x-forwarded-proto'] === 'https');
+    req.protocol === 'https' || !!o.publicUrl?.startsWith('https://');
   const cookies = (req: FastifyRequest) => parseCookies(req.headers.cookie);
   const me = (req: FastifyRequest) => store.device(cookies(req)[DEVICE_COOKIE]);
   const admin = (req: FastifyRequest) =>

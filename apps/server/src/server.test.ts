@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { io as connect, type Socket } from 'socket.io-client';
 import { EUR, HEARD, type Ack, type SessionView } from '@translate/shared';
-import { createServer } from './server';
+import { createServer, type Config } from './server';
 import type { SpeechConnect, SpeechEvents, SpeechStream } from './engine';
 
 const ADMIN = 'admin-password-for-tests';
@@ -30,7 +30,7 @@ function fakeSpeech() {
   return { connect, streams, open: () => streams.filter((s) => !s.ended) };
 }
 
-async function start(speech = fakeSpeech(), price = 0.36 * EUR) {
+async function start(speech = fakeSpeech(), price = 0.36 * EUR, extra: Partial<Config> = {}) {
   const t = { now: 1_800_000_000_000 };
   const server = await createServer({
     adminPassword: ADMIN,
@@ -41,6 +41,7 @@ async function start(speech = fakeSpeech(), price = 0.36 * EUR) {
     defaults: { pricePerHour: price, monthlyLimit: 5 * EUR, globalLimit: 20 * EUR },
     trustProxy: false,
     now: () => t.now,
+    ...extra,
   });
   await server.app.listen({ port: 0, host: '127.0.0.1' });
   const addr = server.app.server.address();
@@ -370,5 +371,39 @@ describe('audit 30', () => {
     await expect(new Promise((_, rej) => late.on('connect_error', rej))).rejects.toThrow(
       'too-many',
     );
+  });
+});
+
+describe('audit 31', () => {
+  /** Wrong admin logins, each claiming another address: how many got past the brake. */
+  const tries = async (url: string) => {
+    let refused = 0;
+    for (let i = 0; i < 12; i++) {
+      const r = await fetch(url + '/admin/login', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: url,
+          'x-forwarded-for': `203.0.113.${i}`,
+        },
+        body: JSON.stringify({ password: 'wrong' }),
+      });
+      if (r.status === 429) refused++;
+    }
+    return refused;
+  };
+
+  it("only the proxy's own X-Forwarded-For counts; another container's is its own address", async () => {
+    const other = await start(fakeSpeech(), 0.36 * EUR, { trustProxy: (a) => a === '10.0.0.99' });
+    expect(await tries(other.url)).toBeGreaterThan(0);
+    const proxy = await start(fakeSpeech(), 0.36 * EUR, { trustProxy: (a) => a === '127.0.0.1' });
+    expect(await tries(proxy.url)).toBe(0);
+  });
+
+  it('cookies are Secure whenever the public address is https', async () => {
+    const { post } = await start(fakeSpeech(), 0.36 * EUR, {
+      publicUrl: 'https://translate.example.com',
+    });
+    expect((await post('/admin/login', { password: ADMIN })).cookie).toMatch(/;\s*Secure/i);
   });
 });

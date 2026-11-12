@@ -112,19 +112,32 @@ export class RateLimiter {
 }
 
 /**
- * The client's address: the last X-Forwarded-For entry behind a trusted proxy (the proxy adds it;
- * the first one is whatever the client wrote), else the socket's.
+ * Whose X-Forwarded-For counts: nobody (false), anyone (true: tests, a proxy on the same machine) or
+ * the addresses a check accepts (the server: only Nginx Proxy Manager's container, since the other
+ * projects' containers on the same Docker network reach this one directly; audit 31).
+ */
+export type TrustProxy = boolean | ((address: string) => boolean);
+
+/** Does this connection come from the trusted proxy? (IPv4 may come as `::ffff:1.2.3.4`.) */
+export function fromProxy(trust: TrustProxy, address: string | undefined): boolean {
+  if (typeof trust === 'boolean') return trust;
+  return !!address && trust(address.replace(/^::ffff:/, ''));
+}
+
+/**
+ * The client's address: the last X-Forwarded-For entry when the connection comes from the trusted
+ * proxy (the proxy adds it; the first one is whatever the client wrote), else the socket's.
  */
 export function clientIp(
   req: {
     headers: Record<string, string | string[] | undefined>;
     socket: { remoteAddress?: string };
   },
-  trustProxy: boolean,
+  trust: TrustProxy,
 ): string {
   const remote = req.socket.remoteAddress ?? '';
   const forwarded = req.headers['x-forwarded-for'];
-  const last = trustProxy
+  const last = fromProxy(trust, remote)
     ? (Array.isArray(forwarded) ? forwarded.join(',') : (forwarded ?? '')).split(',').at(-1)?.trim()
     : undefined;
   return last || remote || 'unknown';

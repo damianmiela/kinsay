@@ -3,6 +3,7 @@ import fastifyStatic from '@fastify/static';
 import Fastify from 'fastify';
 import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
+import { fromProxy, type TrustProxy } from './auth';
 import { routes } from './http';
 import { Store, type Settings } from './db';
 import type { SpeechConnect } from './engine';
@@ -17,7 +18,7 @@ export interface Config {
   /** Soniox streams this app may hold at once (they are counted per Soniox organization). */
   streams: number;
   defaults: Settings;
-  trustProxy: boolean;
+  trustProxy: TrustProxy;
   mail?: Mailer;
   google?: GoogleConfig;
   publicUrl?: string;
@@ -32,7 +33,18 @@ export interface Config {
 const PAGES = new Set(['/', '/join', '/signin', '/account', '/admin']);
 
 export async function createServer(c: Config) {
-  const app = Fastify({ logger: c.logger ?? false, trustProxy: c.trustProxy, bodyLimit: 16_384 });
+  // (one hop, the proxy's own: request.ip and protocol agree with clientIp(); audit 31)
+  const trust = c.trustProxy;
+  const trustProxy =
+    trust !== false && ((address: string, hop: number) => hop === 0 && fromProxy(trust, address));
+  const app = Fastify({
+    logger: c.logger ?? false,
+    trustProxy,
+    // (no line per request: addresses are personal data, and the proxy's log has them; errors and
+    // warnings still log: audit 31)
+    disableRequestLogging: true,
+    bodyLimit: 16_384,
+  });
   const store = new Store(c.dbFile, c.defaults, c.now);
   // (the routes need the realtime part, which needs the HTTP server ready first)
   const rt: { now?: Realtime } = {};
