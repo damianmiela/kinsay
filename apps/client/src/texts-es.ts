@@ -105,6 +105,10 @@ export const es: Texts = {
       'Vuelve a empezar el mes que viene, o pide que lo suban.',
     ],
     stop_global: ['El servicio de traducción está lleno este mes', 'Inténtalo más tarde.'],
+    stop_quiet: ['Parado: nadie ha hablado en 15 minutos', 'Pulsa Empezar para seguir.'],
+    stop_hours: ['Parado tras 4 horas', 'Pulsa Empezar para seguir.'],
+    stillListening: (time) => `¿Sigues escuchando? Los subtítulos se paran a las ${time}.`,
+    keepGoing: 'Seguir',
     stop_blocked: ['Esta cuenta está bloqueada', 'Pregunta a quien te invitó.'],
     serviceDown: [
       'El servicio de traducción tiene un problema',

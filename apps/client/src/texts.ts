@@ -113,6 +113,10 @@ const t_en = {
     'It starts again next month, or ask to raise it.',
   ],
   stop_global: ['The translation service is full this month', 'Try again later.'],
+  stop_quiet: ['Stopped: nobody spoke for 15 minutes', 'Press Start to go on.'],
+  stop_hours: ['Stopped after 4 hours', 'Press Start to go on.'],
+  stillListening: (time: string) => `Still listening? The captions stop at ${time}.`,
+  keepGoing: 'Keep going',
   stop_blocked: ['This account is blocked', 'Ask the person who invited you.'],
   serviceDown: [
     'The translation service has a problem',
@@ -204,6 +208,10 @@ const privacy_en = {
   ],
   contactTitle: 'Contact',
 } as const;
+
+/** A time of day in the page's language ("14:05", "2:05 PM"). */
+export const clock = (ms: number) =>
+  new Date(ms).toLocaleTimeString(ui, { hour: '2-digit', minute: '2-digit' });
 
 /** "1 h 05 min" / "25 min" / "40 s". */
 export function duration(seconds: number): string {

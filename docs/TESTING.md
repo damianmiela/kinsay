@@ -66,3 +66,9 @@ The texts are drafts: a native speaker of each language should read every page o
 - [ ] A sign-in email asked for from a Polish page comes in Polish.
 - [ ] The privacy page in each language says the same as the English one.
 - [ ] Long German texts fit at phone width and in the window (nothing cut off, no sideways scrolling).
+
+## 5. Sessions stop by themselves (2026-11-12)
+
+- [ ] Start captions and say nothing (or leave the phone in a quiet room) for 15 minutes: the session stops and says "nobody spoke for 15 minutes"; nothing more is charged.
+- [ ] Optional, a long session (a TV or radio playing): after 3 h 50 min "Still listening? The captions stop at …" with Keep going, on the phone and in the desktop window; Keep going: 4 more hours. Without it: stopped after 4 hours, "Stopped after 4 hours".
+- [ ] A reader never sees "Still listening?".

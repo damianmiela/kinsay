@@ -9,7 +9,7 @@ import { LangPicker } from './LangPicker';
 import { langName } from './langs';
 import { useMic } from './mic/useMic';
 import { Qr } from './Qr';
-import { stopText, t, tw } from './texts';
+import { clock, stopText, t, tw } from './texts';
 import { ask, useSession } from './useSession';
 
 export function HostPage() {
@@ -159,6 +159,18 @@ export function HostPage() {
           <div className="note warn" onClick={() => setLowSeen(true)}>
             <b>{t.lowTitle}</b>
             {t.lowBody(Math.max(0, view.balance ?? 0))}
+          </div>
+        )}
+        {view.stopsAt && (
+          <div className="note warn">
+            <b>{t.stillListening(clock(view.stopsAt))}</b>
+            <button
+              className="btn main"
+              style={{ marginTop: 8 }}
+              onClick={() => void ask('session:keepGoing')}
+            >
+              {t.keepGoing}
+            </button>
           </div>
         )}
         {!mic.sending && (

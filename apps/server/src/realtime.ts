@@ -44,6 +44,12 @@ export const LANG_SWITCHES_PER_MIN = 10;
 export const CODE_FAILS_MAX = 20;
 /** A channel nobody uses is forgotten after this long (its code with it). */
 const IDLE_CHANNEL_MS = 10 * 60_000;
+/** No words this long: nobody talks (a phone forgotten in a bag), the session stops (as /live's). */
+export const QUIET_STOP_MS = 15 * 60_000;
+/** A session stops after this long unless the host keeps it going (a TV keeps words coming). */
+export const HOURS_MS = 4 * 3_600_000;
+/** "Still listening?" shows this long before that stop. */
+export const ASK_MS = 10 * 60_000;
 const TEXT_EVERY_MS = 150;
 /** Audio streams of a page remembered per channel (their last chunk number; audit 30). */
 const SEQS_MAX = 20;
@@ -74,6 +80,9 @@ interface Channel {
   sockets: Set<S>;
   textTimer?: NodeJS.Timeout;
   idleSince: number;
+  /** When words last came (the quiet stop) and when the running session's hours are up. */
+  wordsAt: number;
+  keepUntil: number;
 }
 
 interface Data {
@@ -145,11 +154,16 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       seqs: new Map(),
       sockets: new Set(),
       idleSince: now(),
+      wordsAt: 0,
+      keepUntil: 0,
       engine: undefined as unknown as Engine,
     };
     ch.engine = new Engine(
       o.speech,
-      () => textSoon(ch),
+      () => {
+        ch.wordsAt = now();
+        textSoon(ch);
+      },
       () => stateAll(ch),
       (ms, streams) => sent(ch, ms, streams),
       now,
@@ -183,6 +197,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     if (s.data.role === 'host') {
       v.code = c.code;
       v.balance = o.store.balance(c.personId) - (c.cost - c.written);
+      if (c.running && now() >= c.keepUntil - ASK_MS) v.stopsAt = c.keepUntil;
     }
     return v;
   }
@@ -298,6 +313,26 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     }
   }
 
+  /**
+   * Sessions that run without anyone: no words for QUIET_STOP_MS, or their hours are up; the
+   * host's pages are asked first ("Still listening?") from ASK_MS before (as /live's).
+   */
+  const asked = new Set<Channel>();
+  function checkStops() {
+    for (const c of byPerson.values()) {
+      if (!c.running) continue;
+      const t = now();
+      if (t - c.wordsAt >= QUIET_STOP_MS) stop(c, 'quiet');
+      else if (t >= c.keepUntil) stop(c, 'hours');
+      else if (t >= c.keepUntil - ASK_MS && !asked.has(c)) {
+        asked.add(c);
+        stateAll(c);
+      }
+    }
+  }
+  const stops = setInterval(checkStops, 15_000);
+  stops.unref();
+
   // forget channels nobody uses
   const tidy = setInterval(() => {
     for (const c of byPerson.values()) {
@@ -398,6 +433,9 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       if (!c.running) {
         c.running = true;
         c.stopped = undefined;
+        c.wordsAt = now();
+        c.keepUntil = now() + HOURS_MS;
+        asked.delete(c);
         c.flushedAt = now();
         c.balanceAt = o.store.balance(c.personId);
         // (a new day: a new code, the old one no longer lets anyone in)
@@ -417,6 +455,14 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     s.on('session:stop', (cb) => {
       if (!host()) return reply(cb, { ok: false, error: 'not-host' });
       stop(c, 'ended');
+      reply(cb, { ok: true });
+    });
+
+    s.on('session:keepGoing', (cb) => {
+      if (!host() || !c.running) return reply(cb, { ok: false, error: 'not-host' });
+      c.keepUntil = now() + HOURS_MS;
+      asked.delete(c);
+      stateAll(c);
       reply(cb, { ok: true });
     });
 
@@ -467,10 +513,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     io,
     personChanged,
     signedOut,
+    /** The automatic stops, at once (tests; the server checks every 15 s). */
+    checkStops,
     /** For the admin: sessions running now. */
     running: () => [...byPerson.values()].filter((c) => c.running).length,
     close() {
       clearInterval(tidy);
+      clearInterval(stops);
       for (const c of byPerson.values()) {
         if (c.running) flush(c, false);
         c.engine.close();

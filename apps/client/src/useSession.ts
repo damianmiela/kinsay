@@ -51,7 +51,7 @@ export function ask(
   event: 'session:start' | 'session:lang',
   payload: { lang: string | null },
 ): Promise<string | null>;
-export function ask(event: 'session:stop'): Promise<string | null>;
+export function ask(event: 'session:stop' | 'session:keepGoing'): Promise<string | null>;
 export async function ask(event: string, payload?: unknown): Promise<string | null> {
   try {
     const s = socket.timeout(10_000) as unknown as {

@@ -14,7 +14,7 @@ import { langName } from './langs';
 import { useMic } from './mic/useMic';
 import { Qr } from './Qr';
 import { useStored } from './store';
-import { stopText, t, tw } from './texts';
+import { clock, stopText, t, tw } from './texts';
 import { ask, useSession } from './useSession';
 import './window.css';
 
@@ -431,6 +431,14 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
         </div>
       )}
       {!panel && note && <Note note={note} />}
+      {host && view.stopsAt && (
+        <div className="lw-note warn">
+          <b>{t.stillListening(clock(view.stopsAt))}</b>{' '}
+          <button className="lw-small" onClick={() => void ask('session:keepGoing')}>
+            {t.keepGoing}
+          </button>
+        </div>
+      )}
       {host && view.running && !mic.sending && (
         <div className="lw-note">
           <b>{tw.resume}</b>{' '}

@@ -103,6 +103,10 @@ export const pl: Texts = {
       'Zacznie się od nowa w przyszłym miesiącu albo poproś o jego podniesienie.',
     ],
     stop_global: ['Usługa tłumaczenia jest w tym miesiącu wyczerpana', 'Spróbuj ponownie później.'],
+    stop_quiet: ['Zatrzymano: nikt nie mówił przez 15 minut', 'Naciśnij Start, aby kontynuować.'],
+    stop_hours: ['Zatrzymano po 4 godzinach', 'Naciśnij Start, aby kontynuować.'],
+    stillListening: (time) => `Nadal słuchasz? Napisy skończą się o ${time}.`,
+    keepGoing: 'Kontynuuj',
     stop_blocked: ['To konto jest zablokowane', 'Zapytaj osobę, która Cię zaprosiła.'],
     serviceDown: [
       'Usługa tłumaczenia ma problem',

@@ -541,3 +541,75 @@ describe('audit 32', () => {
     expect(((await get('/api/me', p.cookie)).json.devices as unknown[]).length).toBe(1);
   });
 });
+
+describe('sessions stop by themselves (as /live did)', () => {
+  /** A host with a session running; `words` sends audio (as a microphone does) and words back. */
+  const running = async () => {
+    const env = await start();
+    const p = await env.person('Marta');
+    const host = env.sock({ cookie: p.cookie });
+    const first = await next<SessionView>(host, 'state:session');
+    expect(await ask(host, 'session:start', { lang: 'pl' })).toEqual({ ok: true });
+    let seq = 0;
+    const audio = async () => {
+      host.emit('host:audio', new Uint8Array(3200).buffer, {
+        age: 0,
+        seq: ++seq,
+        stream: 'mic-aaaaaaaa',
+      });
+      await next(host, 'captions:ack');
+    };
+    await audio();
+    const words = async (text: string) => {
+      await audio();
+      // (stopped meanwhile: no stream to speak through)
+      env.speech
+        .open()[0]
+        ?.events.tokens([{ text, translation_status: 'translation' }, { text: '<end>' }]);
+    };
+    return { ...env, host, words, code: first.code! };
+  };
+
+  it('15 minutes without words: stopped, and the host is told why', async () => {
+    const { server, host, words, t } = await running();
+    t.now += 14 * 60_000;
+    await words('Jeszcze tu jestem.');
+    t.now += 14 * 60_000;
+    server.realtime.checkStops();
+    t.now += 60_000 + 1;
+    const gone = next<SessionView>(host, 'state:session', (v) => !v.running);
+    server.realtime.checkStops();
+    expect((await gone).stopped).toBe('quiet');
+  });
+
+  it('after 4 hours: asked first ("Still listening?"); Keep going gives 4 more; else stopped', async () => {
+    const { server, host, words, t } = await running();
+    const talk = async (minutes: number) => {
+      for (let m = 0; m < minutes; m += 10) {
+        t.now += 10 * 60_000;
+        await words('Dalej rozmawiamy.');
+        server.realtime.checkStops();
+      }
+    };
+    await talk(220); // (3 h 40 min: no question yet)
+    const askedAt = next<SessionView>(host, 'state:session', (v) => !!v.stopsAt);
+    await talk(10);
+    const v = await askedAt;
+    expect(v.running).toBe(true);
+    expect(v.stopsAt! - t.now).toBeLessThanOrEqual(10 * 60_000);
+    const kept = next<SessionView>(host, 'state:session', (x) => x.running && !x.stopsAt);
+    expect(await ask(host, 'session:keepGoing')).toEqual({ ok: true });
+    await kept;
+    await talk(230); // (past the first 4 hours: still running)
+    const stopped = next<SessionView>(host, 'state:session', (x) => !x.running);
+    await talk(20);
+    expect((await stopped).stopped).toBe('hours');
+  });
+
+  it('a reader can never keep a session going', async () => {
+    const { sock, code } = await running();
+    const reader = sock({ code });
+    await next(reader, 'state:session');
+    expect(await ask(reader, 'session:keepGoing')).toEqual({ ok: false, error: 'not-host' });
+  });
+});

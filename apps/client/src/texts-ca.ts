@@ -106,6 +106,10 @@ export const ca: Texts = {
       'Torna a començar el mes que ve, o demana que te l’apugin.',
     ],
     stop_global: ['El servei de traducció és ple aquest mes', 'Torna-ho a provar més tard.'],
+    stop_quiet: ['Aturat: ningú no ha parlat en 15 minuts', 'Prem Comença per continuar.'],
+    stop_hours: ['Aturat després de 4 hores', 'Prem Comença per continuar.'],
+    stillListening: (time) => `Encara escoltes? Els subtítols s’aturen a les ${time}.`,
+    keepGoing: 'Continua',
     stop_blocked: ['Aquest compte està bloquejat', 'Pregunta a qui et va convidar.'],
     serviceDown: [
       'El servei de traducció té un problema',

@@ -111,8 +111,11 @@ export interface SessionView {
   balance?: number;
   /** Why the session can't go on, for the page to say (see STOP_REASONS). */
   stopped?: StopReason;
+  /** The host only, shortly before: the session stops at this time unless they keep it going. */
+  stopsAt?: number;
 }
-export type StopReason = 'credits' | 'monthly' | 'global' | 'ended' | 'blocked';
+/** Why a session stopped: `quiet` no words for a while, `hours` its hours were up (as /live's). */
+export type StopReason = 'credits' | 'monthly' | 'global' | 'ended' | 'blocked' | 'quiet' | 'hours';
 
 /** Every socket action answers with this. */
 export type Ack = { ok: true } | { ok: false; error: string };
@@ -131,6 +134,8 @@ export interface AudioMeta {
 export interface ClientToServerEvents {
   'session:start': Action<{ lang: Target | null }>;
   'session:stop': Action;
+  /** The host: the session goes on for another few hours ("Still listening?"). */
+  'session:keepGoing': Action;
   /** The page's language (host or reader): null = what is heard only. */
   'session:lang': Action<{ lang: Target | null }>;
   'host:audio': (chunk: ArrayBuffer, meta: AudioMeta) => void;

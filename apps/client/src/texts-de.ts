@@ -110,6 +110,13 @@ export const de: Texts = {
       'Der Übersetzungsdienst ist diesen Monat ausgeschöpft',
       'Versuch es später noch einmal.',
     ],
+    stop_quiet: [
+      'Gestoppt: 15 Minuten lang hat niemand gesprochen',
+      'Tipp auf Starten, um weiterzumachen.',
+    ],
+    stop_hours: ['Nach 4 Stunden gestoppt', 'Tipp auf Starten, um weiterzumachen.'],
+    stillListening: (time) => `Hörst du noch zu? Die Untertitel stoppen um ${time}.`,
+    keepGoing: 'Weiter',
     stop_blocked: ['Dieses Konto ist gesperrt', 'Frag die Person, die dich eingeladen hat.'],
     serviceDown: [
       'Der Übersetzungsdienst hat ein Problem',
