@@ -22,3 +22,13 @@ Open http://localhost:3300/admin on the computer, and http://<the computer's add
 - [ ] Account: the balance in euros, one line per session with its language and length, "Ask for more" (€1/2/5/10) shows in the admin's Requests; one tap there grants it.
 - [ ] Admin Settings: the price and the limits save. A person's monthly limit; Block signs their devices out and stops their captions.
 - [ ] With very little credit left (a correction in the admin), a running session stops by itself and says "Out of credits".
+
+## 2. Email links and Google (2026-11-12)
+
+In `.env`: `PUBLIC_URL=http://localhost:3300` (later the real address), `BREVO_API_KEY`, `MAIL_FROM` (a sender Brevo knows), and Google's `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Then `npm run build; npm start`.
+
+- [ ] The sign-in page shows the email field and "Continue with Google" (each only when its keys are set).
+- [ ] An invited person's email: "Check your email"; the email comes from the sender set, with a "Sign in to Translate" button.
+- [ ] The link opens "Sign in on this device?": one tap signs in. The same link again: "doesn't work any more".
+- [ ] An email that isn't invited: the same "Check your email" answer, and no email arrives.
+- [ ] Google with an invited email: straight into Home. With another Google account: "no invitation yet" and the invitation form open.

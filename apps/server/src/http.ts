@@ -17,7 +17,15 @@ import {
   parseCookies,
   samePassword,
 } from './auth';
-import { DEVICE_DAYS, type Store } from './db';
+import { DEVICE_DAYS, MAIL_LINK_MS, type Store } from './db';
+import {
+  GOOGLE_CALLBACK,
+  googleFinish,
+  googleStart,
+  signInMail,
+  type GoogleConfig,
+  type Mailer,
+} from './signin';
 import type { Realtime } from './realtime';
 
 export interface HttpOptions {
@@ -26,7 +34,16 @@ export interface HttpOptions {
   adminPassword: string;
   secret: string;
   trustProxy: boolean;
+  /** Sign-in links by email (none: not offered). */
+  mail?: Mailer;
+  /** Google's sign-in (none: not offered). */
+  google?: GoogleConfig;
+  /** This app's own address (https://…), for the links in emails. */
+  publicUrl?: string;
   now?: () => number;
+  /** (tests: a fake Google) */
+  fetch?: typeof fetch;
+  warn?: (m: string) => void;
 }
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
@@ -41,6 +58,10 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
   const codeAll = new RateLimiter(60, 15 * 60_000);
   const loginIp = new RateLimiter(10, 15 * 60_000);
   const askIp = new RateLimiter(5, 60 * 60_000);
+  const mailIp = new RateLimiter(5, 15 * 60_000);
+  const mailTo = new RateLimiter(3, 60 * 60_000);
+  const warn = o.warn ?? (() => {});
+  const GOOGLE_COOKIE = 'tr_google';
 
   const ip = (req: FastifyRequest) => ipBucket(clientIp(req.raw, o.trustProxy));
   const secure = (req: FastifyRequest) =>
@@ -108,6 +129,72 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     const secret = store.signIn(person.id, label(req));
     reply.header('set-cookie', cookie(DEVICE_COOKIE, secret, DEVICE_DAYS * 86_400, secure(req)));
     return { ok: true, name: person.name };
+  });
+
+  /** Which ways in this server offers (the sign-in page shows only those). */
+  app.get('/api/config', () => ({
+    ok: true,
+    email: !!o.mail && !!o.publicUrl,
+    google: !!o.google,
+  }));
+
+  /**
+   * An email's one-time link. The answer is the same whether the email is on the list or not
+   * (nobody learns who is invited); a few a time per address and per email.
+   */
+  app.post('/api/signin/email', async (req, reply) => {
+    if (!o.mail || !o.publicUrl) return fail(reply, 404, 'not-offered');
+    const email = text(body(req).email, 254).toLowerCase();
+    if (!EMAIL.test(email)) return fail(reply, 400, 'bad-email');
+    const t = now();
+    if (!mailIp.take(ip(req), t)) return fail(reply, 429, 'too-many');
+    const person = store.byEmail(email);
+    if (person && !person.blocked && mailTo.take(email, t)) {
+      const { link } = store.newCode(person.id, MAIL_LINK_MS);
+      const m = signInMail(
+        person.name.split(/\s+/)[0] ?? person.name,
+        `${o.publicUrl}/signin#t=${link}`,
+      );
+      if (!(await o.mail(email, m.subject, m.text, m.html)))
+        warn('a sign-in email could not be sent');
+    }
+    return { ok: true };
+  });
+
+  // Google: off to Google with a cookie that remembers this sign-in's state, nonce and verifier
+  app.get('/api/google/start', (req, reply) => {
+    if (!o.google) return fail(reply, 404, 'not-offered');
+    const { url, memo } = googleStart(o.google);
+    reply.header('set-cookie', cookie(GOOGLE_COOKIE, memo, 600, secure(req)));
+    return reply.redirect(url);
+  });
+  app.get(GOOGLE_CALLBACK, async (req, reply) => {
+    if (!o.google) return fail(reply, 404, 'not-offered');
+    const r = await googleFinish(
+      o.google,
+      req.query as Record<string, unknown>,
+      cookies(req)[GOOGLE_COOKIE],
+      now(),
+      o.fetch,
+    );
+    const cookiesOut = [cookie(GOOGLE_COOKIE, '', 0, secure(req))];
+    let to = '/#google-failed';
+    if ('email' in r) {
+      const person = store.byEmail(r.email);
+      if (person && !person.blocked) {
+        cookiesOut.push(
+          cookie(
+            DEVICE_COOKIE,
+            store.signIn(person.id, label(req)),
+            DEVICE_DAYS * 86_400,
+            secure(req),
+          ),
+        );
+        to = '/';
+      } else to = '/#not-invited';
+    }
+    reply.header('set-cookie', cookiesOut);
+    return reply.redirect(to);
   });
 
   app.post('/api/signout', async (req, reply) => {

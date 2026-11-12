@@ -6,6 +6,7 @@ import { relative, resolve } from 'node:path';
 import { routes } from './http';
 import { Store, type Settings } from './db';
 import type { SpeechConnect } from './engine';
+import type { GoogleConfig, Mailer } from './signin';
 import { attachRealtime, type Realtime } from './realtime';
 
 export interface Config {
@@ -17,6 +18,11 @@ export interface Config {
   streams: number;
   defaults: Settings;
   trustProxy: boolean;
+  mail?: Mailer;
+  google?: GoogleConfig;
+  publicUrl?: string;
+  /** (tests: a fake Google) */
+  fetch?: typeof fetch;
   clientDist?: string;
   now?: () => number;
   logger?: boolean;
@@ -52,7 +58,12 @@ export async function createServer(c: Config) {
     adminPassword: c.adminPassword,
     secret: c.secret,
     trustProxy: c.trustProxy,
+    mail: c.mail,
+    google: c.google,
+    publicUrl: c.publicUrl,
+    fetch: c.fetch,
     now: c.now,
+    warn: (m) => app.log.warn(m),
   });
 
   app.get('/health', () => ({ ok: true }));

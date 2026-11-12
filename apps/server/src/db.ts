@@ -15,6 +15,8 @@ export const token = () => randomBytes(32).toString('base64url');
 export const DEVICE_DAYS = 365;
 /** A sign-in code (6 digits or its QR link) works once, for this long. */
 export const CODE_MS = 10 * 60_000;
+/** An email's sign-in link: once, for this long. */
+export const MAIL_LINK_MS = 15 * 60_000;
 
 export interface Person {
   id: number;
@@ -229,10 +231,10 @@ export class Store {
 
   // ---------- sign-in codes (Damian signs a device in for someone) ----------
   /** A new code for a person: 6 digits to type, a link for the QR code. Older ones of theirs go. */
-  newCode(personId: number): { digits: string; link: string; expires: number } {
+  newCode(personId: number, ms = CODE_MS): { digits: string; link: string; expires: number } {
     const digits = String(randomInt(0, 1_000_000)).padStart(6, '0');
     const link = token();
-    const expires = this.now() + CODE_MS;
+    const expires = this.now() + ms;
     this.db
       .prepare('delete from codes where person_id = ? or expires < ?')
       .run(personId, this.now());

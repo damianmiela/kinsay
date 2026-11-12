@@ -2,6 +2,7 @@
 import { resolve } from 'node:path';
 import { EUR } from '@translate/shared';
 import { sonioxConnect } from './engine';
+import { brevoMailer } from './signin';
 import { createServer } from './server';
 
 const env = process.env;
@@ -25,6 +26,19 @@ const price = euro('PRICE_EUR_PER_STREAM_HOUR', -1);
 if (price < 0)
   fail('PRICE_EUR_PER_STREAM_HOUR must be set (what one stream costs per hour, in euros).');
 
+// this app's own address: the links in emails and Google's way back
+const publicUrl = env.PUBLIC_URL?.replace(/\/+$/, '') || undefined;
+if (publicUrl && !/^https?:\/\/[^/]+$/.test(publicUrl))
+  fail('PUBLIC_URL must look like https://translate.example.com');
+const mail =
+  env.BREVO_API_KEY && env.MAIL_FROM
+    ? brevoMailer(env.BREVO_API_KEY, env.MAIL_FROM, env.MAIL_FROM_NAME || 'Translate')
+    : undefined;
+const google =
+  env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && publicUrl
+    ? { clientId: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET, publicUrl }
+    : undefined;
+
 const root = resolve(import.meta.dirname, '../../..');
 const port = Number(env.PORT ?? 3300);
 const server = await createServer({
@@ -39,6 +53,9 @@ const server = await createServer({
     globalLimit: euro('GLOBAL_LIMIT_EUR', 20),
   },
   trustProxy: env.TRUST_PROXY === 'true',
+  mail,
+  google,
+  publicUrl,
   clientDist: resolve(root, 'apps/client/dist'),
   logger: true,
 });

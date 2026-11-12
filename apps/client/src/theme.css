@@ -527,3 +527,13 @@ a.btn {
   color: inherit;
   text-decoration: none;
 }
+/* Google's mark on its button (its four colours, as Google's own buttons) */
+.btn .g {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: conic-gradient(#ea4335 0 25%, #fbbc05 0 50%, #34a853 0 75%, #4285f4 0);
+}
+.or:empty {
+  gap: 0;
+}
