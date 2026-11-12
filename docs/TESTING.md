@@ -48,6 +48,8 @@ Unzip `desktop/out/Translate-win-x64.zip` (made with `node desktop/pack-win.mjs`
 - [ ] The browser link opened on another internet connection (e.g. a phone on mobile data): "started on another internet connection", no Yes button.
 - [ ] Signing the desktop app out from Account (or Block in the admin): the window goes back to "Sign in to Translate" by itself.
 - [ ] Listen to "This computer's sound", a language, Start; play a video or join a call: its words appear in the window (and nothing is asked first). Nothing playing for a while: "Waiting for sound…".
+- [ ] The window keeps the whole history, centred like subtitles, following the newest line; scrolled up, "Latest" brings it back.
+- [ ] Made small (a corner drag), the language list still opens over the whole window under the bar and scrolls there; the ⚙ menu too.
 - [ ] "This computer" in the bar switches to the microphone while it runs, and back.
 - [ ] The language in the bar opens the list; another language goes on in it.
 - [ ] A− and A+, the gear's See-through slider, Lock in place (clicks go through to the call; the lock badge top right unlocks), the QR code (a phone scanning it reads along), Account (opens in the browser), ✕ closes it. A corner drag resizes it; the next start keeps its place and size.

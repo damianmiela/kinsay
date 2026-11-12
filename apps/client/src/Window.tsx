@@ -7,6 +7,7 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { HEARD, type CaptionText } from '@translate/shared';
 import { api } from './api';
+import { CaptionsList } from './CaptionsList';
 import { LangPicker } from './LangPicker';
 import { langName } from './langs';
 import { useMic } from './mic/useMic';
@@ -27,6 +28,7 @@ interface LiveShell {
 const shell = (window as { liveShell?: LiveShell }).liveShell;
 /** No sound for this long after Start: the window says it is waiting. */
 const QUIET_MS = 8_000;
+const EMPTY: CaptionText = { lines: [], first: 0, live: '' };
 const codeOf = (s: string) => /^[A-Za-z2-9]{6}$/.exec(s)?.[0]?.toUpperCase();
 
 export function WindowPage() {
@@ -274,8 +276,13 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
                           body: source === 'system' ? tw.waitingSoundBody : '',
                         }
                       : null;
-  const text: CaptionText | undefined = update.texts[shown ?? HEARD];
-  const lines = text?.lines.slice(-2) ?? [];
+  const text: CaptionText = update.texts[shown ?? HEARD] ?? EMPTY;
+  // (what is heard: each line with the language it was heard in, as on the website)
+  const labels = shown
+    ? undefined
+    : Object.fromEntries(
+        Object.entries(update.heardLangs ?? {}).map(([n, c]) => [n, langName(c).own]),
+      );
 
   return (
     <div
@@ -406,24 +413,16 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
         </div>
       )}
 
+      {/* the whole history, scrolling, following the newest line: the website's own list (Damian) */}
       {!panel && (
-        <div className="lw-band">
-          {lines.map((line, i) => (
-            <p
-              key={(text?.first ?? 0) + (text?.lines.length ?? 0) - lines.length + i}
-              className={`lw-ln${i < lines.length - 1 || text?.live ? ' old' : ''}`}
-            >
-              {line}
-            </p>
-          ))}
-          {text?.live && (
-            <p className="lw-ln">
-              <span className="coming">{text.live}</span>
-            </p>
-          )}
-          {!lines.length && !text?.live && !note && (
-            <p className="lw-ln old">{view.running ? '…' : t.waitingHost(view.hostName)}</p>
-          )}
+        <div className="lw-caps" lang={shown ?? undefined}>
+          <CaptionsList
+            text={text}
+            labels={labels}
+            note={shown ? t.note : t.heardNote}
+            waiting={view.running ? tw.waitingVoice : t.waitingHost(view.hostName)}
+            latest={t.latest}
+          />
         </div>
       )}
       {!panel && note && <Note note={note} />}

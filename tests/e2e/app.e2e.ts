@@ -235,8 +235,27 @@ test('the subtitles window: signed in through the person’s own browser, then i
   await expect(win.getByRole('button', { name: 'Start' })).toBeVisible({ timeout: 10_000 });
   await win.getByRole('button', { name: /^Microphone/ }).click();
   await win.getByRole('button', { name: 'Start' }).click();
-  await expect(win.locator('.lw-ln').last()).toContainText('Sentence', { timeout: 10_000 });
+  await expect(win.locator('.lw .cap-line').last()).toContainText('Sentence', { timeout: 10_000 });
   expect((await smallestText(win)).px).toBeGreaterThanOrEqual(16);
+  // the whole history, centred like subtitles; scrolled back, "Latest" (Damian)
+  await expect(win.locator('.lw .cap-line')).toHaveCount(8, { timeout: 20_000 });
+  expect(
+    await win
+      .locator('.lw .cap-line')
+      .first()
+      .evaluate((el) => getComputedStyle(el).textAlign),
+  ).toBe('center');
+  await win.locator('.lw .cap-scroll').hover();
+  await win.mouse.wheel(0, -400);
+  await expect(win.locator('.lw .cap-latest')).toBeVisible();
+  await win.locator('.lw .cap-latest').click();
+  await expect(win.locator('.lw .cap-latest')).toBeHidden();
+  // the language list opens inside the window, never past its edge (300 px high)
+  await win.getByRole('button', { name: 'Translate into' }).click();
+  const drop = (await win.locator('.picker-drop').boundingBox())!;
+  expect(drop.y + drop.height).toBeLessThanOrEqual(300);
+  await expect(win.locator('.picker-list button').nth(3)).toBeInViewport();
+  await win.keyboard.press('Escape');
   await win.getByRole('button', { name: /Stop/ }).click();
   await expect(win.getByRole('button', { name: 'Start' })).toBeVisible();
 });
