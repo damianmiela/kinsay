@@ -1,0 +1,18 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Secrets: only .env.example is tracked
+.env
+.env.*
+!.env.example
+
+# The database (people, credits, sign-ins): never in git
+data/
+
+# Private notes (plans with real names)
+_docs/
+CLAUDE.md

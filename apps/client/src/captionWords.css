@@ -1,0 +1,19 @@
+/* Live captions (W3): a new word fades in out of a soft blur (like a reply being written). */
+@keyframes w-in {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+  }
+}
+.w-in {
+  animation: w-in 0.55s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .w-in {
+    animation: none;
+  }
+}

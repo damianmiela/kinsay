@@ -1,0 +1,529 @@
+/* Translate's look (mockups batch 2, approved 2026-11-12): calm and plain, light, a lot of room,
+   one colour (deep teal) for what you can do, big letters in Atkinson Hyperlegible (drawn for
+   readers with low vision). Every text at least 16 px. Colours, sizes and radii only from here. */
+@import '@fontsource/atkinson-hyperlegible/latin-400.css';
+@import '@fontsource/atkinson-hyperlegible/latin-700.css';
+@import '@fontsource/atkinson-hyperlegible/latin-ext-400.css';
+@import '@fontsource/atkinson-hyperlegible/latin-ext-700.css';
+
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --text: #18222d;
+  --text-soft: #4d5a68;
+  --text-faint: #6b7785;
+  --line: #dde3e9;
+  --accent: #0b6e79;
+  --accent-strong: #08545c;
+  --accent-tint: #e2f1f2;
+  --on-accent: #ffffff;
+  --warn: #9a4c06;
+  --warn-tint: #fdf0e1;
+  --bad: #a61f30;
+  --bad-tint: #fbe8ea;
+  --good: #1d6b3a;
+  --good-tint: #e5f3ea;
+  --shade-strong: rgba(20, 30, 40, 0.28);
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --f-body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+  /* the captions' list (shared with the wedding app) asks for these */
+  --gold: var(--accent);
+  --foil: var(--accent);
+  --on-foil: var(--on-accent);
+  /* the reader's text size (the gear's A− A+) */
+  --cap-scale: 1;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- a page ---------- */
+.page {
+  min-height: 100dvh;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4) 18px var(--s3);
+}
+.bar .spacer {
+  flex: 1;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  font-size: 20px;
+}
+.logo .mark {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--accent);
+}
+.logo .mark::before,
+.logo .mark::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: #fff;
+}
+.logo .mark::before {
+  top: 10px;
+  right: 10px;
+}
+.logo .mark::after {
+  top: 16px;
+  opacity: 0.7;
+}
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 18px 24px;
+}
+h1.t {
+  margin: 8px 0 0;
+  font-size: 26px;
+  line-height: 1.2;
+}
+h2.t {
+  margin: 8px 0 0;
+  font-size: 22px;
+}
+p.s {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 17px;
+}
+.small {
+  color: var(--text-faint);
+  font-size: 16px;
+}
+.lbl {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.card {
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.chip.low {
+  border-color: #f1d2ae;
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.input {
+  width: 100%;
+  height: 54px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 18px;
+}
+.input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.input.code {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 0 18px;
+  border: 2px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn.main {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.btn.stop {
+  border-color: var(--bad);
+  background: var(--bad);
+  color: #fff;
+}
+.btn.sm {
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 16px;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.btn.icon {
+  flex: 0 0 54px;
+  padding: 0;
+  color: var(--text-soft);
+}
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-strong);
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-faint);
+  font-size: 16px;
+}
+.or::before,
+.or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.note {
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  font-size: 17px;
+}
+.note b {
+  display: block;
+  margin-bottom: 2px;
+}
+.note.warn {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.note.bad {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+.note.good {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.note.info {
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pill {
+  padding: 10px 16px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pill.on {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+.list {
+  display: flex;
+  flex-direction: column;
+}
+.li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  font-size: 17px;
+}
+.li:first-child {
+  border-top: 0;
+}
+.li .what {
+  flex: 1;
+  min-width: 0;
+}
+.li .what small {
+  display: block;
+  color: var(--text-faint);
+  font-size: 16px;
+}
+.amt {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.amt.plus {
+  color: var(--good);
+}
+.big {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+}
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.tag.waiting {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.tag.granted {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.tag.declined {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+.toggle {
+  position: relative;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: left 0.15s;
+}
+.toggle[aria-checked='true'] {
+  background: var(--accent);
+}
+.toggle[aria-checked='true']::after {
+  left: 25px;
+}
+.digits {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.digits span {
+  display: grid;
+  place-items: center;
+  height: 56px;
+  border: 2px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 26px;
+  font-weight: 700;
+}
+.qr-bg {
+  fill: #fff;
+}
+.qr-ink {
+  fill: var(--text);
+}
+.qr {
+  display: block;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+/* ---------- a sheet over the page (settings, invite) ---------- */
+.sheet-back {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--shade-strong);
+}
+.sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: 92dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 18px calc(18px + env(safe-area-inset-bottom));
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--bg);
+}
+
+/* ---------- the searchable language field ---------- */
+.picker {
+  position: relative;
+}
+.picker-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 54px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.picker-field::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-right: 3px solid var(--text-soft);
+  border-bottom: 3px solid var(--text-soft);
+  transform: rotate(45deg) translateY(-3px);
+}
+.picker.open .picker-field {
+  border-color: var(--accent);
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+}
+.picker-drop {
+  padding: 8px 12px 4px;
+  border: 2px solid var(--accent);
+  border-top: 0;
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  background: var(--surface);
+}
+.picker-drop .input {
+  height: 46px;
+  font-size: 17px;
+}
+.picker-list {
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.picker-list button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 2px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  font-size: 17px;
+  text-align: left;
+  cursor: pointer;
+}
+.picker-list li:first-child button {
+  border-top: 0;
+}
+.picker-list button small {
+  color: var(--text-faint);
+  font-size: 16px;
+}
+.picker-list button[aria-selected='true'] {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+/* a list row that opens something (the gear's Invite, Account) */
+.link-row {
+  width: 100%;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+/* links that look like a chip or a button */
+a.chip,
+a.btn {
+  color: inherit;
+  text-decoration: none;
+}

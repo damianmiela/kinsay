@@ -1,0 +1,10 @@
+# Store text files with LF line endings so they work on the Linux server.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.glb binary
+*.exr binary
+# (the 3D view's estate data: offsets into them must never shift with a line ending)
+*.bin binary

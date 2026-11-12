@@ -1,0 +1,135 @@
+/* Live captions on a phone (W3), shared by the guests' page and /live, which look the same (Damian,
+   2026-10-11): a bar on top, the captions under it (the note, everything said so far, the newest
+   line at the bottom), on /live the one button at the bottom. The page itself never scrolls, only
+   the captions do: an iPhone moves Safari's toolbar with a page that scrolls, and the lines with it. */
+html:has(.cap-page),
+html:has(.cap-page) body {
+  overscroll-behavior: none;
+}
+.cap-page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--f-body);
+  line-height: 1.45;
+}
+.cap-page,
+.cap-page * {
+  box-sizing: border-box;
+}
+.cap-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 69px;
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+/* the bar's buttons: the flag (both pages), the QR code (/live) */
+.cap-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.cap-view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.cap-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* the captions keep the reader's place themselves (CaptionsList.tsx): Safari has no scroll
+     anchor, and another browser's own would count it twice */
+  overflow-anchor: none;
+  /* under the newest line: 24 px (BELOW_NEWEST in CaptionsList.tsx) */
+  padding: var(--s4) var(--s4) var(--s5);
+}
+.cap-note {
+  margin: 0 0 var(--s4);
+  color: var(--text-soft);
+  font-size: 16px;
+}
+.cap-empty {
+  margin: 20vh 0 0;
+  color: var(--text-soft);
+  font-size: 18px;
+  text-align: center;
+}
+.cap-lines {
+  display: grid;
+  /* a clear gap between lines (Damian: easier to find your place when reading back) */
+  gap: var(--s4);
+}
+/* each line starts with a small gold mark hanging in the margin */
+.cap-line {
+  position: relative;
+  margin: 0;
+  /* one very long word never widens the page (round 3, R3G-11) */
+  overflow-wrap: anywhere;
+  padding-left: 22px;
+  font-size: 22px;
+  line-height: 1.4;
+}
+.cap-line::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  color: var(--gold);
+  font-weight: 800;
+}
+.cap-line.old {
+  color: var(--text-soft);
+}
+.cap-line.old::before {
+  opacity: 0.6;
+}
+/* back to the newest line: at the bottom of the captions (on /live above its button) */
+.cap-latest {
+  position: absolute;
+  left: 50%;
+  bottom: var(--s4);
+  transform: translateX(-50%);
+  min-height: 44px;
+  padding: 0 var(--s4);
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--foil);
+  color: var(--on-foil);
+  font: inherit;
+  font-weight: 800;
+  font-size: 16px;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px var(--shade-strong);
+  cursor: pointer;
+}
+/* the language a line was heard in (Translate's "no translation" view) */
+.cap-label {
+  display: inline-block;
+  margin-right: var(--s2);
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+  font-size: 14px;
+  font-weight: 700;
+  vertical-align: 3px;
+}
