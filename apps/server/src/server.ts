@@ -1,6 +1,6 @@
 // The app's one server: Fastify serves the built pages and the API, Socket.IO the captions.
 import fastifyStatic from '@fastify/static';
-import Fastify from 'fastify';
+import Fastify, { LogController } from 'fastify';
 import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { fromProxy, type TrustProxy } from './auth';
@@ -42,7 +42,7 @@ export async function createServer(c: Config) {
     trustProxy,
     // (no line per request: addresses are personal data, and the proxy's log has them; errors and
     // warnings still log: audit 31)
-    disableRequestLogging: true,
+    logController: new LogController({ disableRequestLogging: true }),
     bodyLimit: 16_384,
   });
   const store = new Store(c.dbFile, c.defaults, c.now);
