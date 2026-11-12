@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { euros, GRANT_STEPS, type AccountView } from '@translate/shared';
 import { api } from './api';
-import { Logo } from './bits';
+import { Foot, Logo } from './bits';
 import { langName } from './langs';
 import { duration, t } from './texts';
 
@@ -170,9 +170,7 @@ export function AccountPage() {
         >
           {t.deleteAccount}
         </button>
-        <a className="link small-link" href="/privacy">
-          {t.privacy}
-        </a>
+        <Foot />
       </div>
     </div>
   );

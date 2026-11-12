@@ -2,7 +2,7 @@
 // needed. A reader starts in the host's language and may pick their own (one more stream, paid by
 // the host).
 import { useState } from 'react';
-import { GearButton, Logo, Sheet, Toggle } from './bits';
+import { GearButton, Logo, Sheet, Toggle, UiLangRow } from './bits';
 import { useStored } from './store';
 import { CaptionsView } from './CaptionsView';
 import { TextSize } from './Host';
@@ -138,6 +138,7 @@ function Reading({ code, onBad }: { code: string; onBad: () => void }) {
                 </div>
               )}
               <TextSize scale={scale} setScale={setScale} />
+              <UiLangRow />
             </div>
           </div>
           <button className="btn main" onClick={() => setSheet(false)}>

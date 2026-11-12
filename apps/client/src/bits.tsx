@@ -2,6 +2,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { euros, LOW_BALANCE } from '@translate/shared';
 import { t } from './texts';
+import { setUi, ui, UI_LANGS, UI_NAMES, type UiLang } from './ui';
 
 export function Logo() {
   return (
@@ -86,5 +87,45 @@ export function Toggle({
       aria-label={label}
       onClick={() => onChange(!on)}
     />
+  );
+}
+
+/** The language of the pages (not the captions'): a choice of the five, each in its own name. */
+export function UiLangSelect() {
+  return (
+    <select
+      className="ui-lang"
+      value={ui}
+      aria-label={t.pageLang}
+      onChange={(e) => setUi(e.target.value as UiLang)}
+    >
+      {UI_LANGS.map((l) => (
+        <option key={l} value={l}>
+          {UI_NAMES[l]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** The gear's row for it. */
+export function UiLangRow() {
+  return (
+    <label className="li">
+      <span className="what">{t.pageLang}</span>
+      <UiLangSelect />
+    </label>
+  );
+}
+
+/** A page's foot: the privacy page and the language switch. */
+export function Foot() {
+  return (
+    <div className="foot">
+      <a className="link" href="/privacy">
+        {t.privacy}
+      </a>
+      <UiLangSelect />
+    </div>
   );
 }

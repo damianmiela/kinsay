@@ -39,12 +39,54 @@ const esc = (s: string) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
 
-/** The sign-in email (English for now, like the pages). */
-export function signInMail(name: string, url: string) {
-  const subject = 'Your sign-in link for Translate';
-  const text = `Hello ${name},\n\nopen this link to sign in to Translate on the device you open it on:\n${url}\n\nIt works once, for 15 minutes. If you didn't ask for it, ignore this email.\n`;
-  const html = `<p>Hello ${esc(name)},</p><p><a href="${esc(url)}" style="display:inline-block;padding:12px 20px;border-radius:10px;background:#0b6e79;color:#fff;font-weight:bold;text-decoration:none">Sign in to Translate</a></p><p>It signs in the device you open it on, works once, for 15 minutes. If you didn't ask for it, ignore this email.</p>`;
-  return { subject, text, html };
+/** The sign-in email's words, in the language of the page it was asked from (drafts, as the pages'). */
+const MAIL = {
+  en: {
+    subject: 'Your sign-in link for Translate',
+    hello: (n: string) => `Hello ${n},`,
+    open: 'open this link to sign in to Translate on the device you open it on:',
+    button: 'Sign in to Translate',
+    note: 'It signs in the device you open it on, works once, for 15 minutes. If you didn’t ask for it, ignore this email.',
+  },
+  pl: {
+    subject: 'Twój link do logowania w Translate',
+    hello: (n: string) => `Cześć ${n},`,
+    open: 'otwórz ten link, aby zalogować się do Translate na urządzeniu, na którym go otworzysz:',
+    button: 'Zaloguj się do Translate',
+    note: 'Loguje urządzenie, na którym go otworzysz, działa raz, przez 15 minut. Jeśli o niego nie prosiłeś, zignoruj tę wiadomość.',
+  },
+  es: {
+    subject: 'Tu enlace de acceso a Translate',
+    hello: (n: string) => `Hola, ${n}:`,
+    open: 'abre este enlace para entrar en Translate en el dispositivo donde lo abras:',
+    button: 'Entrar en Translate',
+    note: 'Conecta el dispositivo donde lo abras y funciona una vez, durante 15 minutos. Si no lo has pedido, ignora este correo.',
+  },
+  ca: {
+    subject: 'El teu enllaç d’accés a Translate',
+    hello: (n: string) => `Hola, ${n}:`,
+    open: 'obre aquest enllaç per entrar a Translate al dispositiu on l’obris:',
+    button: 'Entra a Translate',
+    note: 'Connecta el dispositiu on l’obris i funciona una vegada, durant 15 minuts. Si no l’has demanat, no en facis cas.',
+  },
+  de: {
+    subject: 'Dein Anmeldelink für Translate',
+    hello: (n: string) => `Hallo ${n},`,
+    open: 'öffne diesen Link, um dich auf dem Gerät, auf dem du ihn öffnest, bei Translate anzumelden:',
+    button: 'Bei Translate anmelden',
+    note: 'Er meldet das Gerät an, auf dem du ihn öffnest, und funktioniert einmal, 15 Minuten lang. Wenn du ihn nicht angefordert hast, ignoriere diese E-Mail.',
+  },
+};
+export type MailLang = keyof typeof MAIL;
+export const isMailLang = (v: unknown): v is MailLang =>
+  typeof v === 'string' && Object.hasOwn(MAIL, v);
+
+/** The sign-in email. */
+export function signInMail(name: string, url: string, lang: MailLang = 'en') {
+  const w = MAIL[lang];
+  const text = `${w.hello(name)}\n\n${w.open}\n${url}\n\n${w.note}\n`;
+  const html = `<p>${esc(w.hello(name))}</p><p><a href="${esc(url)}" style="display:inline-block;padding:12px 20px;border-radius:10px;background:#0b6e79;color:#fff;font-weight:bold;text-decoration:none">${esc(w.button)}</a></p><p>${esc(w.note)}</p>`;
+  return { subject: w.subject, text, html };
 }
 
 export interface GoogleConfig {

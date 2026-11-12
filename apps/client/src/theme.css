@@ -558,3 +558,30 @@ a.btn {
   letter-spacing: 0.12em;
   color: var(--accent-strong);
 }
+/* a page's foot: the privacy page and the language of the pages */
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 18px;
+  font-size: 16px;
+}
+.ui-lang {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.li .ui-lang {
+  margin-left: auto;
+}
+.lw .ui-lang {
+  background: #2a2631;
+  color: var(--lw-ink);
+  border-color: var(--lw-line);
+}

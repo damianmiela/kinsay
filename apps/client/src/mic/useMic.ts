@@ -1,6 +1,7 @@
 // The microphone for the live captions (W3, in the host panel since the redesign): one audio
 // pipeline that is either only checked (the level bar moves, nothing is sent) or sending. It lives
 // in the host panel's top component, so it keeps sending while the host moves between pages.
+import { t } from '../texts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { socket } from '../socket';
 import { AudioOutbox, makeResampler, peak, randomId, SendAsks, type StartResult } from './logic';
@@ -359,10 +360,10 @@ export function useMic({ voice = false } = {}): Mic {
         setWaiting(0);
       };
       // the input was unplugged (or the browser took it away): say so instead of a silent page
-      for (const t of tracks) {
-        t.onended = () => {
+      for (const track of tracks) {
+        track.onended = () => {
           close.current?.();
-          setProblem('The input stopped (unplugged?). Plug it in again and start again.');
+          setProblem(t.micUnplugged);
         };
       }
       setOpen(true);
@@ -375,20 +376,18 @@ export function useMic({ voice = false } = {}): Mic {
       if (sourceRef.current === 'system') {
         setProblem(
           err.name === 'NoSystemSound'
-            ? "No sound came with the share: share the whole screen and tick 'Share system audio'."
+            ? t.micNoShare
             : err.name === 'NotAllowedError'
-              ? "This computer's sound wasn't shared."
-              : `This computer's sound didn't start: ${err.message || err.name}`,
+              ? t.micNotShared
+              : t.micSystemFailed(err.message || err.name),
         );
       } else if (!voice && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')) {
         setDeviceId('');
         save(DEVICE_KEY, '');
-        setProblem('The chosen input is not there any more: pick one from the list and try again.');
+        setProblem(t.micGone);
       } else {
         setProblem(
-          err.name === 'NotAllowedError'
-            ? 'The browser may not use the microphone: allow it (the icon in the address bar) and try again.'
-            : `The microphone didn't start: ${err.message || err.name}`,
+          err.name === 'NotAllowedError' ? t.micDenied : t.micFailed(err.message || err.name),
         );
       }
       return false;

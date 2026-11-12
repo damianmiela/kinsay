@@ -24,6 +24,8 @@ import {
   GOOGLE_CALLBACK,
   googleFinish,
   googleStart,
+  isMailLang,
+  type MailLang,
   signInMail,
   type GoogleConfig,
   type Mailer,
@@ -212,6 +214,7 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
       const m = signInMail(
         person.name.split(/\s+/)[0] ?? person.name,
         `${o.publicUrl}/signin#t=${link}`,
+        isMailLang(body(req).lang) ? (body(req).lang as MailLang) : 'en',
       );
       // (never awaited: the time of the answer must not tell who is invited, audit 30)
       void o.mail(email, m.subject, m.text, m.html).then((sent) => {

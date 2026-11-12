@@ -2,14 +2,14 @@
 // Invite (or Translate when there is no translation) and the gear for everything else.
 import { useState } from 'react';
 import { LOW_BALANCE } from '@translate/shared';
-import { Balance, GearButton, Logo, Sheet, Toggle } from './bits';
+import { Balance, Foot, GearButton, Logo, Sheet, Toggle, UiLangRow } from './bits';
 import { useStored } from './store';
 import { CaptionsView } from './CaptionsView';
 import { LangPicker } from './LangPicker';
 import { langName } from './langs';
 import { useMic } from './mic/useMic';
 import { Qr } from './Qr';
-import { stopText, t } from './texts';
+import { stopText, t, tw } from './texts';
 import { ask, useSession } from './useSession';
 
 export function HostPage() {
@@ -115,11 +115,12 @@ export function HostPage() {
           <button className="btn main" onClick={() => void start()}>
             {t.start}
           </button>
-          <div className="or">{'or'}</div>
+          <div className="or">{t.or}</div>
           <h2 className="t">{t.joinCaptions}</h2>
           <a className="btn" href="/join">
             {t.enterCode}
           </a>
+          <Foot />
         </div>
       </div>
     );
@@ -220,6 +221,7 @@ export function HostPage() {
                 </div>
               )}
               <TextSize scale={scale} setScale={setScale} />
+              <UiLangRow />
             </div>
           </div>
           <div className="card" style={{ padding: '4px 16px' }}>
@@ -247,10 +249,10 @@ export function TextSize({ scale, setScale }: { scale: number; setScale: (v: num
   return (
     <div className="li">
       <span className="what">{t.textSize}</span>
-      <button className="btn sm" onClick={() => step(-0.1)} aria-label="Smaller">
+      <button className="btn sm" onClick={() => step(-0.1)} aria-label={tw.smaller}>
         A−
       </button>
-      <button className="btn sm" onClick={() => step(0.1)} aria-label="Bigger">
+      <button className="btn sm" onClick={() => step(0.1)} aria-label={tw.bigger}>
         A+
       </button>
     </div>

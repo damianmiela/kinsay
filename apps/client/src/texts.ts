@@ -1,8 +1,14 @@
-// Every text the pages show. English first; the other four languages (PL ES CA DE) come in a pass
-// of their own once the screens have settled.
+// Every text the pages show (not the admin's: Damian's, in English). English is the reference; Polish,
+// Spanish, Catalan and German (texts-pl.ts …) must have every text, the types enforce it. A page
+// shows the language `ui.ts` picks (the browser's, or the one chosen in the gear), once at load.
 import { euros, type StopReason } from '@translate/shared';
+import { ca } from './texts-ca';
+import { de } from './texts-de';
+import { es } from './texts-es';
+import { pl } from './texts-pl';
+import { ui, type UiLang } from './ui';
 
-export const t = {
+const t_en = {
   app: 'Translate',
   // signing in
   signInTitle: 'Live captions, in your language',
@@ -136,6 +142,16 @@ export const t = {
   deleteAccount: 'Delete my account',
   deleteSure: 'Delete your account and its history? This can’t be undone.',
   privacy: 'Privacy',
+  pageLang: 'Page language',
+  // the microphone and this computer's sound (mic/useMic.ts)
+  micUnplugged: 'The input stopped (unplugged?). Plug it in again and start again.',
+  micNoShare: 'No sound came with the share: share the whole screen and tick “Share system audio”.',
+  micNotShared: 'This computer’s sound wasn’t shared.',
+  micSystemFailed: (why: string) => `This computer’s sound didn’t start: ${why}`,
+  micGone: 'The chosen input is not there any more: pick one from the list and try again.',
+  micDenied:
+    'The browser may not use the microphone: allow it (the icon in the address bar) and try again.',
+  micFailed: (why: string) => `The microphone didn’t start: ${why}`,
 } as const;
 
 /**
@@ -143,7 +159,7 @@ export const t = {
  * everyone may sign in with Google. Who is responsible comes from the server (CONTACT_NAME,
  * CONTACT_EMAIL), never from the code.
  */
-export const privacyPage = {
+const privacy_en = {
   title: 'Privacy',
   updated: 'Last updated: 12 November 2026',
   intro: (who: string) =>
@@ -169,7 +185,7 @@ export const privacyPage = {
     {
       h: 'Who else handles it',
       p: [
-        'Hetzner (Germany) runs the server. Soniox turns speech into text and translates it, as above. Brevo (France) sends the sign-in emails, so it sees your email address. Google, only if you sign in with Google: it tells us your name and email address, nothing else.',
+        'Hetzner (Germany) runs the server. Soniox turns speech into text and translates it, as above. Brevo (France) sends the sign-in emails, so it sees your email address. Google, only if you sign in with Google: it tells us your email address, nothing else.',
       ],
     },
     {
@@ -189,9 +205,6 @@ export const privacyPage = {
   contactTitle: 'Contact',
 } as const;
 
-export const stopText = (r: StopReason): readonly [string, string] | null =>
-  r === 'ended' ? null : t[`stop_${r}`];
-
 /** "1 h 05 min" / "25 min" / "40 s". */
 export function duration(seconds: number): string {
   const s = Math.round(seconds);
@@ -201,7 +214,7 @@ export function duration(seconds: number): string {
 }
 
 /** The subtitles window (/window: the desktop app, or a browser tab; mockups batch 1 and part 7). */
-export const tw = {
+const tw_en = {
   title: 'Translate',
   listenTo: 'Listen to',
   system: 'This computer’s sound',
@@ -246,7 +259,7 @@ export const tw = {
 } as const;
 
 /** The browser's side of the desktop app's sign-in (/app-signin, part 7). */
-export const appSignIn = {
+const appSignIn_en = {
   title: 'Sign in the desktop app?',
   body: 'A Translate app asks to sign in as',
   check:
@@ -261,3 +274,27 @@ export const appSignIn = {
   gone: 'This sign-in has ended (it lasts 10 minutes). Start it again in the app.',
   first: 'Sign in here first: the desktop app is waiting for it.',
 } as const;
+
+const en = { t: t_en, privacyPage: privacy_en, tw: tw_en, appSignIn: appSignIn_en };
+
+/** The English texts' shape with every text a plain string: what each language must give. */
+type Widen<T> = T extends string
+  ? string
+  : T extends (...a: infer A) => infer R
+    ? (...a: A) => Widen<R>
+    : T extends readonly [infer X, infer Y]
+      ? readonly [Widen<X>, Widen<Y>]
+      : T extends readonly (infer U)[]
+        ? readonly Widen<U>[]
+        : { readonly [K in keyof T]: Widen<T[K]> };
+export type Texts = Widen<typeof en>;
+
+export const TEXTS: Record<UiLang, Texts> = { en, pl, es, ca, de };
+const chosen = TEXTS[ui];
+export const t = chosen.t;
+export const privacyPage = chosen.privacyPage;
+export const tw = chosen.tw;
+export const appSignIn = chosen.appSignIn;
+
+export const stopText = (r: StopReason): readonly [string, string] | null =>
+  r === 'ended' ? null : t[`stop_${r}`];

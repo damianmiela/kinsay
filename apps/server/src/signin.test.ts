@@ -134,3 +134,16 @@ describe('Google', () => {
     expect(fake.got!.get('client_secret')).toBe('secret-1');
   });
 });
+
+describe('the sign-in email', () => {
+  it("comes in the page's language; anything else is English", async () => {
+    const { signInMail, isMailLang } = await import('./signin');
+    const pl = signInMail('Ola', 'https://example.com/signin#t=x', 'pl');
+    expect(pl.subject).toContain('logowania');
+    expect(pl.html).toContain('Zaloguj się do Translate');
+    expect(pl.text).toContain('https://example.com/signin#t=x');
+    expect(isMailLang('de')).toBe(true);
+    expect(isMailLang('toString')).toBe(false);
+    expect(signInMail('Ola', 'u').subject).toBe('Your sign-in link for Translate');
+  });
+});

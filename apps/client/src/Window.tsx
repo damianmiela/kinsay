@@ -7,6 +7,7 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { HEARD, type CaptionText } from '@translate/shared';
 import { api } from './api';
+import { UiLangSelect } from './bits';
 import { CaptionsList } from './CaptionsList';
 import { LangPicker } from './LangPicker';
 import { langName } from './langs';
@@ -363,6 +364,10 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
               {tw.showQr}
             </button>
           )}
+          <label className="r">
+            {t.pageLang}
+            <UiLangSelect />
+          </label>
           {host ? (
             <button className="r" onClick={() => window.open('/account', '_blank', 'noopener')}>
               {tw.account}

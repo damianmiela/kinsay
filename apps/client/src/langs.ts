@@ -1,6 +1,7 @@
 // The speech service's languages for people: each in its own name and in the page's language
 // (the browser's Intl.DisplayNames: no list of names to keep), the last used first.
 import { SPEECH_LANGS } from '@translate/shared';
+import { ui } from './ui';
 
 const RECENT_KEY = 'tr-recent-langs';
 
@@ -11,7 +12,8 @@ const names = (inLang: string) => {
     return null;
   }
 };
-const page = names(navigator.language || 'en');
+// (other languages' names in the page's own language)
+const page = names(ui);
 
 /** Where the browser's name isn't the speech service's: Tagalog is "Filipino" to browsers. */
 const OWN: Record<string, string> = { tl: 'Tagalog' };

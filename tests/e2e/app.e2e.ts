@@ -281,3 +281,24 @@ test('a browser that isn’t signed in signs in first, then answers the desktop 
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByText('Sign in the desktop app?')).toBeVisible({ timeout: 10_000 });
 });
+
+test('the pages in the browser’s language (Polish here); the switch at the foot changes it', async ({
+  browser,
+  baseURL,
+}) => {
+  const ctx = await browser.newContext({ ...PHONE, baseURL, locale: 'pl-PL' });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  await expect(page.getByText('Napisy na żywo, w Twoim języku')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.lang)).toBe('pl');
+  expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
+  for (const path of ['/join', '/privacy', '/window']) {
+    await page.goto(path);
+    expect((await smallestText(page)).px, path).toBeGreaterThanOrEqual(16);
+  }
+  await page.goto('/');
+  await page.getByLabel('Język strony').selectOption('de');
+  await expect(page.getByText('Live-Untertitel, in deiner Sprache')).toBeVisible();
+  await page.getByLabel('Sprache der Seite').selectOption('en');
+  await expect(page.getByText('Live captions, in your language')).toBeVisible();
+});

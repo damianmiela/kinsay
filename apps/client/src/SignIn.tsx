@@ -2,8 +2,9 @@
 // admin (6 digits, or its QR link: /signin#t=…). Anyone can ask for an invitation.
 import { useEffect, useState } from 'react';
 import { api } from './api';
-import { Logo } from './bits';
+import { Foot, Logo } from './bits';
 import { t } from './texts';
+import { ui } from './ui';
 
 /** `note`: why this page is asked for (the desktop app waiting for a sign-in). */
 export function SignInPage({ note }: { note?: string } = {}) {
@@ -54,9 +55,7 @@ export function SignInPage({ note }: { note?: string } = {}) {
             {t.askInvite}
           </button>
         )}
-        <a className="link small-link" href="/privacy">
-          {t.privacy}
-        </a>
+        <Foot />
       </div>
     </div>
   );
@@ -88,7 +87,9 @@ function EmailSignIn() {
       onSubmit={(e) => {
         e.preventDefault();
         setState('busy');
-        void api('/api/signin/email', { email }).then((r) => setState(r.ok ? 'sent' : r.error));
+        void api('/api/signin/email', { email, lang: ui }).then((r) =>
+          setState(r.ok ? 'sent' : r.error),
+        );
       }}
     >
       <label>

@@ -55,3 +55,14 @@ Unzip `desktop/out/Translate-win-x64.zip` (made with `node desktop/pack-win.mjs`
 - [ ] A− and A+, the gear's See-through slider, Lock in place (clicks go through to the call; the lock badge top right unlocks), the QR code (a phone scanning it reads along), Account (opens in the browser), ✕ closes it. A corner drag resizes it; the next start keeps its place and size.
 - [ ] Stop; close and start again: still signed in, the same language and source.
 - [ ] "Only reading someone's captions? Enter their code" in a signed-out window: someone's captions by their code.
+
+## 4. The pages in five languages (2026-11-12)
+
+The texts are drafts: a native speaker of each language should read every page once.
+
+- [ ] A browser set to Polish (or Spanish, Catalan, German) opens every page in that language; any other browser language: English.
+- [ ] The foot of the sign-in, home and Account pages: "Privacy" and the language; choosing another reloads the page in it, and it stays on that device. The gear's "Page language" and the window's ⚙ menu do the same.
+- [ ] The language list ("Translate into") names the languages in the page's language (in Polish: "Angielski", …), each also in its own name.
+- [ ] A sign-in email asked for from a Polish page comes in Polish.
+- [ ] The privacy page in each language says the same as the English one.
+- [ ] Long German texts fit at phone width and in the window (nothing cut off, no sideways scrolling).
