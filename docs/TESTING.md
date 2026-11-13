@@ -143,3 +143,14 @@ With your phone and your computer, both signed in:
 - [ ] The listening phone in airplane mode: "No internet. What's said is kept and caught up."; back online, the words come in.
 - [ ] Account (from Home): the name and the balance on top, Ask for more and "Send the request" right under it; the request in the history as "Your request, €2 · Waiting", then "Added" once granted; devices named "Your phone" / "Your computer" ("this one" for this device).
 - [ ] Sign in by email: "Check your email"; after a minute "Send it again" appears.
+
+## 14. The redesign, step 5 (second part): the desktop window (2026-11-13)
+
+In the Windows app (no new download needed: it loads the page):
+
+- [ ] The mouse over the window: the strip is the phone's bar: Stop · the language (Original without a translation) · ⚙, then A− A+ and ✕ apart.
+- [ ] The mouse elsewhere: only the words, and a small teal "Live" in the corner while the captions run.
+- [ ] ⚙: Invite someone first (the QR code over the window), then Microphone (This computer / Microphone, the chosen one marked; switching works while it runs), Window (See-through, Lock in place), Account (your name and balance), App (App language).
+- [ ] ✕ while the captions run: "Close the window and stop the captions?" with Stop and close / Keep them. Stopped: ✕ closes at once.
+- [ ] Your phone listening while the window is open: the window says "Listening on your phone" with Use this one.
+- [ ] Each line's language shows only once more than one language was heard (as on the phone).

@@ -5,7 +5,7 @@
 // every page here: the translation, or what is heard without one. Only the captions show; the
 // controls appear while the mouse is over it.
 import { useEffect, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { HEARD, type CaptionText } from '@translate/shared';
+import { euros, HEARD, type CaptionText } from '@translate/shared';
 import { api } from './api';
 import { UiLangSelect } from './bits';
 import { CaptionsList } from './CaptionsList';
@@ -158,7 +158,7 @@ function SignIn({ onCode }: { onCode: (code: string) => void }) {
 
 /** The captions: the signed-in person's own session, or (with `code`) someone else's. */
 function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
-  const { view, update, error } = useSession(code);
+  const { view, update, error, online } = useSession(code);
   const mic = useMic({ voice: true });
   const [lang, setLang] = useStored<string | null>('tr-window-lang', null);
   const [source, setSource] = useStored<'system' | 'mic'>('tr-window-source', 'system');
@@ -170,6 +170,8 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   const [locked, setLocked] = useState(false);
   const [quiet, setQuiet] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // (✕ while the captions run asks first: closing would stop them)
+  const [closing, setClosing] = useState(false);
   const { chooseSource } = mic;
   // another of the host's devices took the microphone: the window stops sending
   const elsewhere = !!view?.mic && !view.mic.here;
@@ -289,81 +291,94 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
                         }
                       : null;
   const text: CaptionText = update.texts[shown ?? HEARD] ?? EMPTY;
-  // (what is heard: each line with the language it was heard in, as on the website)
-  const labels = shown
-    ? undefined
-    : Object.fromEntries(
-        Object.entries(update.heardLangs ?? {}).map(([n, c]) => [n, langName(c).own]),
-      );
+  // (what is heard: each line's language once more than one was heard, as on the website)
+  const labels =
+    shown || new Set(Object.values(update.heardLangs ?? {})).size < 2
+      ? undefined
+      : Object.fromEntries(
+          Object.entries(update.heardLangs ?? {}).map(([n, c]) => [n, langName(c).own]),
+        );
+
+  const listenHere = async () => {
+    setProblem(null);
+    const err = await ask('session:useMic');
+    if (err) return setProblem(err);
+    await resume();
+  };
+  const close = () => {
+    if (host && view.running) return setClosing(true);
+    shell?.close();
+  };
+  const where = view.mic && !view.mic.here ? view.mic.on : null;
+  const [before, after] = t.listeningOn('|').split('|');
 
   return (
     <div
       className={`lw${locked ? ' locked' : ''}${shell ? ' in-app' : ''}`}
       style={{ ['--lw-size' as string]: size, ['--lw-glass' as string]: shell ? 0.72 : 0.9 }}
     >
-      {!locked && (
+      {/* (a small "Live" that stays while the strip hides: the captions are on) */}
+      {view.running && online && <span className="lw-live">{t.live}</span>}
+      {!locked && !closing && (
         <div className="lw-ctl">
           <span className="lw-grip" aria-hidden="true" />
+          {/* the phone's bar: Stop (or Start) · the language · Settings; then the window's own */}
           {host && view.running && (
             <button className="stop" onClick={() => void stop()}>
               ■ {t.stop}
             </button>
           )}
-          {host && (
-            <button onClick={switchSource} aria-label={tw.listenTo}>
-              <span className={`lw-dot${mic.sending ? ' on' : ''}`} />
-              {source === 'system' ? tw.thisComputer : tw.mic}
-            </button>
-          )}
           {!panel && (
-            <button onClick={() => setPicking((p) => !p)} aria-label={tw.translateInto}>
-              {shown ? langName(shown).own : t.noTranslation}
+            <button
+              className="lang"
+              onClick={() => setPicking((p) => !p)}
+              aria-label={tw.translateInto}
+            >
+              {shown ? langName(shown).own : t.original} ▾
             </button>
           )}
-          <span className="lw-gap" />
-          <button aria-label={tw.smaller} onClick={() => setSize(step(size, -0.1))}>
-            A−
-          </button>
-          <button aria-label={tw.bigger} onClick={() => setSize(step(size, 0.1))}>
-            A+
-          </button>
           <button aria-label={tw.menu} className={menu ? 'on' : ''} onClick={() => setMenu(!menu)}>
             ⚙
           </button>
-          {shell && (
-            <button aria-label={tw.closeWindow} onClick={() => shell.close()}>
-              ✕
-            </button>
+          <span className="lw-gap" />
+          {!panel && (
+            <>
+              <button aria-label={tw.smaller} onClick={() => setSize(step(size, -0.1))}>
+                A−
+              </button>
+              <button aria-label={tw.bigger} onClick={() => setSize(step(size, 0.1))}>
+                A+
+              </button>
+            </>
           )}
+          {shell && (
+            <>
+              <span className="lw-sep" aria-hidden="true" />
+              <button aria-label={tw.closeWindow} onClick={close}>
+                ✕
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {closing && (
+        <div className="lw-ask">
+          <b>{tw.closeAsk}</b>
+          <button
+            className="stop"
+            onClick={() => {
+              void stop().then(() => shell?.close());
+            }}
+          >
+            {tw.stopAndClose}
+          </button>
+          <button onClick={() => setClosing(false)}>{tw.keepThem}</button>
         </div>
       )}
 
       {menu && !locked && (
         <div className="lw-menu">
-          {shell && (
-            <label className="r">
-              {tw.seeThrough}
-              <input
-                type="range"
-                min={0.35}
-                max={1}
-                step={0.05}
-                value={opacity}
-                onChange={(e) => setOpacity(Number(e.target.value))}
-              />
-            </label>
-          )}
-          {shell && (
-            <button
-              className="r"
-              onClick={() => {
-                setMenu(false);
-                setLocked(true);
-              }}
-            >
-              {tw.lock}
-            </button>
-          )}
           {host && view.code && (
             <button
               className="r"
@@ -372,20 +387,67 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
                 setQr(true);
               }}
             >
-              {tw.showQr}
+              {t.inviteTitle}
             </button>
           )}
+          {host && (
+            <>
+              <h6>{t.groupMic}</h6>
+              {(['system', 'mic'] as const).map((src) => (
+                <button
+                  key={src}
+                  className={`r${source === src ? ' sel' : ''}`}
+                  aria-pressed={source === src}
+                  onClick={() => source !== src && switchSource()}
+                >
+                  {src === 'system' ? tw.thisComputer : tw.mic}
+                  {source === src && <span aria-hidden="true">✓</span>}
+                </button>
+              ))}
+            </>
+          )}
+          {shell && (
+            <>
+              <h6>{tw.groupWindow}</h6>
+              <label className="r">
+                {tw.seeThrough}
+                <input
+                  type="range"
+                  min={0.35}
+                  max={1}
+                  step={0.05}
+                  value={opacity}
+                  onChange={(e) => setOpacity(Number(e.target.value))}
+                />
+              </label>
+              <button
+                className="r"
+                onClick={() => {
+                  setMenu(false);
+                  setLocked(true);
+                }}
+              >
+                {tw.lock}
+              </button>
+            </>
+          )}
+          {host && (
+            <>
+              <h6>{t.groupAccount}</h6>
+              <button className="r" onClick={() => window.open('/account', '_blank', 'noopener')}>
+                {view.hostName}
+                {view.balance !== undefined && <span>{euros(Math.max(0, view.balance))} ›</span>}
+              </button>
+            </>
+          )}
+          <h6>{t.groupApp}</h6>
           <label className="r">
             {t.pageLang}
             <UiLangSelect />
           </label>
-          {host ? (
-            <button className="r" onClick={() => window.open('/account', '_blank', 'noopener')}>
-              {tw.account}
-            </button>
-          ) : (
+          {!host && (
             <button className="r" onClick={onLeave}>
-              {t.leave}
+              {t.leaveNamed(view.hostName)}
             </button>
           )}
         </div>
@@ -436,10 +498,14 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
           <CaptionsList
             text={text}
             labels={labels}
-            note={shown ? t.note : t.heardNote}
             waiting={view.running ? tw.waitingVoice : t.waitingHost(view.hostName)}
             latest={t.latest}
           />
+        </div>
+      )}
+      {!online && (
+        <div className="lw-note warn">
+          <b>{t.noInternet}</b> {host && mic.sending ? t.offlineKept : t.comeBack}
         </div>
       )}
       {!panel && note && <Note note={note} />}
@@ -451,11 +517,21 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
           </button>
         </div>
       )}
-      {host && view.running && !mic.sending && (
+      {host && view.running && !mic.sending && where && (
         <div className="lw-note">
-          <b>{tw.resume}</b>{' '}
+          {before}
+          <b>{t.deviceName[where]}</b>
+          {after}{' '}
+          <button className="lw-small" onClick={() => void listenHere()}>
+            {t.useThisOne}
+          </button>
+        </div>
+      )}
+      {host && view.running && !mic.sending && !where && (
+        <div className="lw-note warn">
+          <b>{t.micIsOff}</b>{' '}
           <button className="lw-small" onClick={() => void resume()}>
-            {t.micOn}
+            {t.turnItOn}
           </button>
         </div>
       )}

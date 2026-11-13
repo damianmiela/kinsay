@@ -469,8 +469,20 @@ test('the subtitles window: signed in through the person’s own browser, then i
   expect(drop.y + drop.height).toBeLessThanOrEqual(300);
   await expect(win.locator('.picker-list button').nth(3)).toBeInViewport();
   await win.keyboard.press('Escape');
+  // the strip is the phone's bar: Stop, the language, Settings; a "Live" that stays
+  const strip = win.locator('.lw-ctl > button');
+  await expect(strip.nth(0)).toHaveClass(/stop/);
+  await expect(strip.nth(1)).toHaveClass(/lang/);
+  await expect(win.locator('.lw-live')).toBeVisible();
+  // its Settings in groups: Invite first, then the microphone (the chosen one marked)
+  await win.getByRole('button', { name: 'Settings' }).click();
+  await expect(win.locator('.lw-menu .r').first()).toHaveText('Invite someone');
+  await expect(win.locator('.lw-menu h6').first()).toHaveText('Microphone');
+  await expect(win.locator('.lw-menu .r.sel')).toContainText('Microphone');
+  await win.getByRole('button', { name: 'Settings' }).click();
   await win.getByRole('button', { name: /Stop/ }).click();
   await expect(win.getByRole('button', { name: 'Start' })).toBeVisible();
+  await expect(win.locator('.lw-live')).toHaveCount(0);
 });
 
 test('a browser that isn’t signed in signs in first, then answers the desktop app', async ({
