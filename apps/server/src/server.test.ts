@@ -3,6 +3,7 @@ import { io as connect, type Socket } from 'socket.io-client';
 import { EUR, HEARD, type Ack, type SessionView } from '@translate/shared';
 import { createServer, type Config } from './server';
 import type { SpeechConnect, SpeechEvents, SpeechStream } from '@translate/engine';
+import type { UsageSource } from './usage';
 
 const ADMIN = 'admin-password-for-tests';
 const SECRET = 's'.repeat(40);
@@ -38,7 +39,7 @@ async function start(speech = fakeSpeech(), price = 0.36 * EUR, extra: Partial<C
     dbFile: ':memory:',
     speech: speech.connect,
     streams: 5,
-    defaults: { pricePerHour: price, monthlyLimit: 5 * EUR, globalLimit: 20 * EUR },
+    defaults: { pricePerHour: price, monthlyLimit: 5 * EUR, globalLimit: 20 * EUR, streamShare: 5 },
     trustProxy: false,
     now: () => t.now,
     ...extra,
@@ -1053,15 +1054,27 @@ describe('both sides of a call: a guest on the host balance (mockups batch 4)', 
   });
 });
 
+/** A fake Soniox for "Use and cost": every call answers nothing unless the test says otherwise. */
+function sonioxFake(o: Partial<UsageSource> = {}): UsageSource {
+  return {
+    summary: () => Promise.resolve([]),
+    now: () => Promise.resolve({ current: 0, limit: 10 }),
+    peaks: () => Promise.resolve([]),
+    ...o,
+  };
+}
+
 describe('use and cost (mockups batch 5)', () => {
   it('our use per UTC day with its stream-seconds, next to Soniox’s; admins only', async () => {
     const asked: string[][] = [];
-    const usage = (from: string, to: string) => {
-      asked.push([from, to]);
-      return Promise.resolve([
-        { day: '2027-01-15', costUsd: 0.25, audioMs: 3_600_000, requests: 4 },
-      ]);
-    };
+    const usage = sonioxFake({
+      summary: (from, to) => {
+        asked.push([from, to]);
+        return Promise.resolve([
+          { day: '2027-01-15', costUsd: 0.25, audioMs: 3_600_000, requests: 4 },
+        ]);
+      },
+    });
     const { person, sock, get, admin, t } = await start(fakeSpeech(), 0.36 * EUR, { usage });
     const p = await person('Marta');
     const host = sock({ cookie: p.cookie });
@@ -1103,12 +1116,101 @@ describe('use and cost (mockups batch 5)', () => {
   });
 
   it('Soniox not answering: our side all the same, and why', async () => {
-    const usage = () => Promise.reject(new Error('401'));
+    const usage = sonioxFake({ summary: () => Promise.reject(new Error('401')) });
     const { get, admin } = await start(fakeSpeech(), 0.36 * EUR, { usage });
     const r = await get('/admin/api/usage', admin);
     expect(r.status).toBe(200);
     expect(r.json.days).toBe(30);
     expect(r.json.soniox).toBeNull();
     expect(r.json.sonioxError).toBe('401');
+  });
+});
+
+describe('Soniox right now (mockups batch 6)', () => {
+  it('its count for the whole key next to Translate’s own and its share; today’s and the week’s highest', async () => {
+    const usage = sonioxFake({
+      now: () => Promise.resolve({ current: 7, limit: 10 }),
+      peaks: (from, to, period) =>
+        Promise.resolve(
+          period === 3600
+            ? [
+                { start: new Date(Date.parse(from) + 3_600_000).toISOString(), max: 10 },
+                { start: new Date(Date.parse(to) - 3_600_000).toISOString(), max: 6 },
+              ]
+            : [],
+        ),
+    });
+    const { person, sock, get, admin, post } = await start(fakeSpeech(), 0.36 * EUR, { usage });
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    await next(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'en' });
+    host.emit('host:audio', new Uint8Array(3200).buffer, {
+      age: 0,
+      seq: 1,
+      stream: 'mic-aaaaaaaa',
+    });
+    await next(host, 'captions:ack');
+    expect((await get('/admin/api/soniox/now', p.cookie)).status).toBe(401);
+    const r = await get('/admin/api/soniox/now', admin);
+    expect(r.json.org).toEqual({ current: 7, limit: 10 });
+    expect(r.json.translate).toEqual({ used: 1, share: 5 });
+    expect(r.json.week).toBe(10);
+    expect((r.json.today as { max: number }).max).toBe(6);
+    // the share: at once, and saved
+    expect((await post('/admin/api/settings', { streamShare: 0 }, admin)).status).toBe(400);
+    expect((await post('/admin/api/settings', { streamShare: 3 }, admin)).status).toBe(200);
+    expect((await get('/admin/api/soniox/now', admin)).json.translate).toEqual({
+      used: 1,
+      share: 3,
+    });
+  });
+
+  it('a share reached: a new language waits, as when Soniox is full', async () => {
+    const { person, sock, post, admin, speech } = await start(fakeSpeech(), 0.36 * EUR, {
+      usage: sonioxFake(),
+    });
+    await post('/admin/api/settings', { streamShare: 1 }, admin);
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    await next(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'en' });
+    host.emit('host:audio', new Uint8Array(3200).buffer, {
+      age: 0,
+      seq: 1,
+      stream: 'mic-aaaaaaaa',
+    });
+    await next(host, 'captions:ack');
+    expect(await ask(host, 'session:lang', { lang: 'en', other: 'pl' })).toEqual({
+      ok: false,
+      error: 'service-full',
+    });
+    expect(speech.open()).toHaveLength(1);
+  });
+
+  it('the history: hours for a day or a week, days for a month or a year; costs but for a day', async () => {
+    const seen: number[] = [];
+    const usage = sonioxFake({
+      peaks: (_f, _t, period) => {
+        seen.push(period);
+        return Promise.resolve([{ start: '2027-01-15T00:00:00Z', max: 4 }]);
+      },
+      summary: () => Promise.resolve([{ day: '2027-01-15', costUsd: 1, audioMs: 1, requests: 1 }]),
+    });
+    const { get, admin } = await start(fakeSpeech(), 0.36 * EUR, { usage });
+    const day = await get('/admin/api/soniox/history?range=day', admin);
+    expect(day.json.period).toBe(3600);
+    expect(day.json.costs).toBeNull();
+    const year = await get('/admin/api/soniox/history?range=year', admin);
+    expect(year.json.period).toBe(86400);
+    expect(year.json.costs).toHaveLength(1);
+    expect(year.json.peaks).toEqual([{ start: '2027-01-15T00:00:00Z', max: 4 }]);
+    expect(seen).toEqual([3600, 86400]);
+  });
+
+  it('no key: Translate’s own count all the same', async () => {
+    const { get, admin } = await start();
+    const r = await get('/admin/api/soniox/now', admin);
+    expect(r.json).toMatchObject({ ok: true, error: 'no key', translate: { used: 0, share: 5 } });
   });
 });

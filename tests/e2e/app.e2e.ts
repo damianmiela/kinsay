@@ -370,7 +370,10 @@ test('the admin: sign in, invite, a sign-in code with its QR; an encoded address
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Use and cost' }).click();
   await expect(page.getByRole('heading', { name: 'Use and cost' })).toBeVisible();
-  await expect(page.getByText('No Soniox key on this server')).toBeVisible();
+  await expect(page.getByText('No Soniox key on this server: our side only.')).toBeVisible();
+  // (the live card: Translate's own count all the same, and its share)
+  await expect(page.locator('.live-big')).toContainText('Translate’s own now');
+  await expect(page.getByLabel("Translate's share of Soniox's streams")).toHaveValue('5');
   await expect(page.locator('.tbl.usage tbody tr')).toHaveCount(31); // (30 days and the sum)
   await page.getByRole('button', { name: '7 days' }).click();
   await expect(page.locator('.tbl.usage tbody tr')).toHaveCount(8);

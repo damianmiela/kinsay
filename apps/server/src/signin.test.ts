@@ -30,7 +30,12 @@ async function start() {
     dbFile: ':memory:',
     speech: null,
     streams: 5,
-    defaults: { pricePerHour: 0.2 * EUR, monthlyLimit: 5 * EUR, globalLimit: 20 * EUR },
+    defaults: {
+      pricePerHour: 0.2 * EUR,
+      monthlyLimit: 5 * EUR,
+      globalLimit: 20 * EUR,
+      streamShare: 5,
+    },
     trustProxy: false,
     mail: (to, _subject, text) => {
       mails.push({ to, text });

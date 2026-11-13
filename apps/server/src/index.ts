@@ -77,6 +77,7 @@ const server = await createServer({
     pricePerHour: price,
     monthlyLimit: euro('MONTHLY_LIMIT_EUR', 5),
     globalLimit: euro('GLOBAL_LIMIT_EUR', 20),
+    streamShare: Number(env.SONIOX_STREAMS ?? 10),
   },
   trustProxy,
   mail,

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { euros } from '@translate/shared';
 import { api } from './api';
 import { lowestPrice, windowDays } from './logic';
+import { SonioxHistory, SonioxLive } from './SonioxLive';
 import { useStored } from './store';
 
 interface OurDay {
@@ -28,6 +29,8 @@ interface Usage {
   soniox: SonioxDay[] | null;
   sonioxError?: string;
   pricePerHour: number;
+  /** Soniox's most at once per day (its date). */
+  peaks?: Record<string, number>;
 }
 
 const hours = (s: number) => `${(s / 3600).toFixed(2)} h`;
@@ -85,6 +88,8 @@ export function UsagePage() {
           ))}
         </div>
       </div>
+      <SonioxLive />
+      <SonioxHistory />
       {failed && <div className="note bad">That didn&apos;t load. Reload the page.</div>}
       {u?.sonioxError ? (
         <div className="note warn">
@@ -166,6 +171,7 @@ export function UsagePage() {
                 <th className="n">Soniox audio</th>
                 <th className="n">Soniox cost</th>
                 <th className="n">Per hour</th>
+                <th className="n">Peak</th>
               </tr>
             </thead>
             <tbody>
@@ -195,6 +201,7 @@ export function UsagePage() {
                       {s && s.costUsd ? usd(s.costUsd) : '–'}
                     </td>
                     <td className="n">{s && sH ? usd(s.costUsd / sH, 3) : '–'}</td>
+                    <td className="n">{u.peaks?.[d] ? u.peaks[d] : '–'}</td>
                   </tr>
                 );
               })}
@@ -206,6 +213,11 @@ export function UsagePage() {
                 <td className="n">{u.soniox ? hours(sAudio) : '–'}</td>
                 <td className="n">{u.soniox ? usd(sCost) : '–'}</td>
                 <td className="n">{perHour === null ? '–' : usd(perHour, 3)}</td>
+                <td className="n">
+                  {Object.values(u.peaks ?? {}).length
+                    ? Math.max(...Object.values(u.peaks ?? {}))
+                    : '–'}
+                </td>
               </tr>
             </tbody>
           </table>

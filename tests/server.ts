@@ -52,7 +52,12 @@ const server = await createServer({
   dbFile: join(work, 'translate.db'),
   speech: fakeSpeech,
   streams: Number(env.E2E_STREAMS ?? 5),
-  defaults: { pricePerHour: 0.2 * EUR, monthlyLimit: 5 * EUR, globalLimit: 20 * EUR },
+  defaults: {
+    pricePerHour: 0.2 * EUR,
+    monthlyLimit: 5 * EUR,
+    globalLimit: 20 * EUR,
+    streamShare: Number(env.E2E_STREAMS ?? 5),
+  },
   trustProxy: env.TRUST_PROXY === 'true',
   contact: { name: 'A. Example', email: 'privacy@example.com' },
   clientDist: resolve(import.meta.dirname, '../apps/client/dist'),

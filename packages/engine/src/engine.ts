@@ -143,9 +143,10 @@ export function sonioxConnect(apiKey: string, options: SonioxOptions): SpeechCon
 /** The streams the whole app may hold at once (Soniox counts them per organization). */
 export class StreamPool {
   used = 0;
-  constructor(readonly size: number) {}
+  /** `size` may change while streams run (Translate's share): streams over it end in their time. */
+  constructor(public size: number) {}
   get free(): number {
-    return this.size - this.used;
+    return Math.max(0, this.size - this.used);
   }
 }
 /** A full pool for this long: said. */

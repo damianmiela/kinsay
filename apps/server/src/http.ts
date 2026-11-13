@@ -2,7 +2,7 @@
 // and the admin's API. Captions go over Socket.IO (realtime.ts). Every POST must come from our own
 // pages (same origin); every answer is JSON.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { SonioxDay, UsageSource } from './usage';
+import type { SonioxDay, SonioxPeak, UsageSource } from './usage';
 import { EUR, GRANT_STEPS } from '@translate/shared';
 import {
   ADMIN_COOKIE,
@@ -368,11 +368,14 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     const from = new Date(start).toISOString();
     const to = new Date(end).toISOString();
     let soniox: SonioxDay[] | null = null;
+    let peaks: SonioxPeak[] = [];
     let sonioxError: string | undefined;
     if (!o.usage) sonioxError = 'no key';
     else {
       try {
-        soniox = await o.usage(from, to);
+        soniox = await o.usage.summary(from, to);
+        // (the day's most at once: a column of the table; never in the way of the rest)
+        peaks = await o.usage.peaks(from, to, 86_400).catch(() => []);
       } catch (e) {
         sonioxError = e instanceof Error ? e.message : 'no answer';
         o.warn?.(`Soniox usage: ${sonioxError}`);
@@ -384,9 +387,77 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
       from: from.slice(0, 10),
       ours: o.store.usageByDay(from, to),
       soniox,
+      peaks: Object.fromEntries(peaks.map((p) => [p.start.slice(0, 10), p.max])),
       ...(sonioxError ? { sonioxError } : {}),
       pricePerHour: o.store.settings().pricePerHour,
     };
+  });
+
+  // Soniox right now (mockups batch 6): its count for the whole key (both apps) and its limit,
+  // Translate's own and its share, and the highest of today, this week and the last 12 hours
+  app.get('/admin/api/soniox/now', async () => {
+    const translate = o.realtime().streams();
+    if (!o.usage) return { ok: true, translate, error: 'no key' };
+    const t = (o.now ?? Date.now)();
+    const day0 = new Date(t);
+    const today = Date.UTC(day0.getUTCFullYear(), day0.getUTCMonth(), day0.getUTCDate());
+    const hour = Math.floor(t / 3_600_000) * 3_600_000;
+    try {
+      const now = await o.usage.now();
+      // (the week's hours: the last 12 bars, today's and the week's highest, from one answer)
+      const week = await o.usage
+        .peaks(
+          new Date(today - 6 * 86_400_000).toISOString(),
+          new Date(hour + 3_600_000).toISOString(),
+          3600,
+        )
+        .catch(() => null);
+      const todayPeaks = week?.filter((p) => Date.parse(p.start) >= today) ?? [];
+      const best = todayPeaks.reduce<SonioxPeak | null>(
+        (a, p) => (!a || p.max > a.max ? p : a),
+        null,
+      );
+      return {
+        ok: true,
+        translate,
+        org: now,
+        ...(week
+          ? {
+              today: best ? { max: best.max, at: best.start } : null,
+              week: Math.max(0, ...week.map((p) => p.max)),
+              hours: week.slice(-12),
+            }
+          : {}),
+      };
+    } catch (e) {
+      const error = e instanceof Error ? e.message : 'no answer';
+      return { ok: true, translate, error };
+    }
+  });
+
+  // the history card: the most at once (Day/Week per hour, Month per day, Year per day, made months
+  // on the page) and, but for a day, Soniox's cost next to what was charged per day
+  app.get('/admin/api/soniox/history', async (req) => {
+    const range = String((req.query as { range?: string }).range ?? 'month');
+    const t = new Date((o.now ?? Date.now)());
+    const end = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate() + 1);
+    const days = range === 'day' ? 1 : range === 'week' ? 7 : range === 'year' ? 366 : 30;
+    const period = days <= 7 ? 3600 : 86_400;
+    const from = new Date(end - days * 86_400_000).toISOString();
+    const to = new Date(end).toISOString();
+    const charged = days > 1 ? o.store.usageByDay(from, to) : [];
+    if (!o.usage)
+      return { ok: true, range, period, peaks: [], costs: null, charged, error: 'no key' };
+    try {
+      const [peaks, costs] = await Promise.all([
+        o.usage.peaks(from, to, period),
+        days > 1 ? o.usage.summary(from, to) : Promise.resolve(null),
+      ]);
+      return { ok: true, range, period, peaks, costs, charged };
+    } catch (e) {
+      const error = e instanceof Error ? e.message : 'no answer';
+      return { ok: true, range, period, peaks: [], costs: null, charged, error };
+    }
   });
 
   app.get('/admin/api/state', () => ({
@@ -487,6 +558,13 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
       if (!Number.isSafeInteger(v) || v < 0 || v > 10_000 * EUR)
         return fail(reply, 400, 'bad-setting');
       store.setSetting(k, v);
+    }
+    // (Translate's share of Soniox's streams: at once, from now on)
+    if (b.streamShare !== undefined) {
+      const v = Number(b.streamShare);
+      if (!Number.isInteger(v) || v < 1 || v > 1000) return fail(reply, 400, 'bad-setting');
+      store.setSetting('streamShare', v);
+      o.realtime().setShare(v);
     }
     return { ok: true, settings: store.settings() };
   });

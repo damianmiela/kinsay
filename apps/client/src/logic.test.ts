@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lowestPrice, mergeText, PAGE_LINES, windowDays } from './logic';
+import { byMonth, chartBars, lowestPrice, mergeText, PAGE_LINES, windowDays } from './logic';
 
 describe('mergeText', () => {
   it('adds new lines by number and replaces the line coming in', () => {
@@ -40,5 +40,34 @@ describe('use and cost (the admin)', () => {
     expect(lowestPrice(null, 0.93, 30)).toBeNull();
     expect(lowestPrice(0.12, Number.NaN, 30)).toBeNull();
     expect(lowestPrice(0.12, 0.93, -5)).toBeNull();
+  });
+});
+
+describe('the admin’s history', () => {
+  it('a year as months: each month’s highest', () => {
+    expect(
+      byMonth([
+        { start: '2026-10-30T00:00:00Z', max: 3 },
+        { start: '2026-11-01T00:00:00Z', max: 2 },
+        { start: '2026-10-02T00:00:00Z', max: 7 },
+      ]),
+    ).toEqual([
+      { start: '2026-10', max: 7 },
+      { start: '2026-11', max: 2 },
+    ]);
+  });
+  it('charged (euros) next to Soniox (dollars), per day or month, every Soniox day a bar', () => {
+    const costs = [
+      { day: '2026-11-12', costUsd: 0.5 },
+      { day: '2026-11-13', costUsd: 0.25 },
+    ];
+    const charged = [{ day: '2026-11-13', charged: 1_000_000 }];
+    expect(chartBars(costs, charged, false).map((b) => [b.key, b.a, b.b])).toEqual([
+      ['2026-11-12', 0, 0.5],
+      ['2026-11-13', 1, 0.25],
+    ]);
+    expect(chartBars(costs, charged, true).map((b) => [b.key, b.a, b.b])).toEqual([
+      ['2026-11', 1, 0.75],
+    ]);
   });
 });

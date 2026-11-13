@@ -12,10 +12,29 @@ export interface SonioxDay {
   requests: number;
 }
 
-/** Soniox's days in [start, end) (ISO times); throws with a short reason when it can't. */
-export type UsageSource = (startIso: string, endIso: string) => Promise<SonioxDay[]>;
+/** Soniox's count at once now, and its limit, for the whole organization (both apps). */
+export interface SonioxNow {
+  current: number;
+  limit: number;
+}
 
-const URL_BASE = 'https://api.soniox.com/v1/usage/summary';
+/** The most at once in a period (its start, ISO). */
+export interface SonioxPeak {
+  start: string;
+  max: number;
+}
+
+/** What the admin asks Soniox (by the server, never a page); each throws a short reason. */
+export interface UsageSource {
+  /** Days in [start, end) (ISO times). */
+  summary(startIso: string, endIso: string): Promise<SonioxDay[]>;
+  /** Now: GET /v1/concurrency-limits. */
+  now(): Promise<SonioxNow>;
+  /** The most at once per period (60, 3600 or 86400 s): GET /v1/concurrent-streams-history. */
+  peaks(startIso: string, endIso: string, periodSec: 60 | 3600 | 86400): Promise<SonioxPeak[]>;
+}
+
+const API = 'https://api.soniox.com/v1';
 
 interface Summary {
   total?: {
@@ -40,22 +59,58 @@ export function parseSummary(body: unknown): SonioxDay[] {
   }));
 }
 
-/** The real source, its answers kept 5 minutes (the page may be reloaded often). */
+/** /v1/concurrency-limits: the organization's count now and its limit (speech, not voices). */
+export function parseNow(body: unknown): SonioxNow {
+  const org = (body as { organization?: { current?: unknown; limits?: unknown } } | null)
+    ?.organization;
+  const n = (o: unknown) =>
+    Number((o as { transcribe_concurrent?: unknown } | undefined)?.transcribe_concurrent);
+  const current = n(org?.current);
+  const limit = n(org?.limits);
+  if (!Number.isFinite(current) || !Number.isFinite(limit))
+    throw new Error('an answer without counts');
+  return { current, limit };
+}
+
+/** /v1/concurrent-streams-history: each period's most at once (`sample_max`). */
+export function parsePeaks(body: unknown): SonioxPeak[] {
+  const entries = (body as { entries?: unknown } | null)?.entries;
+  if (!Array.isArray(entries)) throw new Error('an answer without entries');
+  return entries.map((e: { period_start?: unknown; sample_max?: unknown }) => ({
+    start: String(e.period_start),
+    max: Number(e.sample_max) || 0,
+  }));
+}
+
+/**
+ * The real source. Answers are kept a while (the page asks every 5 s, others reload it): now 3 s,
+ * peaks a minute, days 5 minutes.
+ */
 export function sonioxUsage(apiKey: string, fetcher: typeof fetch = fetch): UsageSource {
-  const kept = new Map<string, { at: number; days: SonioxDay[] }>();
-  return async (start, end) => {
-    const key = `${start}|${end}`;
-    const hit = kept.get(key);
-    if (hit && Date.now() - hit.at < 5 * 60_000) return hit.days;
-    const url = `${URL_BASE}?start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}`;
-    const r = await fetcher(url, {
+  const kept = new Map<string, { at: number; value: unknown }>();
+  async function ask<T>(path: string, keepMs: number, parse: (b: unknown) => T): Promise<T> {
+    const hit = kept.get(path);
+    if (hit && Date.now() - hit.at < keepMs) return hit.value as T;
+    const r = await fetcher(`${API}${path}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(10_000),
     });
     if (!r.ok) throw new Error(String(r.status));
-    const days = parseSummary(await r.json());
-    kept.clear();
-    kept.set(key, { at: Date.now(), days });
-    return days;
+    const value = parse(await r.json());
+    if (kept.size > 50) kept.clear();
+    kept.set(path, { at: Date.now(), value });
+    return value;
+  }
+  const q = (start: string, end: string) =>
+    `start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}`;
+  return {
+    summary: (start, end) => ask(`/usage/summary?${q(start, end)}`, 5 * 60_000, parseSummary),
+    now: () => ask('/concurrency-limits', 3_000, parseNow),
+    peaks: (start, end, period) =>
+      ask(
+        `/concurrent-streams-history?${q(start, end)}&period_sec=${period}&kind=stt`,
+        60_000,
+        parsePeaks,
+      ),
   };
 }

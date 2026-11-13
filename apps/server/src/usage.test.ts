@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSummary } from './usage';
+import { parseNow, parsePeaks, parseSummary } from './usage';
 
 describe('Soniox’s usage summary', () => {
   it('its days with their cost, audio and requests (the docs’ shape)', () => {
@@ -21,5 +21,40 @@ describe('Soniox’s usage summary', () => {
   it('an unexpected answer is a reason, never a crash', () => {
     expect(() => parseSummary({})).toThrow('an answer without days');
     expect(() => parseSummary(null)).toThrow();
+  });
+});
+
+describe('Soniox’s concurrency', () => {
+  it('the organization’s count now and its limit (speech)', () => {
+    const body = {
+      project: {
+        current: { transcribe_concurrent: 2, tts_concurrent: 0 },
+        limits: { transcribe_concurrent: 4, tts_concurrent: 1 },
+      },
+      organization: {
+        current: { transcribe_concurrent: 7, tts_concurrent: 0 },
+        limits: { transcribe_concurrent: 10, tts_concurrent: 3 },
+      },
+    };
+    expect(parseNow(body)).toEqual({ current: 7, limit: 10 });
+    expect(() => parseNow({})).toThrow('an answer without counts');
+  });
+  it('the history: each period’s most at once', () => {
+    const body = {
+      kind: 'stt',
+      entries: [
+        {
+          period_start: '2026-11-13T09:00:00Z',
+          period_sec: 3600,
+          sample_min: 0,
+          sample_max: 6,
+          sample_sum: 9,
+          sample_count: 3,
+          total_count: 4,
+        },
+      ],
+    };
+    expect(parsePeaks(body)).toEqual([{ start: '2026-11-13T09:00:00Z', max: 6 }]);
+    expect(() => parsePeaks({})).toThrow();
   });
 });

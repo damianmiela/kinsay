@@ -190,3 +190,13 @@ You and someone else on a video call, each with the Windows app (no new download
 - [ ] The note says Soniox's numbers include the wedding app (the same key); a day where Soniox heard more than 10 % over our count is shaded.
 - [ ] The price helper: type the dollar rate and your margin: "Charge at least €… per stream-hour". The two numbers stay in this browser.
 - [ ] Compare one day with the Soniox console's own usage page: the dollars should match.
+
+## 19. Soniox right now, and the history (2026-11-13)
+
+- [ ] Admin → Use and cost: the live card on top: "N of 10 at Soniox now" (Soniox's own count for the whole key), the bar split into Translate and Wedding app, refreshed every 5 seconds; today's and this week's highest and the last 12 hours.
+- [ ] Start captions on your phone: within a few seconds Translate's part grows; start the wedding's captions too: the Wedding app part grows.
+- [ ] "Translate may hold at most N": set it lower (for example 5) and Save: Translate opens no more than that at once (a new language says the service is full), the rest stays the wedding's. Back to 10 after.
+- [ ] From 9 of 10 at once: the amber line.
+- [ ] History: Day / Week / Month / Year: the most at once (Soniox's limit dashed) and, but for Day, what was charged next to Soniox's cost. Hovering a bar shows its numbers.
+- [ ] The table's new Peak column: each day's most at once.
+- [ ] Compare the live number with Soniox's Console (Usage → Activity) once: they should agree.

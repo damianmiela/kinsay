@@ -49,3 +49,44 @@ export function lowestPrice(usdPerHour: number | null, rate: number, marginPct: 
   if (!usdPerHour || !(rate > 0) || !(marginPct >= 0)) return null;
   return Math.ceil(usdPerHour * rate * (1 + marginPct / 100) * 100) * (EUR / 100);
 }
+
+/** A chart's bar: its value (and a second one, side by side), with its numbers for the tooltip. */
+export interface Bar {
+  key: string;
+  a: number;
+  b?: number;
+  tip: string;
+}
+
+/** A year's daily peaks as months: each month's highest, oldest first. */
+export function byMonth(peaks: readonly { start: string; max: number }[]) {
+  const m = new Map<string, number>();
+  for (const p of peaks) {
+    const k = p.start.slice(0, 7);
+    m.set(k, Math.max(m.get(k) ?? 0, p.max));
+  }
+  return [...m.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([start, max]) => ({ start, max }));
+}
+
+/**
+ * What was charged (euros) next to Soniox's cost (dollars) per day, or per month for a year:
+ * Soniox's days decide the bars (it gives every day of the window), oldest first.
+ */
+export function chartBars(
+  costs: readonly { day: string; costUsd: number }[],
+  charged: readonly { day: string; charged: number }[],
+  months: boolean,
+): Bar[] {
+  const k = (day: string) => (months ? day.slice(0, 7) : day);
+  const ours = new Map<string, number>();
+  for (const c of charged) ours.set(k(c.day), (ours.get(k(c.day)) ?? 0) + c.charged / EUR);
+  const theirs = new Map<string, number>();
+  for (const c of costs) theirs.set(k(c.day), (theirs.get(k(c.day)) ?? 0) + c.costUsd);
+  return [...theirs.keys()].sort().map((key) => {
+    const a = ours.get(key) ?? 0;
+    const b = theirs.get(key) ?? 0;
+    return { key, a, b, tip: `${key}: charged €${a.toFixed(2)}, Soniox $${b.toFixed(2)}` };
+  });
+}
