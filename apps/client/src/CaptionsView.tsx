@@ -19,6 +19,7 @@ export function CaptionsView({
   showHeard = false,
   bar,
   waiting,
+  saying,
 }: {
   update: CaptionsUpdate;
   /** The page's language (the bottom half's face to face); null: what is heard. */
@@ -30,6 +31,8 @@ export function CaptionsView({
   bar: ReactNode;
   /** While nothing has been said. */
   waiting: ReactNode;
+  /** Read aloud (one column): the line being said. */
+  saying?: number | null;
 }) {
   const heard = update.texts[HEARD] ?? EMPTY;
   const heardLangs = update.heardLangs ?? {};
@@ -38,8 +41,9 @@ export function CaptionsView({
     new Set(Object.values(heardLangs)).size > 1
       ? Object.fromEntries(Object.entries(heardLangs).map(([n, c]) => [n, langName(c).own]))
       : undefined;
-  const list = (target: string | null, turned = false) => (
+  const list = (target: string | null, turned = false, said?: number | null) => (
     <CaptionsList
+      saying={said}
       text={target ? (update.texts[target] ?? EMPTY) : heard}
       labels={target ? undefined : labels}
       turned={turned}
@@ -65,7 +69,7 @@ export function CaptionsView({
       <div className="caps">
         {showHeard && lang && <div className="heard-band">{list(null)}</div>}
         <div className="main-band" lang={lang ?? undefined}>
-          {list(lang)}
+          {list(lang, false, saying)}
         </div>
       </div>
       {bar}

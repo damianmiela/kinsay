@@ -816,3 +816,45 @@ a.btn {
 .cap-first::first-letter {
   text-transform: uppercase;
 }
+
+/* ---------- step 4: the one code door, the reader's bar ---------- */
+.digits {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.digits b {
+  display: grid;
+  place-items: center;
+  height: 64px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 30px;
+  font-weight: 700;
+}
+.digits b.on {
+  border-color: var(--text-soft);
+}
+.digits b.cur {
+  border-color: var(--accent);
+}
+.digits:focus-within b.cur {
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.digits-in {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  font-size: 16px;
+  caret-color: transparent;
+}
+.lang-row.off {
+  color: var(--text-faint);
+  cursor: default;
+}
+.small.center {
+  text-align: center;
+}

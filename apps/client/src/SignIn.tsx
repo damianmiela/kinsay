@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
 import { Foot, Logo } from './bits';
+import { CodeDoor } from './Code';
 import { t } from './texts';
 import { ui } from './ui';
 
@@ -37,12 +38,6 @@ export function SignInPage({ note }: { note?: string } = {}) {
         <a className={`btn${ways && !ways.email && !ways.google ? ' main' : ''}`} href="/signin">
           {t.haveCode}
         </a>
-        <p className="s">
-          {t.joinTitle}{' '}
-          <a className="link" href="/join">
-            {t.enterTheirCode}
-          </a>
-        </p>
         <div className="or" />
         {asking ? (
           <AskInvite />
@@ -185,7 +180,6 @@ const signIn = (body: { digits?: string; link?: string }) =>
  */
 export function CodePage() {
   const link = /^#t=([\w-]{20,100})$/.exec(window.location.hash)?.[1];
-  const [digits, setDigits] = useState('');
   // 'idle', 'busy', 'done' or an error code
   const [state, setState] = useState<string>('idle');
   const [name, setName] = useState('');
@@ -213,12 +207,14 @@ export function CodePage() {
       {state === 'offline' && <div className="note bad">{t.offline}</div>}
     </>
   );
+  // (no link: the one door for any code; a join code goes on to /join, where the door left it)
+  if (!link) return <CodeDoor onJoin={() => window.location.reload()} />;
   return (
     <div className="page">
       <div className="bar">
         <Logo />
       </div>
-      {link ? (
+      {
         <div className="body">
           <h1 className="t">{t.linkTitle}</h1>
           <p className="s">{t.linkBody}</p>
@@ -236,31 +232,7 @@ export function CodePage() {
             </a>
           )}
         </div>
-      ) : (
-        <form
-          className="body"
-          onSubmit={(e) => {
-            e.preventDefault();
-            send({ digits });
-          }}
-        >
-          <h1 className="t">{t.codeTitle}</h1>
-          <p className="s">{t.codeBody}</p>
-          <input
-            className="input code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            value={digits}
-            aria-label={t.codeTitle}
-            onChange={(e) => setDigits(e.target.value.replace(/\D/g, ''))}
-          />
-          <button className="btn main" disabled={digits.length !== 6 || state === 'busy'}>
-            {t.signIn}
-          </button>
-          {notes}
-        </form>
-      )}
+      }
     </div>
   );
 }

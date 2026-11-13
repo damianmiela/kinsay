@@ -133,3 +133,14 @@ html:has(.cap-page) body {
   font-weight: 700;
   vertical-align: 3px;
 }
+/* read aloud: the line being said has a teal edge in the margin */
+.cap-line.saying::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: -10px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}

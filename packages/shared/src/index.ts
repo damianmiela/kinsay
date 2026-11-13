@@ -117,6 +117,12 @@ export interface SessionView {
   stopsAt?: number;
   /** The host only, while it runs: which page's microphone listens (`here`: this one) and on what. */
   mic?: { here: boolean; on: DeviceKind };
+  /** The host only: when the code stops letting new readers in (a day after the last Start). */
+  codeUntil?: number;
+  /** Not running: when it last stopped ("Marta stopped at 18:40"). */
+  stoppedAt?: number;
+  /** The session reads as many languages as it may: these (a reader picks one of them). */
+  full?: Target[];
 }
 
 /** A device as people name it: "your phone", "your tablet", "your computer". */

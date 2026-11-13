@@ -53,8 +53,11 @@ export function CaptionsList({
   latest,
   labels,
   turned = false,
+  saying,
 }: {
   text: CaptionText;
+  /** Read aloud: the line being said (a teal edge). */
+  saying?: number | null;
   /** Shown turned round (face to face's top half, for the person across). */
   turned?: boolean;
   /** A small label before a line, by its number (what was heard: its language). */
@@ -213,6 +216,7 @@ export function CaptionsList({
                   n={text.first + i}
                   text={line}
                   old={i < recent}
+                  saying={saying === text.first + i}
                   label={labels?.[text.first + i]}
                 />
               ))}
@@ -258,8 +262,10 @@ const Line = memo(function Line({
   text,
   old,
   live = false,
+  saying = false,
   label,
 }: {
+  saying?: boolean;
   label?: string;
   /** Its number (CaptionText.first counts on). */
   n: number;
@@ -268,7 +274,10 @@ const Line = memo(function Line({
   live?: boolean;
 }) {
   return (
-    <p data-n={n} className={`cap-line${old ? ' old' : ''}${live ? ' live' : ''}`}>
+    <p
+      data-n={n}
+      className={`cap-line${old ? ' old' : ''}${live ? ' live' : ''}${saying ? ' saying' : ''}`}
+    >
       {label && <span className="cap-label">{label}</span>}
       <Words text={text} />
     </p>

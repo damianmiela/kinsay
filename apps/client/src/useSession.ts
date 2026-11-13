@@ -12,6 +12,8 @@ export function useSession(code?: string) {
   const [view, setView] = useState<SessionView | null>(null);
   const [update, setUpdate] = useState<CaptionsUpdate>(EMPTY);
   const [error, setError] = useState<string | null>(null);
+  // (this device's own internet: false while the connection is lost, until it comes back)
+  const [online, setOnline] = useState(true);
   useEffect(() => {
     socket.auth = code ? { code } : {};
     // (after a stop the words stay to read again: the server empties its text, the page keeps its
@@ -40,9 +42,12 @@ export function useSession(code?: string) {
     // never comes back by itself then: the page starts again and shows where it stands, audit 32)
     const onGone = (reason: string) => {
       if (reason === 'io server disconnect') window.location.reload();
+      else if (reason !== 'io client disconnect') setOnline(false);
     };
+    const onConnect = () => setOnline(true);
     socket.on('state:session', onState);
     socket.on('disconnect', onGone);
+    socket.on('connect', onConnect);
     socket.on('captions', onCaptions);
     socket.on('connect_error', onError);
     socket.connect();
@@ -52,11 +57,12 @@ export function useSession(code?: string) {
       socket.off('connect_error', onError);
       clearTimeout(retry);
       socket.off('disconnect', onGone);
+      socket.off('connect', onConnect);
       socket.disconnect();
     };
   }, [code]);
   useAwake(!!view?.running);
-  return { view, update, error };
+  return { view, update, error, online };
 }
 
 /** A socket action with a reply in at most 10 s (never a page stuck waiting). */

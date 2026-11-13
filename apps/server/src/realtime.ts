@@ -80,6 +80,7 @@ interface Channel {
   /** Face to face: the other person's language, the top half's (kept over a reconnect). */
   hostOther: Target | null;
   stopped?: StopReason;
+  stoppedAt?: number;
   /** The running session's ledger row, its cost so far, and what of it is written. */
   row?: number;
   cost: number;
@@ -150,7 +151,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     for (;;) {
       let code = '';
       for (let i = 0; i < CODE_LENGTH; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
-      if (!byCode.has(code)) return code;
+      // (always with a letter: six digits are a sign-in code, the one door tells them apart)
+      if (!byCode.has(code) && /[A-Z]/.test(code)) return code;
     }
   }
 
@@ -226,6 +228,10 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     for (const l of before) if (!read.includes(l)) c.kept.set(l, now());
     for (const l of read) c.kept.delete(l);
     c.engine.setLangs(langsOf(c));
+    // (full, or no longer: the pages' language lists say which three)
+    const full = (l: readonly Target[]) =>
+      l.length >= CHANNEL_LANGS_MAX ? [...l].sort().join() : '';
+    if (full(before) !== full(read)) stateAll(c);
   }
 
   function view(s: S): SessionView {
@@ -239,9 +245,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       lang: s.data.lang,
       ...(s.data.other !== undefined ? { other: s.data.other } : {}),
       ...(c.stopped ? { stopped: c.stopped } : {}),
+      ...(!c.running && c.stoppedAt ? { stoppedAt: c.stoppedAt } : {}),
     };
+    const read = readNow(c);
+    if (read.length >= CHANNEL_LANGS_MAX) v.full = read;
     if (s.data.role === 'host') {
       v.code = c.code;
+      v.codeUntil = c.codeUntil;
       v.balance = o.store.balance(c.personId) - (c.cost - c.written);
       if (c.running && now() >= c.keepUntil - ASK_MS) v.stopsAt = c.keepUntil;
       if (c.running && c.micSocket) v.mic = { here: c.micSocket === s.id, on: c.micKind };
@@ -313,6 +323,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
 
   function stop(c: Channel, why?: StopReason, write = true) {
     if (c.running && write) flush(c, false);
+    if (c.running) c.stoppedAt = now();
     c.running = false;
     c.stopped = why;
     c.row = undefined;
@@ -429,7 +440,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       // only wrong codes count (readers reconnect often, many share one address: audit 30)
       if (codeFails.blocked(ip, now())) return next(new Error('too-many'));
       const c = isSessionCode(code) ? byCode.get(code) : undefined;
-      if (!c || c.codeUntil < now()) {
+      // (a running session lets its readers back in, however old its code: audit, the review)
+      if (!c || (c.codeUntil < now() && !c.running)) {
         codeFails.record(ip, now());
         return next(new Error('no-session'));
       }
@@ -550,9 +562,10 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         if (c.codeUntil < now()) {
           byCode.delete(c.code);
           c.code = newCode();
-          c.codeUntil = now() + CODE_MS;
           byCode.set(c.code, c);
         }
+        // (the code lasts a day from the last Start: never out an hour into a session)
+        c.codeUntil = now() + CODE_MS;
       }
       listenHere();
       reply(cb, { ok: true });

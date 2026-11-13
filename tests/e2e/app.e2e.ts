@@ -153,8 +153,7 @@ test('two devices: the other says where it listens, "Use this one" moves it; Set
   const pcCtx = await browser.newContext({ baseURL, permissions: ['microphone'] });
   const pc = await pcCtx.newPage();
   await pc.goto('/signin');
-  await pc.getByLabel('Type the sign-in code').fill(String(code.json.digits));
-  await pc.getByRole('button', { name: 'Sign in' }).click();
+  await pc.getByLabel('Type the code').fill(String(code.json.digits));
   await expect(pc.getByText('Start live captions')).toBeVisible();
 
   await phone.getByRole('button', { name: 'Start', exact: true }).click();
@@ -220,13 +219,29 @@ test('a reader joins by the code: the host’s language first, then their own', 
   await host.getByRole('button', { name: 'Invite someone' }).click();
   const code = (await host.locator('.sheet .invite-code').textContent())!.trim();
   expect(code).toMatch(/^[A-Z2-9]{6}$/);
+  expect(code).toMatch(/[A-Z]/); // (always a letter: six digits are a sign-in code)
+  await expect(host.locator('.sheet')).toContainText('Works until');
   await host.keyboard.press('Escape');
 
   const readerCtx = await browser.newContext({ ...PHONE, baseURL });
+  // (the device's voices played by the page: a Spanish one only, each line said in 50 ms)
+  await readerCtx.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>;
+    w.SpeechSynthesisUtterance = class {
+      onend: (() => void) | null = null;
+      constructor(public text: string) {}
+    };
+    const es = { lang: 'es-ES', name: 'es', default: true, localService: true, voiceURI: 'es' };
+    Object.assign(speechSynthesis, {
+      getVoices: () => [es],
+      speak: (u: { onend: (() => void) | null }) => setTimeout(() => u.onend?.(), 50),
+      cancel: () => {},
+    });
+  });
   const reader = await readerCtx.newPage();
   await reader.goto('/join');
-  await reader.getByLabel('The code').fill(code.toLowerCase());
-  await reader.getByRole('button', { name: 'Join' }).click();
+  // the one door: no button, the sixth character joins; small letters come out as capitals
+  await reader.getByLabel('Type the code').fill(code.toLowerCase());
   await expect(reader.locator('.who')).toContainText(`${name.split(' ')[0]}’s captions`);
   await expect(reader.locator('.who .live')).toBeVisible();
   await expect(reader.locator('.cap-line').first()).toContainText('[pl] Sentence');
@@ -237,9 +252,36 @@ test('a reader joins by the code: the host’s language first, then their own', 
   // a reader never sees the code or the balance, and has no Stop
   await expect(reader.locator('.balance')).toHaveCount(0);
   await expect(reader.getByRole('button', { name: 'Stop' })).toHaveCount(0);
-  // the host stops: the reader's line is no longer live
+  // Read aloud: the word, the mark and the colour change; the earphones line the first time
+  await reader.getByRole('button', { name: 'Read aloud' }).click();
+  await expect(reader.locator('.cb.aloud.on')).toHaveText('Reading');
+  await expect(reader.locator('.cbar .strip')).toContainText('Best with earphones');
+  await reader.getByRole('button', { name: 'Reading' }).click();
+  await expect(reader.locator('.cb.aloud')).toHaveText('Read aloud');
+  // no voice for a language: said, with where to add one, until ✕
+  await reader.locator('.cbar .cb.lang').click();
+  await pickInSheet(reader, 'deu', 'Deutsch');
+  await reader.getByRole('button', { name: 'Read aloud' }).click();
+  await expect(reader.locator('.cbar .strip')).toContainText('No Deutsch voice on this device');
+  await expect(reader.locator('.cb.aloud.dim')).toBeVisible();
+  await reader.locator('.cbar .strip .mini.x').click();
+  await expect(reader.locator('.cbar .strip', { hasText: 'voice' })).toHaveCount(0);
+  await reader.getByRole('button', { name: 'Read aloud' }).click();
+  // the host stops: the reader's line is no longer live, the bar says when
   await host.getByRole('button', { name: 'Stop' }).click();
   await expect(reader.locator('.who .live')).toHaveCount(0);
+  await expect(reader.locator('.cbar .strip')).toContainText(/stopped at \d\d:\d\d/);
+  // Leave: a page of its own; Join again comes back
+  await reader.getByRole('button', { name: 'Settings' }).click();
+  await reader.getByRole('button', { name: /^Leave .*captions$/ }).click();
+  await expect(reader.getByText(/You left .*captions/)).toBeVisible();
+  await reader.getByRole('button', { name: 'Join again' }).click();
+  await expect(reader.locator('.who')).toContainText('captions');
+  // six digits at the same door are a sign-in code (a wrong one here)
+  const door = await readerCtx.newPage();
+  await door.goto('/join');
+  await door.getByLabel('Type the code').fill('000000');
+  await expect(door.locator('.note.bad')).toBeVisible();
   // a wrong code
   const other = await readerCtx.newPage();
   await other.goto('/join#ZZZZZZ');
@@ -439,8 +481,7 @@ test('a browser that isn’t signed in signs in first, then answers the desktop 
     id: (inv.json.person as { id: number }).id,
   });
   await page.goto('/signin');
-  await page.getByLabel('Type the sign-in code').fill(String(code.json.digits));
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Type the code').fill(String(code.json.digits));
   await expect(page.getByText('Sign in the desktop app?')).toBeVisible({ timeout: 10_000 });
 });
 

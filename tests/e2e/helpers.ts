@@ -47,8 +47,7 @@ export async function signedInPhone(
   });
   const page = await ctx.newPage();
   await page.goto('/signin');
-  await page.getByLabel('Type the sign-in code').fill(String(code.json.digits));
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByLabel('Type the code').fill(String(code.json.digits));
   await expect(page.getByText('Start live captions')).toBeVisible();
   return { ctx, page, id, name };
 }

@@ -25,6 +25,7 @@ import { barName } from './langs';
 import { MicAsk, MicBlocked } from './MicSheets';
 import { markMicAsked, micAskedBefore, micPermission } from './mic/permission';
 import { useMic } from './mic/useMic';
+import { canSpeak, useReadAloud } from './readAloud';
 import { Qr } from './Qr';
 import { SettingsSheet, SwitchRow, TextSizeRow } from './Settings';
 import { useStored } from './store';
@@ -78,6 +79,15 @@ export function HostPage() {
 
   // another of the host's devices took the microphone: this one stops sending
   const elsewhere = view?.mic && !view.mic.here ? view.mic.on : null;
+  // read aloud: only on a device that doesn't listen (its voice would be captioned again)
+  const [aloud, setAloud] = useStored('tr-aloud', false);
+  const aloudLang = mode === 'face' ? null : lang;
+  const { saying } = useReadAloud(
+    aloud && !!elsewhere && !!view?.running && mode !== 'face',
+    update.texts[aloudLang ?? 'heard'] ?? { lines: [], first: 0, live: '' },
+    aloudLang,
+    (n) => update.heardLangs?.[n],
+  );
   useEffect(() => {
     if (elsewhere && mic.sending) mic.stopSending();
   }, [elsewhere, mic]);
@@ -190,6 +200,9 @@ export function HostPage() {
           {(view.running || here) && !face && lang && (
             <SwitchRow label={t.showHeard} on={showHeard} onChange={setShowHeard} />
           )}
+          {view.running && elsewhere && !face && canSpeak && (
+            <SwitchRow label={t.readAloudHere} on={aloud} onChange={setAloud} />
+          )}
         </>
       }
       microphone={
@@ -211,7 +224,7 @@ export function HostPage() {
     <>
       {sheet === 'gear' && settings}
       {sheet === 'invite' && view.code && (
-        <InviteSheet code={view.code} onClose={() => setSheet(null)} />
+        <InviteSheet code={view.code} until={view.codeUntil} onClose={() => setSheet(null)} />
       )}
       {sheet === 'langs' && (
         <LanguagesSheet
@@ -440,6 +453,7 @@ export function HostPage() {
         showHeard={showHeard}
         bar={bar}
         waiting={<Hears />}
+        saying={saying}
       />
       {sheets}
     </div>
@@ -576,7 +590,15 @@ function FaceToFacePicture() {
   );
 }
 
-function InviteSheet({ code, onClose }: { code: string; onClose: () => void }) {
+function InviteSheet({
+  code,
+  until,
+  onClose,
+}: {
+  code: string;
+  until?: number;
+  onClose: () => void;
+}) {
   const link = `${window.location.origin}/join#${code}`;
   const [copied, setCopied] = useState(false);
   return (
@@ -604,7 +626,17 @@ function InviteSheet({ code, onClose }: { code: string; onClose: () => void }) {
           {copied ? t.copied : t.copyLink}
         </button>
       </div>
-      <p className="small">{t.codeWorks}</p>
+      {until && (
+        <p className="small center">
+          {t.codeUntil(
+            new Date(until).toLocaleString(ui, {
+              weekday: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          )}
+        </p>
+      )}
     </Sheet>
   );
 }

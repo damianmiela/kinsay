@@ -121,3 +121,16 @@ With your phone and your computer, both signed in:
 - [ ] ⚙ while it runs: Account opens over the captions (the balance, Ask for more, "History and devices" in a new tab); the captions keep going.
 - [ ] ⚙ → App language: a list of the five; picking one reloads the page in it.
 - [ ] The desktop window while the phone listens: it stops sending its own sound (its redesign comes in step 5).
+
+## 12. The redesign, step 4: readers, read aloud, the one code door (2026-11-13)
+
+- [ ] Signed out, "I have a code": six boxes, no button. Your sign-in code from the admin signs in as you type the sixth digit. Someone's captions code (it always has a letter) opens their captions; small letters come out as capitals.
+- [ ] Invite: under the code, "Works until" a day after this Start. Start again the next day: the same code works on (it never runs out in the middle of a session).
+- [ ] A reader: "Marta's captions" with a teal Live mark; the bar: the language, Read aloud, ⚙.
+- [ ] Read aloud: the button says "Reading", each new line is said by the phone's voice with a teal edge on it; "Best with earphones" the first time only. If people talk fast, it skips to the newest line.
+- [ ] A language the phone has no voice for (try Català): "No Català voice on this device" with where to add one (iPhone: Spoken Content; Android: Text-to-speech); ✕ puts it away.
+- [ ] The host stops: the reader's words stay, the bar says "Marta stopped at 18:40", Live goes; Start again and it carries on by itself.
+- [ ] Three readers in three other languages: the fourth's list says the captions have three languages and offers only those.
+- [ ] ⚙ → "Leave Marta's captions": "You left Marta's captions" with Join again and Type another code.
+- [ ] Airplane mode on a reader's phone: "No internet. The captions come back by themselves."; off again: they come back.
+- [ ] Your computer while your phone listens: ⚙ has "Read aloud on this device".

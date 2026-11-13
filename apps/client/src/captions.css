@@ -331,3 +331,25 @@ html:has(.cap-screen) body {
   border-radius: 50%;
   background: currentColor;
 }
+/* a reader's bar with Read aloud: the language, Read aloud, Settings (2 : 2 : 1) */
+.cbar-pair.three {
+  grid-template-columns: 2fr 2fr 1fr;
+}
+.cb.aloud {
+  border-color: var(--bar-edge);
+  background: transparent;
+  white-space: normal;
+  font-size: 16px;
+  line-height: 1.1;
+  text-align: center;
+}
+.cb.aloud svg {
+  flex: none;
+}
+.cb.aloud.on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.cb.aloud.dim {
+  color: var(--bar-soft);
+}

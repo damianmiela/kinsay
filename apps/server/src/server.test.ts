@@ -845,3 +845,52 @@ describe('which microphone listens (mockups batch 3)', () => {
     expect(await ask(reader, 'session:useMic')).toEqual({ ok: false, error: 'not-host' });
   });
 });
+
+describe('the code and what readers see (mockups batch 3)', () => {
+  it('a code lasts a day from the last Start, never out mid-session; always with a letter', async () => {
+    const { person, sock, t } = await start();
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    const v = await next<SessionView>(host, 'state:session');
+    expect(v.code).toMatch(/[A-Z]/);
+    t.now += 23 * 3_600_000;
+    const started = next<SessionView>(host, 'state:session', (x) => x.running);
+    await ask(host, 'session:start', { lang: 'pl' });
+    const s = await started;
+    expect(s.code).toBe(v.code);
+    expect(s.codeUntil).toBe(t.now + 24 * 3_600_000);
+    // 25 h after the code was made, the session still runs: a reader gets in
+    t.now += 2 * 3_600_000;
+    const reader = sock({ code: v.code });
+    expect((await next<SessionView>(reader, 'state:session')).running).toBe(true);
+    // stopped, and a day after its last Start: the code no longer lets anyone in
+    const stopped = next<SessionView>(reader, 'state:session', (x) => !x.running);
+    await ask(host, 'session:stop');
+    expect((await stopped).stoppedAt).toBe(t.now);
+    t.now += 23 * 3_600_000;
+    const late = sock({ code: v.code });
+    const err = await new Promise<Error>((res) => late.once('connect_error', res));
+    expect(err.message).toBe('no-session');
+  });
+
+  it('a session with three languages tells its pages which', async () => {
+    const { person, sock } = await start();
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    const v = await next<SessionView>(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'pl' });
+    const a = sock({ code: v.code });
+    await next(a, 'state:session');
+    await ask(a, 'session:lang', { lang: 'en' });
+    const b = sock({ code: v.code });
+    await next(b, 'state:session');
+    const full = next<SessionView>(b, 'state:session', (x) => !!x.full);
+    await ask(a, 'session:lang', { lang: 'de' }); // (still two: en went)
+    expect(await ask(b, 'session:lang', { lang: 'es' })).toEqual({ ok: true });
+    expect([...(await full).full!].sort()).toEqual(['de', 'es', 'pl']);
+    expect(await ask(b, 'session:lang', { lang: 'fr' })).toEqual({
+      ok: false,
+      error: 'too-many-langs',
+    });
+  });
+});

@@ -29,9 +29,12 @@ export function LangSheet({
   value,
   onPick,
   onClose,
+  full,
 }: {
   title: string;
   value: string | null;
+  /** The session reads three languages already: only those (and no translation) may be picked. */
+  full?: { langs: readonly string[]; note: string };
   onPick: (lang: string | null) => void;
   onClose: () => void;
 }) {
@@ -41,13 +44,14 @@ export function LangSheet({
     if (lang) rememberLang(lang);
     onPick(lang);
   };
-  const row = (code: string | null, side?: string) => {
+  const row = (code: string | null, side?: string, off = false) => {
     const n = code ? langName(code) : null;
     const on = value === code;
     return (
       <button
         key={code ?? '-'}
-        className="li link-row lang-row"
+        disabled={off}
+        className={`li link-row lang-row${off ? ' off' : ''}`}
         role="option"
         aria-selected={on}
         onClick={() => pick(code)}
@@ -73,15 +77,28 @@ export function LangSheet({
             <IconClose />
           </button>
         </div>
-        <div className="list" role="listbox" aria-label={title}>
-          {row(null)}
-          {MAIN_LANGS.map((c) => row(c))}
-          {usedBefore().map((c) => row(c, t.usedBefore))}
-          <button className="li link-row" onClick={() => setAll(true)}>
-            <span className="what">{t.otherLangs}</span>
-            <IconRight />
-          </button>
-        </div>
+        {full ? (
+          <>
+            <div className="note warn">{full.note}</div>
+            <div className="list" role="listbox" aria-label={title}>
+              {row(null)}
+              {full.langs.map((c) => row(c))}
+              {MAIN_LANGS.filter((c) => !full.langs.includes(c)).map((c) =>
+                row(c, undefined, true),
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="list" role="listbox" aria-label={title}>
+            {row(null)}
+            {MAIN_LANGS.map((c) => row(c))}
+            {usedBefore().map((c) => row(c, t.usedBefore))}
+            <button className="li link-row" onClick={() => setAll(true)}>
+              <span className="what">{t.otherLangs}</span>
+              <IconRight />
+            </button>
+          </div>
+        )}
       </Sheet>
     );
   }
