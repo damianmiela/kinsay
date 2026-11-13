@@ -89,6 +89,8 @@ const t_en = {
   askForMore: 'Ask for more',
   micProblem: 'The microphone didn’t start.',
   micOff: 'This device’s microphone is off.',
+  keepScreenOn:
+    'Keep this phone’s screen on: it can’t do it by itself, and the microphone stops when the screen locks.',
   micOn: 'Turn the microphone on',
   // readers
   hostsCaptions: (name: string) => `${name}’s captions`,

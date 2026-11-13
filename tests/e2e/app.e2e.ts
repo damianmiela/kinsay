@@ -324,3 +324,19 @@ test('the download page: the desktop app as one file, saved as a download', asyn
   expect(body.subarray(0, 2).toString()).toBe('MZ'); // (a Windows program)
   expect(body.length).toBeGreaterThan(500_000);
 });
+
+test('a phone that can’t keep its screen on by itself is asked to, while it listens', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  const { page } = await signedInPhone(browser, baseURL!, admin);
+  // (as an iPhone before iOS 16.4: no wake lock)
+  await page.addInitScript(() => {
+    delete (Navigator.prototype as { wakeLock?: unknown }).wakeLock;
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Start' }).click();
+  await expect(page.getByText('Keep this phone’s screen on', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Stop' }).click();
+});

@@ -84,6 +84,8 @@ export const de: Texts = {
     askForMore: 'Um mehr bitten',
     micProblem: 'Das Mikrofon ist nicht angegangen.',
     micOff: 'Das Mikrofon dieses Geräts ist aus.',
+    keepScreenOn:
+      'Lass den Bildschirm dieses Handys an: Es kann das nicht von selbst, und das Mikrofon hört auf, wenn der Bildschirm sperrt.',
     micOn: 'Mikrofon einschalten',
     hostsCaptions: (name) => `Untertitel von ${name}`,
     waitingHost: (name) => `Warten auf ${name}`,

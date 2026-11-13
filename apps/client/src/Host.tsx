@@ -8,6 +8,7 @@ import { CaptionsView } from './CaptionsView';
 import { LangPicker } from './LangPicker';
 import { langName } from './langs';
 import { useMic } from './mic/useMic';
+import { canStayAwake } from './useAwake';
 import { Qr } from './Qr';
 import { clock, stopText, t, tw } from './texts';
 import { ask, useSession } from './useSession';
@@ -166,6 +167,7 @@ export function HostPage() {
             {t.lowBody(Math.max(0, view.balance ?? 0))}
           </div>
         )}
+        {!canStayAwake && mic.sending && <div className="note info">{t.keepScreenOn}</div>}
         {view.stopsAt && (
           <div className="note warn">
             <b>{t.stillListening(clock(view.stopsAt))}</b>

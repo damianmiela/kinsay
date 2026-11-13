@@ -81,3 +81,7 @@ The texts are drafts: a native speaker of each language should read every page o
 ## 7. Pages per connection (2026-11-13)
 
 Nothing to see normally: one internet connection (a family's Wi-Fi) may have 50 Translate pages open at once. Beyond that a page says "Too many Translate pages are open on this internet connection" and tries again by itself every 30 seconds. (Hard to reach by hand; the server tests check it.)
+
+## 8. Keep the screen on (2026-11-13)
+
+- [ ] On an iPhone older than iOS 16.4 (if anyone has one): while it listens, "Keep this phone's screen on…". On any newer phone the note never shows (the screen stays on by itself while captions run).

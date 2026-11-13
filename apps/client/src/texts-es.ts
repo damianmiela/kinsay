@@ -83,6 +83,8 @@ export const es: Texts = {
     askForMore: 'Pedir más',
     micProblem: 'El micrófono no se ha puesto en marcha.',
     micOff: 'El micrófono de este dispositivo está apagado.',
+    keepScreenOn:
+      'Mantén encendida la pantalla de este móvil: no puede hacerlo solo, y el micrófono se para cuando la pantalla se bloquea.',
     micOn: 'Encender el micrófono',
     hostsCaptions: (name) => `Subtítulos de ${name}`,
     waitingHost: (name) => `Esperando a ${name}`,

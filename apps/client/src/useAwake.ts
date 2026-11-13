@@ -1,7 +1,13 @@
-// Keeps a phone's screen on while it matters (shared by the guests' page and /live), and brings a
-// fresh connection at once after the phone was locked or in the background for a while.
+// Keeps a phone's screen on while captions run (from the wedding app's), and brings a fresh
+// connection at once after the phone was locked or in the background for a while.
 import { useEffect } from 'react';
 import { socket } from './socket';
+
+/**
+ * Can this browser keep the screen on by itself? (Not iPhones before iOS 16.4: there the page asks
+ * the person to keep it on, or the listening phone's microphone stops when it locks, as /live did.)
+ */
+export const canStayAwake = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 
 interface WakeLock {
   release: () => Promise<void>;

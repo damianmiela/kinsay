@@ -84,6 +84,8 @@ export const ca: Texts = {
     askForMore: 'Demana’n més',
     micProblem: 'El micròfon no s’ha engegat.',
     micOff: 'El micròfon d’aquest dispositiu està apagat.',
+    keepScreenOn:
+      'Mantén encesa la pantalla d’aquest mòbil: no ho pot fer sol, i el micròfon s’atura quan la pantalla es bloqueja.',
     micOn: 'Engega el micròfon',
     hostsCaptions: (name) => `Subtítols de ${name}`,
     waitingHost: (name) => `Esperant ${name}`,
