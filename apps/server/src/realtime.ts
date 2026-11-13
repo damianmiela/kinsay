@@ -73,6 +73,8 @@ interface Channel {
   running: boolean;
   /** The host's language (kept over a reconnect; null: what is heard only). */
   hostLang: Target | null;
+  /** Face to face: the other person's language, the top half's (kept over a reconnect). */
+  hostOther: Target | null;
   stopped?: StopReason;
   /** The running session's ledger row, its cost so far, and what of it is written. */
   row?: number;
@@ -101,6 +103,8 @@ interface Data {
   channel: Channel;
   role: 'host' | 'reader';
   lang: Target | null;
+  /** Face to face (the host's page): the top half's language too. */
+  other?: Target | null;
   personId?: number;
   deviceId?: number;
 }
@@ -157,6 +161,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       codeUntil: now() + CODE_MS,
       running: false,
       hostLang: null,
+      hostOther: null,
       cost: 0,
       written: 0,
       balanceAt: 0,
@@ -190,9 +195,11 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
 
   /** The languages a channel's pages read now: the host's first (its stream also gives what is heard). */
   function readNow(c: Channel): Target[] {
-    const all = [c.hostLang, ...[...c.sockets].map((s) => s.data.lang)].filter(
-      (l): l is Target => !!l && l !== HEARD,
-    );
+    const all = [
+      c.hostLang,
+      c.hostOther,
+      ...[...c.sockets].flatMap((s) => [s.data.lang, s.data.other ?? null]),
+    ].filter((l): l is Target => !!l && l !== HEARD);
     return [...new Set(all)];
   }
 
@@ -222,6 +229,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       service: c.engine.service,
       ...(c.engine.error ? { error: c.engine.error } : {}),
       lang: s.data.lang,
+      ...(s.data.other !== undefined ? { other: s.data.other } : {}),
       ...(c.stopped ? { stopped: c.stopped } : {}),
     };
     if (s.data.role === 'host') {
@@ -239,7 +247,9 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   function textSoon(c: Channel) {
     c.textTimer ??= setTimeout(() => {
       c.textTimer = undefined;
-      for (const s of c.sockets) s.emit('captions', c.engine.update(s.data.lang));
+      for (const s of c.sockets) {
+        s.emit('captions', c.engine.update(s.data.lang, false, s.data.other));
+      }
     }, TEXT_EVERY_MS);
   }
 
@@ -435,24 +445,39 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     // (a channel dropped while this socket was being let in)
     if (byPerson.get(c.personId) !== c) return void s.disconnect(true);
     c.sockets.add(s);
-    // (a host gets their own language back; a reader starts in the host's)
+    // (a host gets their own languages back; a reader starts in the host's)
     s.data.lang = c.hostLang;
+    if (s.data.role === 'host' && c.hostOther) s.data.other = c.hostOther;
     s.emit('state:session', view(s));
-    s.emit('captions', c.engine.update(s.data.lang, true));
+    s.emit('captions', c.engine.update(s.data.lang, true, s.data.other));
 
     const reply = (cb: unknown, r: Ack) => {
       if (typeof cb === 'function') (cb as (r: Ack) => void)(r);
     };
     const host = () => s.data.role === 'host' && s.data.personId === c.personId;
 
-    /** A page's language: null or HEARD = what is heard only. */
-    function setLang(lang: unknown): Ack {
-      const next = lang === null || lang === HEARD ? null : lang;
-      if (next !== null && !isTarget(next)) return { ok: false, error: 'bad-lang' };
-      if (next === s.data.lang) return { ok: true };
+    const asLang = (v: unknown): Target | null | undefined =>
+      v === null || v === HEARD ? null : isTarget(v) ? v : undefined;
+
+    /**
+     * A page's languages: its own (null or HEARD = what is heard only) and, face to face (the host's
+     * page only), the top half's (`other`; left out = one column).
+     */
+    function setLang(p: unknown): Ack {
+      const o = (typeof p === 'object' && p ? p : {}) as { lang?: unknown; other?: unknown };
+      const next = asLang(o.lang ?? null);
+      const two = host() && o.other !== undefined;
+      const nextOther = two ? asLang(o.other) : undefined;
+      if (next === undefined || (two && nextOther === undefined)) {
+        return { ok: false, error: 'bad-lang' };
+      }
+      if (next === s.data.lang && nextOther === s.data.other) return { ok: true };
       if (!langSwitches.take(s.id, now())) return { ok: false, error: 'too-many' };
       const langs = new Set(langsOf(c));
-      if (next && !langs.has(next)) {
+      const added = [...new Set([next, nextOther])].filter(
+        (l): l is Target => !!l && !langs.has(l),
+      );
+      for (const l of added) {
         // (a kept language nobody reads makes room first: the oldest)
         const oldest = [...c.kept.entries()].sort((a, b) => a[1] - b[1])[0]?.[0];
         if (langs.size >= CHANNEL_LANGS_MAX && oldest) {
@@ -460,25 +485,29 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
           langs.delete(oldest);
         }
         if (langs.size >= CHANNEL_LANGS_MAX) return { ok: false, error: 'too-many-langs' };
-        if (c.running && !c.engine.canAdd(oldest && !c.kept.has(oldest) ? 0 : 1)) {
-          return { ok: false, error: 'service-full' };
-        }
+        langs.add(l);
+      }
+      if (added.length && c.running && !c.engine.canAdd(added.length)) {
+        return { ok: false, error: 'service-full' };
       }
       const before = readNow(c);
       s.data.lang = next;
-      if (host()) c.hostLang = next;
+      if (two) s.data.other = nextOther;
+      else delete s.data.other;
+      if (host()) {
+        c.hostLang = next;
+        c.hostOther = two ? (nextOther ?? null) : null;
+      }
       // (a page sees a language new to the channel from now on: its history starts there; a kept
       // one comes back with its lines)
-      if (next && !langs.has(next)) c.engine.clearText(next);
+      for (const l of added) c.engine.clearText(l);
       readersChanged(c, before);
       s.emit('state:session', view(s));
-      s.emit('captions', c.engine.update(next, true));
+      s.emit('captions', c.engine.update(next, true, s.data.other));
       return { ok: true };
     }
 
-    s.on('session:lang', (p, cb) =>
-      reply(cb, setLang((p as { lang?: unknown } | undefined)?.lang ?? null)),
-    );
+    s.on('session:lang', (p, cb) => reply(cb, setLang(p)));
 
     s.on('session:start', (p, cb) => {
       if (!host()) return reply(cb, { ok: false, error: 'not-host' });
@@ -488,7 +517,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         stateAll(c);
         return reply(cb, { ok: false, error: why });
       }
-      const r = setLang((p as { lang?: unknown } | undefined)?.lang ?? null);
+      const r = setLang(p);
       if (!r.ok) return reply(cb, r);
       // (a new session: no language left over from pages gone since)
       if (!c.running) c.kept.clear();

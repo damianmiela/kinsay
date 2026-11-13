@@ -404,11 +404,11 @@ export class Engine {
   }
 
   /** What a page reading `target` gets (`all`: every kept line, a page that just came). */
-  update(target: Target | null, all = false): CaptionsUpdate {
+  update(target: Target | null, all = false, also?: Target | null): CaptionsUpdate {
     const n = all ? Infinity : LINES_SENT;
     const heard = this.heard.view(n);
     const texts: CaptionsUpdate['texts'] = { [HEARD]: heard };
-    if (target && target !== HEARD) texts[target] = this.text(target).view(n);
+    for (const t of [target, also]) if (t && t !== HEARD) texts[t] = this.text(t).view(n);
     const heardLangs: Record<number, string> = {};
     for (let i = heard.first; i < heard.first + heard.lines.length; i++) {
       const l = this.heardLangs.get(i);

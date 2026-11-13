@@ -61,7 +61,7 @@ Open translate.dendigital.de/download (or "Windows app" at any page's foot), dow
 The texts are drafts: a native speaker of each language should read every page once.
 
 - [ ] A browser set to Polish (or Spanish, Catalan, German) opens every page in that language; any other browser language: English.
-- [ ] The foot of the sign-in, home and Account pages: "Privacy" and the language; choosing another reloads the page in it, and it stays on that device. The gear's "Page language" and the window's ⚙ menu do the same.
+- [ ] The foot of the sign-in, home and Account pages: "Privacy" and the language; choosing another reloads the page in it, and it stays on that device. Settings' "App language" and the window's ⚙ menu do the same.
 - [ ] The language list ("Translate into") names the languages in the page's language (in Polish: "Angielski", …), each also in its own name.
 - [ ] A sign-in email asked for from a Polish page comes in Polish.
 - [ ] The privacy page in each language says the same as the English one.
@@ -85,3 +85,16 @@ Nothing to see normally: one internet connection (a family's Wi-Fi) may have 50 
 ## 8. Keep the screen on (2026-11-13)
 
 - [ ] On an iPhone older than iOS 16.4 (if anyone has one): while it listens, "Keep this phone's screen on…". On any newer phone the note never shows (the screen stays on by itself while captions run).
+
+## 9. The redesign, step 1: the bar and two-way face to face (2026-11-13)
+
+On a phone:
+
+- [ ] Home: "Start live captions", two pictures (Just me chosen); Face to face asks the top half's and the bottom half's language, each with a little phone showing its half.
+- [ ] While it runs, one dark bar: Stop (red) · the language · ⚙, one height, nothing cut off at a small phone's width. No sentence explains the screen.
+- [ ] Face to face: the bar sits between the halves; the far half is turned round and in its own language, yours under the bar in yours. Both halves scroll smoothly, each on its own.
+- [ ] The language button (both languages, the top one above): each half changes on its own; "Swap the halves" swaps them.
+- [ ] ⚙: "Invite someone" first, then Captions (text size, face to face, what is heard), Account (name and balance), App (App language, the Windows app on Windows only, Privacy).
+- [ ] Stop: the words stay on screen, the first button says Start again; Start begins with an empty screen.
+- [ ] Turn the microphone off in the browser: the bar says "The microphone is off" with "Turn it on" (never for a moment while it is still opening).
+- [ ] A reader (the code from Invite): their name and a Live mark above the captions, the language and ⚙ in the bar, no Stop; the host's Stop takes the Live mark away.

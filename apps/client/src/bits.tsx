@@ -51,10 +51,13 @@ export function Sheet({
   onClose,
   children,
   label,
+  half = false,
 }: {
   onClose: () => void;
   children: ReactNode;
   label: string;
+  /** Over running captions: half height, no dimming, so they stay in sight. */
+  half?: boolean;
 }) {
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -62,7 +65,10 @@ export function Sheet({
     return () => window.removeEventListener('keydown', key);
   }, [onClose]);
   return (
-    <div className="sheet-back" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className={`sheet-back${half ? ' half' : ''}`}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
       <div className="sheet" role="dialog" aria-modal="true" aria-label={label}>
         {children}
       </div>

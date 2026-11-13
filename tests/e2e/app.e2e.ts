@@ -2,52 +2,80 @@
 // translation, face to face, a reader by code, the credits, the account, the admin. The speech
 // service is the test server's fake: every second of audio a numbered "Sentence N.".
 import { expect, test } from '@playwright/test';
-import { adminApi, pickLang, PHONE, signedInPhone, smallestText } from './helpers';
+import { adminApi, pickInSheet, pickLang, PHONE, signedInPhone, smallestText } from './helpers';
 
-test('a host starts with a translation: face to face, then the translation alone, the gear', async ({
+test('face to face, two-way: each half in its person’s language, the bar between them', async ({
   browser,
   baseURL,
 }) => {
   const admin = await adminApi(browser, baseURL!);
   const { page } = await signedInPhone(browser, baseURL!, admin);
-  await pickLang(page, 'tag', 'Tagalog');
-  await page.getByRole('button', { name: 'Start' }).click();
-  await expect(page.locator('.live-dot')).toHaveText('Live · Tagalog');
-  // face to face: the top half turned round with the translation, the bottom what is heard
+  // Home: Just me is the default; Face to face asks both halves' languages
+  await expect(page.getByRole('radio', { name: 'Just me' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.getByRole('radio', { name: 'Face to face' }).click();
+  await pickLang(page, 'tag', 'Tagalog', 0); // the top half
+  await expect(page.locator('.picker-field').nth(1)).toContainText('English'); // the app's
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  // the top half turned round in Tagalog, the bottom in English, the bar between them
   await expect(page.locator('.half.across .cap-line').first()).toContainText('[tl] Sentence');
+  // (English speech in the English half: as heard, no translation needed)
   await expect(page.locator('.half:not(.across) .cap-line').first()).toContainText('Sentence');
+  await expect(page.locator('.half:not(.across) .cap-line').first()).not.toContainText('[');
   expect(
     await page.locator('.half.across').evaluate((el) => getComputedStyle(el).transform),
   ).toMatch(/matrix\(-1, .*-1, 0, 0\)/);
-  await page.getByRole('button', { name: 'Turn off' }).click();
-  await expect(page.locator('.main-band .cap-line').first()).toContainText('[tl] Sentence');
-  // the gear: "Show what was heard" adds its band
+  const bar = page.locator('.dual > .cbar');
+  await expect(bar).toBeVisible();
+  // the bar: Start/Stop a quarter, the languages a half, Settings a quarter, one height
+  const widths = await bar
+    .locator('.cbar-row > .cb')
+    .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+  expect(widths[1]! / widths[0]!).toBeGreaterThan(1.8);
+  expect(Math.abs(widths[0]! - widths[2]!)).toBeLessThan(3);
+  await expect(bar.locator('.cb.lang .tl')).toHaveText('Tagalog');
+  // no sentence explains the screen
+  await expect(page.locator('.cap-note')).toHaveCount(0);
+  // the languages: each half on its own, and Swap
+  await bar.locator('.cb.lang').click();
+  await page.getByRole('button', { name: 'Swap the halves' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.half:not(.across) .cap-line').last()).toContainText('[tl] Sentence');
+  await expect(page.locator('.half.across .cap-line').last()).not.toContainText('[tl]');
+  // Settings: Invite first; face to face off gives one column
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('switch', { name: 'Show what was heard' }).click();
-  await page.getByRole('button', { name: 'Back to captions' }).click();
-  await expect(page.locator('.heard-band .cap-line').first()).toContainText('Sentence');
-  // the page itself never scrolls (only the captions do)
+  await expect(page.locator('.sheet .li').first()).toContainText('Invite someone');
+  await page.getByRole('switch', { name: 'Face to face' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.main-band .cap-line').last()).toContainText('Sentence');
+  // the page itself never scrolls (only the captions do); every text 16 px or more
   expect(await page.evaluate(() => document.scrollingElement!.scrollHeight <= innerHeight)).toBe(
     true,
   );
   expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
+  // Stop: the words stay, the same button says Start
   await page.getByRole('button', { name: 'Stop' }).click();
-  await expect(page.getByText('Start captions')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
+  await expect(page.locator('.cap-line').first()).toBeVisible();
 });
 
-test('no translation: what is heard with its language; "Translate" turns it into face to face', async ({
+test('no translation: what is heard; the language button says Original and picks one', async ({
   browser,
   baseURL,
 }) => {
   const admin = await adminApi(browser, baseURL!);
   const { page } = await signedInPhone(browser, baseURL!, admin);
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
   await expect(page.locator('.cap-line').first()).toContainText('Sentence');
-  await expect(page.locator('.cap-label').first()).toHaveText('English');
-  await page.getByRole('button', { name: 'Translate' }).click();
-  await page.locator('.sheet .picker-drop input').fill('pol');
-  await page.locator('.sheet .picker-list button', { hasText: 'Polski' }).click();
-  await expect(page.locator('.half.across .cap-line').first()).toContainText('[pl] Sentence');
+  // (one language heard: no labels on the lines)
+  await expect(page.locator('.cap-label')).toHaveCount(0);
+  await expect(page.locator('.cbar .cb.lang')).toHaveText(/Original/);
+  await page.locator('.cbar .cb.lang').click();
+  await pickInSheet(page, 'pol', 'Polski');
+  await expect(page.locator('.cap-line').last()).toContainText('[pl] Sentence');
+  await expect(page.locator('.cbar .cb.lang')).toHaveText(/Polski/);
 });
 
 test('a reader joins by the code: the host’s language first, then their own', async ({
@@ -57,9 +85,11 @@ test('a reader joins by the code: the host’s language first, then their own', 
   const admin = await adminApi(browser, baseURL!);
   const { page: host, name } = await signedInPhone(browser, baseURL!, admin);
   await pickLang(host, 'pol', 'Polski');
-  await host.getByRole('button', { name: 'Start' }).click();
-  await host.getByRole('button', { name: 'Invite' }).click();
-  const code = (await host.locator('.sheet .input.code').textContent())!.trim();
+  await host.getByRole('button', { name: 'Start', exact: true }).click();
+  // Invite is the first row of Settings
+  await host.getByRole('button', { name: 'Settings' }).click();
+  await host.getByRole('button', { name: 'Invite someone' }).click();
+  const code = (await host.locator('.sheet .invite-code').textContent())!.trim();
   expect(code).toMatch(/^[A-Z2-9]{6}$/);
   await host.keyboard.press('Escape');
 
@@ -68,19 +98,19 @@ test('a reader joins by the code: the host’s language first, then their own', 
   await reader.goto('/join');
   await reader.getByLabel('The code').fill(code.toLowerCase());
   await reader.getByRole('button', { name: 'Join' }).click();
-  await expect(reader.locator('.live-dot')).toHaveText(`${name.split(' ')[0]}’s captions`);
+  await expect(reader.locator('.who')).toContainText(`${name.split(' ')[0]}’s captions`);
+  await expect(reader.locator('.who .live')).toBeVisible();
   await expect(reader.locator('.cap-line').first()).toContainText('[pl] Sentence');
   // their own language: one more stream
-  await reader.getByRole('button', { name: 'Settings' }).click();
-  await pickLang(reader, 'span', 'Español');
-  await reader.keyboard.press('Escape');
-  await expect(reader.locator('.cap-line').first()).toContainText('[es] Sentence');
+  await reader.locator('.cbar .cb.lang').click();
+  await pickInSheet(reader, 'span', 'Español');
+  await expect(reader.locator('.cap-line').last()).toContainText('[es] Sentence');
   // a reader never sees the code or the balance, and has no Stop
-  await expect(reader.locator('.chip')).toHaveCount(0);
+  await expect(reader.locator('.balance')).toHaveCount(0);
   await expect(reader.getByRole('button', { name: 'Stop' })).toHaveCount(0);
-  // the host stops: the reader waits
+  // the host stops: the reader's line is no longer live
   await host.getByRole('button', { name: 'Stop' }).click();
-  await expect(reader.getByText(/Waiting for/)).toBeVisible();
+  await expect(reader.locator('.who .live')).toHaveCount(0);
   // a wrong code
   const other = await readerCtx.newPage();
   await other.goto('/join#ZZZZZZ');
@@ -98,9 +128,11 @@ test('the credits: used as the audio goes; at zero the session stops and says so
   await admin.post('/admin/api/settings', { pricePerHour: 3600 * 1_000_000 });
   try {
     await page.reload();
-    await page.getByRole('button', { name: 'Start' }).click();
-    await expect(page.getByText('Out of credits', { exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Ask for more' })).toBeVisible();
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    // stopped: the bar says why, its first button says Start again
+    await expect(page.locator('.cbar .strip', { hasText: 'Out of credits' })).toBeVisible();
+    await expect(page.locator('.cbar').getByRole('button', { name: 'Ask for more' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
   } finally {
     await admin.post('/admin/api/settings', { pricePerHour: 200_000 });
   }
@@ -174,8 +206,9 @@ test('face to face: both halves follow their newest line alike; scrolled back, "
   test.setTimeout(90_000);
   const admin = await adminApi(browser, baseURL!);
   const { page } = await signedInPhone(browser, baseURL!, admin);
-  await pickLang(page, 'pol', 'Polski');
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.getByRole('radio', { name: 'Face to face' }).click();
+  await pickLang(page, 'pol', 'Polski', 0);
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
   // (more lines than a half holds: a sentence a second)
   await expect(page.locator('.half.across .cap-line')).toHaveCount(14, { timeout: 40_000 });
   for (const half of ['.half.across', '.half:not(.across)']) {
@@ -297,9 +330,9 @@ test('the pages in the browser’s language (Polish here); the switch at the foo
     expect((await smallestText(page)).px, path).toBeGreaterThanOrEqual(16);
   }
   await page.goto('/');
-  await page.getByLabel('Język strony').selectOption('de');
+  await page.getByLabel('Język aplikacji').selectOption('de');
   await expect(page.getByText('Live-Untertitel, in deiner Sprache')).toBeVisible();
-  await page.getByLabel('Sprache der Seite').selectOption('en');
+  await page.getByLabel('App-Sprache').selectOption('en');
   await expect(page.getByText('Live captions, in your language')).toBeVisible();
 });
 
@@ -337,6 +370,6 @@ test('a phone that can’t keep its screen on by itself is asked to, while it li
   });
   await page.reload();
   await page.getByRole('button', { name: 'Start' }).click();
-  await expect(page.getByText('Keep this phone’s screen on', { exact: false })).toBeVisible();
+  await expect(page.getByText('Keep the screen on while it listens')).toBeVisible();
   await page.getByRole('button', { name: 'Stop' }).click();
 });

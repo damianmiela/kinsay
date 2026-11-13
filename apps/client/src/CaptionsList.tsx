@@ -9,7 +9,15 @@
 // only when the reader scrolls up themselves (a finger dragging and its glide, the wheel, a key)
 // and starts again when the newest line is back on screen or "Latest" is tapped. Texts come from
 // the page (each page has its own).
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { CaptionText } from '@translate/shared';
 import { CaptionsFrame, Words } from './captionWords';
 import { glideStep } from './captionScroll';
@@ -51,10 +59,10 @@ export function CaptionsList({
   turned?: boolean;
   /** A small label before a line, by its number (what was heard: its language). */
   labels?: Record<number, string>;
-  /** Above everything said ("Translated automatically…"). */
-  note: string;
+  /** Above everything said (none since mockups batch 3: no sentence explains the screen). */
+  note?: string;
   /** While nothing has been said. */
-  waiting: string;
+  waiting: ReactNode;
   /** The button back to the newest line. */
   latest: string;
 }) {
@@ -192,9 +200,9 @@ export function CaptionsList({
   return (
     <div className="cap-view">
       <div className="cap-scroll" ref={box}>
-        <p className="cap-note">{note}</p>
+        {note && <p className="cap-note">{note}</p>}
         {empty ? (
-          <p className="cap-empty">{waiting}</p>
+          <div className="cap-empty">{waiting}</div>
         ) : (
           <CaptionsFrame>
             <div className="cap-lines" ref={lines}>

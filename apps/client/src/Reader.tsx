@@ -2,12 +2,13 @@
 // needed. A reader starts in the host's language and may pick their own (one more stream, paid by
 // the host).
 import { useState } from 'react';
-import { GearButton, Logo, Sheet, Toggle, UiLangRow } from './bits';
+import { ControlBar, GearCb, LangButton, Strip } from './Bar';
+import { Logo, Sheet } from './bits';
 import { useStored } from './store';
 import { CaptionsView } from './CaptionsView';
-import { TextSize } from './Host';
 import { LangPicker } from './LangPicker';
-import { t } from './texts';
+import { SettingsSheet, SwitchRow, TextSizeRow } from './Settings';
+import { t, tw } from './texts';
 import { ask, useSession } from './useSession';
 
 const codeOf = (hash: string) => /^#([A-Za-z2-9]{6})$/.exec(hash)?.[1]?.toUpperCase();
@@ -57,10 +58,9 @@ function CodeForm({ onCode, bad }: { onCode: (c: string) => void; bad?: boolean 
 
 function Reading({ code, onBad }: { code: string; onBad: () => void }) {
   const { view, update, error } = useSession(code);
-  const [faceToFace, setFaceToFace] = useStored('tr-read-face', false);
   const [showHeard, setShowHeard] = useStored('tr-heard', false);
   const [scale, setScale] = useStored('tr-scale', 1);
-  const [sheet, setSheet] = useState(false);
+  const [sheet, setSheet] = useState<null | 'gear' | 'lang'>(null);
   const [problem, setProblem] = useState<string | null>(null);
   if (error === 'no-session' || error === 'too-many') {
     return <BadCode onRetry={onBad} tooMany={error === 'too-many'} />;
@@ -80,76 +80,71 @@ function Reading({ code, onBad }: { code: string; onBad: () => void }) {
     );
   }
   const changeLang = async (lang: string | null) => {
+    setSheet(null);
     setProblem(await ask('session:lang', { lang }));
   };
+  const problemText =
+    problem === 'too-many-langs'
+      ? t.tooManyLangs
+      : problem === 'service-full'
+        ? t.serviceFull
+        : problem
+          ? tw.failed
+          : null;
+  const bar = (
+    <ControlBar
+      strips={
+        <>
+          {problemText && (
+            <Strip tone="amber" onClose={() => setProblem(null)}>
+              {problemText}
+            </Strip>
+          )}
+          {view.running && view.service === 'error' && (
+            <Strip tone="amber">{t.serviceTrying}</Strip>
+          )}
+        </>
+      }
+    >
+      <div className="cbar-pair">
+        <LangButton lang={view.lang} onClick={() => setSheet('lang')} />
+        <GearCb onClick={() => setSheet('gear')} />
+      </div>
+    </ControlBar>
+  );
   return (
     <div className="cap-screen" style={{ ['--cap-scale' as string]: scale }}>
-      <div className="bar">
-        <span className={`live-dot${view.running ? '' : ' off'}`}>
-          {t.hostsCaptions(view.hostName)}
-        </span>
+      <div className={`who${view.running ? '' : ' off'}`}>
+        {t.hostsCaptions(view.hostName)}
+        {view.running && <span className="live">{t.live}</span>}
       </div>
-      {view.running ? (
-        <CaptionsView
-          update={update}
-          lang={view.lang}
-          faceToFace={faceToFace && !!view.lang}
-          showHeard={showHeard}
-          reader
-        />
-      ) : (
-        <div className="body" style={{ justifyContent: 'center' }}>
-          <div className="note info">
-            <b>{t.waitingHost(view.hostName)}</b>
-            {t.waitingHostBody}
-          </div>
-        </div>
-      )}
-      <div className="cap-notes">
-        {problem === 'too-many-langs' && <div className="note bad">{t.tooManyLangs}</div>}
-        {problem === 'service-full' && <div className="note warn">{t.serviceFull}</div>}
-        {view.running && view.service === 'error' && (
-          <div className="note warn">{t.serviceDown[0]}</div>
-        )}
-      </div>
-      <div className="tray">
-        <GearButton onClick={() => setSheet(true)} />
-        <a className="btn" href="/">
-          {t.leave}
-        </a>
-      </div>
-      {sheet && (
-        <Sheet label={t.settings} onClose={() => setSheet(false)}>
-          <h2 className="t">{t.settings}</h2>
-          <div>
-            <span className="lbl">{t.language}</span>
-            <LangPicker value={view.lang} onChange={(l) => void changeLang(l)} />
-          </div>
-          <div className="card" style={{ padding: '4px 16px' }}>
-            <div className="list">
-              {view.lang && (
-                <div className="li">
-                  <span className="what">
-                    {t.faceToFace}
-                    <small>{t.faceToFaceHint}</small>
-                  </span>
-                  <Toggle on={faceToFace} onChange={setFaceToFace} label={t.faceToFace} />
-                </div>
-              )}
-              {view.lang && !faceToFace && (
-                <div className="li">
-                  <span className="what">{t.showHeard}</span>
-                  <Toggle on={showHeard} onChange={setShowHeard} label={t.showHeard} />
-                </div>
-              )}
-              <TextSize scale={scale} setScale={setScale} />
-              <UiLangRow />
-            </div>
-          </div>
-          <button className="btn main" onClick={() => setSheet(false)}>
-            {t.back}
-          </button>
+      <CaptionsView
+        update={update}
+        lang={view.lang}
+        showHeard={showHeard}
+        bar={bar}
+        waiting={view.running ? t.waitingReader : t.waitingHost(view.hostName)}
+      />
+      {sheet === 'lang' && (
+        <Sheet label={t.translateIntoSet} onClose={() => setSheet(null)}>
+          <h2 className="t">{t.translateIntoSet}</h2>
+          <LangPicker value={view.lang} onChange={(l) => void changeLang(l)} startOpen />
         </Sheet>
+      )}
+      {sheet === 'gear' && (
+        <SettingsSheet
+          onClose={() => setSheet(null)}
+          half={view.running}
+          captions={
+            <>
+              <TextSizeRow scale={scale} setScale={setScale} />
+              {view.lang && (
+                <SwitchRow label={t.showHeard} on={showHeard} onChange={setShowHeard} />
+              )}
+            </>
+          }
+          leave={{ label: t.leave, onClick: () => window.location.assign('/') }}
+        />
       )}
     </div>
   );

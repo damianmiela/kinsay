@@ -1,28 +1,63 @@
-// The signed-in person's own captions: Home (start, join someone's), then the captions with Stop,
-// Invite (or Translate when there is no translation) and the gear for everything else.
+// The signed-in person's own captions (mockups batch 3, approved 2026-11-13). Home: how the captions
+// will be read (Just me, the default, or Face to face, in two pictures), the language (face to face:
+// the top half's and the bottom half's), Start. The captions: the words, and one dark bar
+// (Start/Stop · language · Settings) under them, or face to face between the two halves; Invite is
+// the first row of Settings. After Stop the page stays: the words to read again, the same button
+// says Start.
 import { useState } from 'react';
 import { LOW_BALANCE } from '@translate/shared';
-import { Balance, Foot, GearButton, Logo, Sheet, Toggle, UiLangRow } from './bits';
-import { useStored } from './store';
+import {
+  ControlBar,
+  GearCb,
+  HalfMark,
+  IconGear,
+  IconMic,
+  IconRight,
+  IconSwap,
+  LangButton,
+  StartStop,
+  Strip,
+} from './Bar';
+import { Logo, Sheet } from './bits';
 import { CaptionsView } from './CaptionsView';
 import { LangPicker } from './LangPicker';
-import { langName } from './langs';
+import { barName } from './langs';
 import { useMic } from './mic/useMic';
-import { canStayAwake } from './useAwake';
 import { Qr } from './Qr';
+import { SettingsSheet, SwitchRow, TextSizeRow } from './Settings';
+import { useStored } from './store';
 import { clock, stopText, t, tw } from './texts';
+import { ui } from './ui';
+import { canStayAwake } from './useAwake';
 import { ask, useSession } from './useSession';
+
+type SheetName = null | 'gear' | 'invite' | 'lang' | 'langs' | 'top' | 'bottom';
+
+/** While nothing has been said: a microphone whose rings say "it hears you", in no language. */
+const Hears = () => (
+  <span className="hears" aria-hidden="true">
+    <span className="ring">
+      <IconMic size={34} />
+    </span>
+  </span>
+);
 
 export function HostPage() {
   const { view, update, error } = useSession();
   const mic = useMic({ voice: true });
+  const [mode, setMode] = useStored<'me' | 'face'>('tr-mode', 'me');
   const [lang, setLang] = useStored<string | null>('tr-lang', null);
-  const [faceToFace, setFaceToFace] = useStored('tr-face', true);
+  const [top, setTop] = useStored<string | null>('tr-top', null);
+  const [bottom, setBottom] = useStored<string | null>('tr-bottom', ui);
   const [showHeard, setShowHeard] = useStored('tr-heard', false);
   const [scale, setScale] = useStored('tr-scale', 1);
-  const [sheet, setSheet] = useState<null | 'gear' | 'invite' | 'translate'>(null);
+  const [sheet, setSheet] = useState<SheetName>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [lowSeen, setLowSeen] = useState(false);
+  // (this visit started captions: after Stop it stays on them, the same button then says Start)
+  const [here, setHere] = useState(false);
+  // (the microphone is opening, perhaps asking: "the microphone is off" would be wrong meanwhile)
+  const [opening, setOpening] = useState(false);
 
   if (!view) {
     return (
@@ -39,11 +74,24 @@ export function HostPage() {
     );
   }
 
+  const face = mode === 'face';
+  const langs = (f = face, tp = top, bt = bottom, l = lang) =>
+    f ? { lang: bt, other: tp } : { lang: l };
+  /** The page's languages changed: while captions run, the server reads the new ones at once. */
+  const send = async (next: { lang: string | null; other?: string | null }) => {
+    if (!view.running) return;
+    const err = await ask('session:lang', next);
+    if (err) setProblem(err);
+  };
   const start = async () => {
+    if (face && !top) return setSheet('top');
     setProblem(null);
-    const err = await ask('session:start', { lang });
+    const err = await ask('session:start', langs());
     if (err) return setProblem(err);
+    setHere(true);
+    setOpening(true);
     const r = await mic.startSending();
+    setOpening(false);
     if (r === 'failed') {
       await ask('session:stop');
       setProblem('mic');
@@ -53,228 +101,393 @@ export function HostPage() {
     mic.stopSending();
     await ask('session:stop');
   };
-  const changeLang = async (next: string | null) => {
-    setLang(next);
-    setSheet(null);
-    if (view.running) {
-      const err = await ask('session:lang', { lang: next });
-      if (err) setProblem(err);
-    }
-  };
-
-  // (the session runs on the server even when this page's microphone isn't on: after a reload,
-  // a second tab; Stop is always in reach, audit 30)
-  const running = view.running;
   const resumeMic = async () => {
     setProblem(null);
-    if ((await mic.startSending()) === 'failed') setProblem('mic');
+    setOpening(true);
+    const r = await mic.startSending();
+    setOpening(false);
+    if (r === 'failed') setProblem('mic');
   };
-  const note = (k: string | null) => {
-    if (!k) return null;
-    if (k === 'mic')
-      return (
-        <div className="note bad">
-          <b>{t.micProblem}</b>
-          {mic.problem}
-        </div>
-      );
-    if (k === 'too-many-langs') return <div className="note bad">{t.tooManyLangs}</div>;
-    if (k === 'service-full') return <div className="note warn">{t.serviceFull}</div>;
-    if (k === 'offline') return <div className="note bad">{t.offline}</div>;
-    const s = stopText(k as never);
-    return s ? (
-      <div className="note bad">
-        <b>{s[0]}</b>
-        {s[1]}
-      </div>
-    ) : null;
+  const pick = (which: 'lang' | 'top' | 'bottom') => (l: string | null) => {
+    setSheet(face && which !== 'lang' ? 'langs' : null);
+    if (which === 'lang') {
+      setLang(l);
+      void send(langs(false, top, bottom, l));
+    } else if (which === 'top') {
+      setTop(l);
+      void send(langs(true, l, bottom));
+    } else {
+      setBottom(l);
+      void send(langs(true, top, l));
+    }
   };
+  const setFace = (on: boolean) => {
+    setMode(on ? 'face' : 'me');
+    if (on && !top) return setSheet('top');
+    void send(langs(on));
+  };
+  const settings = (
+    <SettingsSheet
+      onClose={() => setSheet(null)}
+      half={view.running}
+      invite={view.code && (view.running || here) ? () => setSheet('invite') : undefined}
+      account={{ name: view.hostName, balance: view.balance }}
+      captions={
+        <>
+          <TextSizeRow scale={scale} setScale={setScale} />
+          {(view.running || here) && (
+            <SwitchRow label={t.faceToFace} on={face} onChange={setFace} />
+          )}
+          {(view.running || here) && !face && lang && (
+            <SwitchRow label={t.showHeard} on={showHeard} onChange={setShowHeard} />
+          )}
+        </>
+      }
+    />
+  );
+  const sheets = (
+    <>
+      {sheet === 'gear' && settings}
+      {sheet === 'invite' && view.code && (
+        <InviteSheet code={view.code} onClose={() => setSheet(null)} />
+      )}
+      {sheet === 'langs' && (
+        <LanguagesSheet
+          top={top}
+          bottom={bottom}
+          onTop={() => setSheet('top')}
+          onBottom={() => setSheet('bottom')}
+          onSwap={() => {
+            setTop(bottom);
+            setBottom(top);
+            void send(langs(true, bottom, top));
+          }}
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {(sheet === 'lang' || sheet === 'top' || sheet === 'bottom') && (
+        <Sheet label={t.translateIntoSet} onClose={() => setSheet(face ? 'langs' : null)}>
+          <h2 className="t">
+            {sheet === 'top' ? t.topHalf : sheet === 'bottom' ? t.bottomHalf : t.translateIntoSet}
+          </h2>
+          <LangPicker
+            value={sheet === 'top' ? top : sheet === 'bottom' ? bottom : lang}
+            onChange={pick(sheet)}
+            startOpen
+          />
+        </Sheet>
+      )}
+    </>
+  );
 
   // ---------- Home ----------
-  if (!running) {
-    const stopped = view.stopped && view.stopped !== 'ended' ? view.stopped : null;
+  if (!view.running && !here) {
+    const stopped = view.stopped && view.stopped !== 'ended' ? stopText(view.stopped) : null;
     return (
       <div className="page" style={{ ['--cap-scale' as string]: scale }}>
         <div className="bar">
           <Logo />
           <span className="spacer" />
-          {view.balance !== undefined && <Balance micro={view.balance} />}
+          <button className="ibtn" onClick={() => setSheet('gear')} aria-label={t.settings}>
+            <IconGear />
+          </button>
         </div>
         <div className="body">
           <h1 className="t">{t.startTitle}</h1>
-          <p className="s">{t.phoneListens}</p>
-          <div>
-            <span className="lbl">{t.translateInto}</span>
-            <LangPicker value={lang} onChange={setLang} />
-            {!lang && (
-              <p className="small" style={{ margin: '8px 0 0' }}>
-                {t.withoutTranslation}
-              </p>
-            )}
+          <div className="modes" role="radiogroup" aria-label={t.startTitle}>
+            <button
+              className={`mode${face ? '' : ' on'}`}
+              role="radio"
+              aria-checked={!face}
+              onClick={() => setMode('me')}
+            >
+              <JustMePicture />
+              {t.justMe}
+            </button>
+            <button
+              className={`mode${face ? ' on' : ''}`}
+              role="radio"
+              aria-checked={face}
+              onClick={() => setMode('face')}
+            >
+              <FaceToFacePicture />
+              {t.faceToFace}
+            </button>
           </div>
-          {note(problem ?? stopped)}
-          {(stopped === 'credits' || problem === 'credits') && (
-            <a className="btn" href="/account#ask">
-              {t.askForMore}
-            </a>
+          {face ? (
+            <>
+              <div>
+                <span className="lbl">{t.topHalf}</span>
+                <LangPicker value={top} onChange={setTop} mark="top" />
+              </div>
+              <div>
+                <span className="lbl">{t.bottomHalf}</span>
+                <LangPicker value={bottom} onChange={setBottom} mark="bottom" />
+              </div>
+            </>
+          ) : (
+            <div>
+              <span className="lbl">{t.translateIntoSet}</span>
+              <LangPicker value={lang} onChange={setLang} />
+            </div>
           )}
-          <button className="btn main" onClick={() => void start()}>
+          {(problem || stopped) && (
+            <HomeNote problem={problem} stopped={stopped} mic={mic.problem} />
+          )}
+          {view.balance !== undefined && view.balance < LOW_BALANCE && view.balance > 0 && (
+            <div className="note warn">
+              <b>{t.lowLeft(view.balance)}</b>
+              <a className="link" href="/account#ask">
+                {t.askForMore}
+              </a>
+            </div>
+          )}
+          <button className="btn main big" onClick={() => void start()}>
             {t.start}
           </button>
-          <div className="or">{t.or}</div>
-          <h2 className="t">{t.joinCaptions}</h2>
+          <span className="push" />
           <a className="btn" href="/join">
-            {t.enterCode}
+            {t.joinCaptions}
           </a>
-          <Foot />
         </div>
+        {sheets}
       </div>
     );
   }
 
   // ---------- the captions ----------
-  const service = view.service === 'error' ? t.serviceDown : null;
   const low = (view.balance ?? Infinity) < LOW_BALANCE && !lowSeen;
+  const stopped = !view.running && view.stopped && view.stopped !== 'ended' ? view.stopped : null;
+  const stopLine = stopped ? stopText(stopped) : null;
+  const problemText =
+    problem === 'mic'
+      ? `${t.micProblem} ${mic.problem ?? ''}`
+      : problem === 'too-many-langs'
+        ? t.tooManyLangs
+        : problem === 'service-full'
+          ? t.serviceFull
+          : problem === 'offline'
+            ? t.offline
+            : problem && stopText(problem as never)
+              ? stopText(problem as never)![0]
+              : problem
+                ? tw.failed
+                : null;
+  const strips = (
+    <>
+      {problemText && (
+        <Strip tone="amber" onClose={() => setProblem(null)}>
+          {problemText}
+        </Strip>
+      )}
+      {stopLine && (
+        <Strip
+          tone={stopped === 'quiet' || stopped === 'hours' ? undefined : 'amber'}
+          action={
+            stopped === 'credits'
+              ? { label: t.askForMore, onClick: () => window.location.assign('/account#ask') }
+              : undefined
+          }
+        >
+          <b>{stopLine[0]}.</b> {stopLine[1]}
+        </Strip>
+      )}
+      {view.running && !mic.sending && !opening && (
+        <Strip
+          tone="amber"
+          icon={<IconMic />}
+          action={{ label: t.turnItOn, onClick: () => void resumeMic() }}
+        >
+          <b>{t.micIsOff}</b>
+        </Strip>
+      )}
+      {view.running && mic.sending && !canStayAwake && <Strip>{t.keepScreenOnLine}</Strip>}
+      {view.running && view.service === 'error' && <Strip tone="amber">{t.serviceTrying}</Strip>}
+      {view.running && low && (
+        <Strip
+          tone="amber"
+          action={{
+            label: t.askForMore,
+            onClick: () => window.open('/account#ask', '_blank', 'noopener'),
+          }}
+          onClose={() => setLowSeen(true)}
+        >
+          <b>{t.lowLeft(Math.max(0, view.balance ?? 0))}</b>
+        </Strip>
+      )}
+    </>
+  );
+  // (a question for the host takes the buttons' place: the bar never grows, the halves never jump)
+  const bar = (
+    <ControlBar hinge={face} strips={strips}>
+      {view.stopsAt ? (
+        <div className="cbar-msg">
+          <span>
+            <b>{t.stillListening(clock(view.stopsAt))}</b>
+          </span>
+          <button className="cb start" onClick={() => void ask('session:keepGoing')}>
+            {t.keepGoing}
+          </button>
+        </div>
+      ) : (
+        <>
+          <StartStop
+            running={view.running}
+            onStart={() => void start()}
+            onStop={() => void stop()}
+          />
+          <LangButton
+            lang={face ? bottom : lang}
+            other={face ? top : undefined}
+            onClick={() => setSheet(face ? 'langs' : 'lang')}
+          />
+          <GearCb onClick={() => setSheet('gear')} />
+        </>
+      )}
+    </ControlBar>
+  );
   return (
     <div className="cap-screen" style={{ ['--cap-scale' as string]: scale }}>
-      <div className="bar">
-        <span className="live-dot">
-          {t.live}
-          {lang ? ` · ${langName(lang).own}` : ''}
-        </span>
-        <span className="spacer" />
-        {view.balance !== undefined && <Balance micro={view.balance} />}
-      </div>
       <CaptionsView
         update={update}
-        lang={lang}
-        faceToFace={faceToFace}
+        lang={face ? bottom : lang}
+        other={face ? top : undefined}
         showHeard={showHeard}
-        onFaceToFaceOff={() => setFaceToFace(false)}
+        bar={bar}
+        waiting={<Hears />}
       />
-      <div className="cap-notes">
-        {service && (
-          <div className="note warn">
-            <b>{service[0]}</b>
-            {view.error && view.error.startsWith('The translation service is full')
-              ? view.error
-              : service[1]}
-          </div>
-        )}
-        {low && (
-          <div className="note warn" onClick={() => setLowSeen(true)}>
-            <b>{t.lowTitle}</b>
-            {t.lowBody(Math.max(0, view.balance ?? 0))}
-          </div>
-        )}
-        {!canStayAwake && mic.sending && <div className="note info">{t.keepScreenOn}</div>}
-        {view.stopsAt && (
-          <div className="note warn">
-            <b>{t.stillListening(clock(view.stopsAt))}</b>
-            <button
-              className="btn main"
-              style={{ marginTop: 8 }}
-              onClick={() => void ask('session:keepGoing')}
-            >
-              {t.keepGoing}
-            </button>
-          </div>
-        )}
-        {!mic.sending && (
-          <div className="note info">
-            <b>{t.micOff}</b>
-            <button className="btn main" style={{ marginTop: 8 }} onClick={() => void resumeMic()}>
-              {t.micOn}
-            </button>
-          </div>
-        )}
-        {note(problem)}
-      </div>
-      <div className="tray">
-        <button className="btn stop" onClick={() => void stop()}>
-          {t.stop}
-        </button>
-        {lang ? (
-          <button className="btn" onClick={() => setSheet('invite')}>
-            {t.invite}
-          </button>
-        ) : (
-          <button className="btn main" onClick={() => setSheet('translate')}>
-            {t.translate}
-          </button>
-        )}
-        <GearButton onClick={() => setSheet('gear')} />
-      </div>
-
-      {sheet === 'translate' && (
-        <Sheet label={t.translate} onClose={() => setSheet(null)}>
-          <h2 className="t">{t.translateIntoSet}</h2>
-          <LangPicker value={lang} onChange={(l) => void changeLang(l)} startOpen />
-        </Sheet>
-      )}
-      {sheet === 'invite' && view.code && (
-        <InviteSheet code={view.code} onClose={() => setSheet(null)} />
-      )}
-      {sheet === 'gear' && (
-        <Sheet label={t.settings} onClose={() => setSheet(null)}>
-          <h2 className="t">{t.settings}</h2>
-          <div>
-            <span className="lbl">{t.translateIntoSet}</span>
-            <LangPicker value={lang} onChange={(l) => void changeLang(l)} />
-          </div>
-          <div className="card" style={{ padding: '4px 16px' }}>
-            <div className="list">
-              {lang && (
-                <div className="li">
-                  <span className="what">
-                    {t.faceToFace}
-                    <small>{t.faceToFaceHint}</small>
-                  </span>
-                  <Toggle on={faceToFace} onChange={setFaceToFace} label={t.faceToFace} />
-                </div>
-              )}
-              {lang && !faceToFace && (
-                <div className="li">
-                  <span className="what">{t.showHeard}</span>
-                  <Toggle on={showHeard} onChange={setShowHeard} label={t.showHeard} />
-                </div>
-              )}
-              <TextSize scale={scale} setScale={setScale} />
-              <UiLangRow />
-            </div>
-          </div>
-          <div className="card" style={{ padding: '4px 16px' }}>
-            <div className="list">
-              <button className="li link-row" onClick={() => setSheet('invite')}>
-                <span className="what">{t.inviteTitle}</span>›
-              </button>
-              <a className="li link-row" href="/account">
-                <span className="what">{t.account}</span>›
-              </a>
-            </div>
-          </div>
-          <button className="btn main" onClick={() => setSheet(null)}>
-            {t.back}
-          </button>
-        </Sheet>
-      )}
+      {sheets}
     </div>
   );
 }
 
-export function TextSize({ scale, setScale }: { scale: number; setScale: (v: number) => void }) {
-  const step = (d: number) =>
-    setScale(Math.min(1.8, Math.max(0.8, Math.round((scale + d) * 10) / 10)));
-  return (
-    <div className="li">
-      <span className="what">{t.textSize}</span>
-      <button className="btn sm" onClick={() => step(-0.1)} aria-label={tw.smaller}>
-        A−
-      </button>
-      <button className="btn sm" onClick={() => step(0.1)} aria-label={tw.bigger}>
-        A+
-      </button>
+function HomeNote({
+  problem,
+  stopped,
+  mic,
+}: {
+  problem: string | null;
+  stopped: readonly [string, string] | null;
+  mic: string | null;
+}) {
+  if (problem === 'mic') {
+    return (
+      <div className="note bad">
+        <b>{t.micProblem}</b>
+        {mic}
+      </div>
+    );
+  }
+  if (problem === 'too-many-langs') return <div className="note bad">{t.tooManyLangs}</div>;
+  if (problem === 'service-full') return <div className="note warn">{t.serviceFull}</div>;
+  if (problem === 'offline') return <div className="note bad">{t.offline}</div>;
+  const s = (problem && stopText(problem as never)) || stopped;
+  return s ? (
+    <div className="note bad">
+      <b>{s[0]}</b>
+      {s[1]}
+      {problem === 'credits' && (
+        <a className="link" href="/account#ask">
+          {t.askForMore}
+        </a>
+      )}
     </div>
+  ) : null;
+}
+
+/** Face to face's languages: each half on its own, and Swap (the phone turned, the people moved). */
+function LanguagesSheet({
+  top,
+  bottom,
+  onTop,
+  onBottom,
+  onSwap,
+  onClose,
+}: {
+  top: string | null;
+  bottom: string | null;
+  onTop: () => void;
+  onBottom: () => void;
+  onSwap: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Sheet label={t.languages} onClose={onClose}>
+      <h2 className="t">{t.languages}</h2>
+      <div className="list">
+        <button className="li link-row" onClick={onTop}>
+          <HalfMark top />
+          <span className="what">{t.topHalf}</span>
+          <b>{top === null ? t.chooseLang : barName(top)}</b>
+          <IconRight />
+        </button>
+        <button className="li link-row" onClick={onBottom}>
+          <HalfMark top={false} />
+          <span className="what">{t.bottomHalf}</span>
+          <b>{barName(bottom)}</b>
+          <IconRight />
+        </button>
+      </div>
+      <button className="btn" onClick={onSwap}>
+        <IconSwap />
+        {t.swapHalves}
+      </button>
+    </Sheet>
+  );
+}
+
+/** Home's pictures: one person with a phone, and the same phone between two people. */
+function JustMePicture() {
+  return (
+    <svg className="mode-pic" viewBox="0 0 120 86" aria-hidden="true">
+      <circle cx="60" cy="13" r="9" fill="currentColor" />
+      <rect
+        x="49"
+        y="31"
+        width="22"
+        height="36"
+        rx="4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <line
+        x1="56"
+        y1="61"
+        x2="64"
+        y2="61"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+function FaceToFacePicture() {
+  return (
+    <svg className="mode-pic" viewBox="0 0 120 86" aria-hidden="true">
+      <circle cx="60" cy="11" r="9" fill="currentColor" />
+      <rect
+        x="49"
+        y="25"
+        width="22"
+        height="36"
+        rx="4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <line
+        x1="56"
+        y1="55"
+        x2="64"
+        y2="55"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <circle cx="60" cy="75" r="9" fill="currentColor" />
+    </svg>
   );
 }
 
@@ -284,12 +497,16 @@ function InviteSheet({ code, onClose }: { code: string; onClose: () => void }) {
   return (
     <Sheet label={t.inviteTitle} onClose={onClose}>
       <h2 className="t">{t.inviteTitle}</h2>
-      <p className="s">{t.inviteBody}</p>
-      <Qr text={link} px={200} />
-      <div className="input code" style={{ display: 'grid', placeItems: 'center' }}>
-        {code}
-      </div>
+      <Qr text={link} px={220} />
+      <div className="invite-code">{code}</div>
       <div className="row2">
+        <button
+          className="btn"
+          disabled={!('share' in navigator)}
+          onClick={() => void navigator.share?.({ url: link }).catch(() => {})}
+        >
+          {t.share}
+        </button>
         <button
           className="btn"
           onClick={() =>
@@ -301,18 +518,8 @@ function InviteSheet({ code, onClose }: { code: string; onClose: () => void }) {
         >
           {copied ? t.copied : t.copyLink}
         </button>
-        <button
-          className="btn"
-          disabled={!('share' in navigator)}
-          onClick={() => void navigator.share?.({ url: link }).catch(() => {})}
-        >
-          {t.share}
-        </button>
       </div>
       <p className="small">{t.codeWorks}</p>
-      <button className="btn main" onClick={onClose}>
-        {t.back}
-      </button>
     </Sheet>
   );
 }

@@ -43,15 +43,21 @@ export async function signedInPhone(
   await page.goto('/signin');
   await page.getByLabel('Type the sign-in code').fill(String(code.json.digits));
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByText('Start captions')).toBeVisible();
+  await expect(page.getByText('Start live captions')).toBeVisible();
   return { ctx, page, id, name };
 }
 
-/** Picks a language in the searchable field (the first matching one). */
-export async function pickLang(page: Page, search: string, name: string) {
-  await page.locator('.picker-field').first().click();
+/** Picks a language in a searchable field (the `nth` on the page; the first matching one). */
+export async function pickLang(page: Page, search: string, name: string, nth = 0) {
+  await page.locator('.picker-field').nth(nth).click();
   await page.locator('.picker-drop input').fill(search);
   await page.locator('.picker-list button', { hasText: name }).first().click();
+}
+
+/** Picks a language in a sheet's list (it opens with the list open). */
+export async function pickInSheet(page: Page, search: string, name: string) {
+  await page.locator('.sheet .picker-drop input').fill(search);
+  await page.locator('.sheet .picker-list button', { hasText: name }).first().click();
 }
 
 /** No text on the page smaller than 16 px (older people read these pages). */

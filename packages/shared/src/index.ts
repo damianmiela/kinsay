@@ -107,6 +107,8 @@ export interface SessionView {
   error?: string;
   /** This page's translation language (null: what is heard only). */
   lang: Target | null;
+  /** Face to face (the host's page): the top half's language, the other person's. */
+  other?: Target | null;
   /** The host only: credits left, in micro-euros. */
   balance?: number;
   /** Why the session can't go on, for the page to say (see STOP_REASONS). */
@@ -132,12 +134,12 @@ export interface AudioMeta {
 }
 
 export interface ClientToServerEvents {
-  'session:start': Action<{ lang: Target | null }>;
+  'session:start': Action<{ lang: Target | null; other?: Target | null }>;
   'session:stop': Action;
   /** The host: the session goes on for another few hours ("Still listening?"). */
   'session:keepGoing': Action;
   /** The page's language (host or reader): null = what is heard only. */
-  'session:lang': Action<{ lang: Target | null }>;
+  'session:lang': Action<{ lang: Target | null; other?: Target | null }>;
   'host:audio': (chunk: ArrayBuffer, meta: AudioMeta) => void;
 }
 

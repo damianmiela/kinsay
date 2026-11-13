@@ -1,6 +1,7 @@
 // The speech service's languages for people: each in its own name and in the page's language
 // (the browser's Intl.DisplayNames: no list of names to keep), the last used first.
 import { SPEECH_LANGS } from '@translate/shared';
+import { t } from './texts';
 import { ui } from './ui';
 
 const RECENT_KEY = 'tr-recent-langs';
@@ -57,3 +58,6 @@ export function langList(query: string): string[] {
     );
   });
 }
+
+/** A language's name on the control bar: its own name, or "Original" without a translation. */
+export const barName = (lang: string | null) => (lang ? langName(lang).own : t.original);

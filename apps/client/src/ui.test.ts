@@ -17,7 +17,7 @@ describe('the language of the pages', () => {
       if (typeof v === 'string') out.push([path, v]);
       else if (typeof v === 'function') {
         // (the low balance takes an amount: it shows as euros)
-        const money = path.endsWith('lowBody');
+        const money = path.endsWith('lowBody') || path.endsWith('lowLeft');
         const s = (v as (...a: unknown[]) => string)(money ? 2_500_000 : 'ARG1', 'ARG2');
         out.push([path, s]);
         expect(s, path).toContain(money ? euros(2_500_000) : 'ARG1');

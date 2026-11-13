@@ -1,7 +1,9 @@
-// The captions on screen, for the host and for readers. Without a translation: what is heard, each
-// line with the language it was heard in. With one: the translation (and what was heard as a smaller
-// band above it, if wanted), or face to face: the phone lies between two people, the top half turned
-// round shows the translation to the one across, the bottom half what is heard to the host.
+// The captions on screen (mockups batch 3): the words fill it, no sentence explains it. One column:
+// the page's language (or what is heard, each line with its language once more than one was heard),
+// with what was heard as a band above it if wanted, the control bar under it. Face to face
+// (two-way, Damian): each half is everything said in its person's language, the far half turned
+// round for the person across, the control bar between them.
+import type { ReactNode } from 'react';
 import { HEARD, type CaptionText, type CaptionsUpdate } from '@translate/shared';
 import { CaptionsList } from './CaptionsList';
 import { langName } from './langs';
@@ -13,67 +15,60 @@ const EMPTY: CaptionText = { lines: [], first: 0, live: '' };
 export function CaptionsView({
   update,
   lang,
-  faceToFace,
-  showHeard,
-  onFaceToFaceOff,
-  reader = false,
+  other,
+  showHeard = false,
+  bar,
+  waiting,
 }: {
-  /** A reader's page (nobody there to "say something"). */
-  reader?: boolean;
   update: CaptionsUpdate;
+  /** The page's language (the bottom half's face to face); null: what is heard. */
   lang: string | null;
-  faceToFace: boolean;
-  showHeard: boolean;
-  onFaceToFaceOff?: () => void;
+  /** Face to face: the top half's language (null: what is heard); left out: one column. */
+  other?: string | null;
+  showHeard?: boolean;
+  /** The control bar: under the captions, or between the halves. */
+  bar: ReactNode;
+  /** While nothing has been said. */
+  waiting: ReactNode;
 }) {
   const heard = update.texts[HEARD] ?? EMPTY;
-  const labels = Object.fromEntries(
-    Object.entries(update.heardLangs ?? {}).map(([n, code]) => [n, langName(code).own]),
-  );
-  const heardList = (
+  const heardLangs = update.heardLangs ?? {};
+  // (each line's language only once more than one language was heard: Damian, minimal)
+  const labels =
+    new Set(Object.values(heardLangs)).size > 1
+      ? Object.fromEntries(Object.entries(heardLangs).map(([n, c]) => [n, langName(c).own]))
+      : undefined;
+  const list = (target: string | null, turned = false) => (
     <CaptionsList
-      text={heard}
-      labels={labels}
-      note={t.heardNote}
-      waiting={reader ? t.waitingReader : t.waitingWords}
+      text={target ? (update.texts[target] ?? EMPTY) : heard}
+      labels={target ? undefined : labels}
+      turned={turned}
+      waiting={waiting}
       latest={t.latest}
     />
   );
-  if (!lang) return <div className="caps">{heardList}</div>;
-  const translated = update.texts[lang] ?? EMPTY;
-  const translatedList = (
-    <CaptionsList
-      text={translated}
-      turned={faceToFace}
-      note={t.note}
-      waiting={reader ? t.waitingReader : t.waitingWords}
-      latest={t.latest}
-    />
-  );
-  if (faceToFace) {
+  if (other !== undefined) {
     return (
       <div className="caps dual">
-        <div className="half across" lang={lang}>
-          {translatedList}
+        <div className="half across" lang={other ?? undefined}>
+          {list(other, true)}
         </div>
-        <div className="fold">
-          <span>{t.faceToFace}</span>
-          {onFaceToFaceOff && (
-            <button className="btn sm" onClick={onFaceToFaceOff}>
-              {t.turnOff}
-            </button>
-          )}
+        {bar}
+        <div className="half" lang={lang ?? undefined}>
+          {list(lang)}
         </div>
-        <div className="half">{heardList}</div>
       </div>
     );
   }
   return (
-    <div className="caps">
-      {showHeard && <div className="heard-band">{heardList}</div>}
-      <div className="main-band" lang={lang}>
-        {translatedList}
+    <>
+      <div className="caps">
+        {showHeard && lang && <div className="heard-band">{list(null)}</div>}
+        <div className="main-band" lang={lang ?? undefined}>
+          {list(lang)}
+        </div>
       </div>
-    </div>
+      {bar}
+    </>
   );
 }

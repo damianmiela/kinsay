@@ -722,3 +722,71 @@ describe('pages from one address (as /live did)', () => {
     expect(typeof (await open('198.51.100.7'))).not.toBe('string');
   });
 });
+
+describe('face to face, two-way (mockups batch 3)', () => {
+  it("a host's page reads two languages: both halves' captions come; a reader's other is ignored", async () => {
+    const { person, sock, speech } = await start();
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    const first = await next<SessionView>(host, 'state:session');
+    expect(await ask(host, 'session:start', { lang: 'en', other: 'pl' })).toEqual({ ok: true });
+    host.emit('host:audio', new Uint8Array(3200).buffer, {
+      age: 0,
+      seq: 1,
+      stream: 'mic-aaaaaaaa',
+    });
+    await next(host, 'captions:ack');
+    expect(
+      speech
+        .open()
+        .map((s) => s.target)
+        .sort(),
+    ).toEqual(['en', 'pl']);
+    const both = next<{ texts: Record<string, { lines: string[] }> }>(
+      host,
+      'captions',
+      (u) => !!u.texts.pl?.lines.length && !!u.texts.en?.lines.length,
+    );
+    for (const [target, text] of [
+      ['pl', 'Zostaniecie na weekend?'],
+      ['en', 'Are you staying the weekend?'],
+    ] as const) {
+      speech
+        .open()
+        .find((s) => s.target === target)!
+        .events.tokens([{ text, translation_status: 'translation' }, { text: '<end>' }]);
+    }
+    const u = await both;
+    expect(u.texts.pl!.lines).toEqual(['Zostaniecie na weekend?']);
+    expect(u.texts.en!.lines).toEqual(['Are you staying the weekend?']);
+    // the host's second page gets both languages back
+    const again = sock({ cookie: p.cookie });
+    const v = await next<SessionView>(again, 'state:session');
+    expect([v.lang, v.other]).toEqual(['en', 'pl']);
+    // a reader reads one language: an "other" from a reader does nothing
+    const reader = sock({ code: first.code! });
+    await next(reader, 'state:session');
+    const rv = next<SessionView>(reader, 'state:session');
+    expect(await ask(reader, 'session:lang', { lang: 'de', other: 'es' })).toEqual({ ok: true });
+    expect((await rv).other).toBeUndefined();
+    expect(speech.open().map((s) => s.target)).not.toContain('es');
+  });
+
+  it("back to one column: the top half's language goes", async () => {
+    const { person, sock, speech } = await start();
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    await next(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'en', other: 'pl' });
+    host.emit('host:audio', new Uint8Array(3200).buffer, {
+      age: 0,
+      seq: 1,
+      stream: 'mic-aaaaaaaa',
+    });
+    await next(host, 'captions:ack');
+    const v = next<SessionView>(host, 'state:session', (x) => x.other === undefined);
+    expect(await ask(host, 'session:lang', { lang: 'en' })).toEqual({ ok: true });
+    expect((await v).lang).toBe('en');
+    expect(speech.open().map((s) => s.target)).toContain('en');
+  });
+});

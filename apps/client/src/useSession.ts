@@ -14,15 +14,22 @@ export function useSession(code?: string) {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     socket.auth = code ? { code } : {};
+    // (after a stop the words stay to read again: the server empties its text, the page keeps its
+    // own until the next start, which begins afresh; mockups batch 3)
+    let running = false;
     const onState = (v: SessionView) => {
       setError(null);
+      if (v.running && !running) setUpdate(EMPTY);
+      running = v.running;
       setView((was) => {
         // (a page that changed its language starts that language's history again)
         if (was && was.lang !== v.lang) setUpdate(EMPTY);
         return v;
       });
     };
-    const onCaptions = (u: CaptionsUpdate) => setUpdate((was) => mergeUpdate(was, u));
+    const onCaptions = (u: CaptionsUpdate) => {
+      if (running) setUpdate((was) => mergeUpdate(was, u));
+    };
     // (too many pages from this connection: it says so and tries again by itself, as /live's)
     let retry: ReturnType<typeof setTimeout> | undefined;
     const onError = (e: Error) => {
@@ -55,7 +62,7 @@ export function useSession(code?: string) {
 /** A socket action with a reply in at most 10 s (never a page stuck waiting). */
 export function ask(
   event: 'session:start' | 'session:lang',
-  payload: { lang: string | null },
+  payload: { lang: string | null; other?: string | null },
 ): Promise<string | null>;
 export function ask(event: 'session:stop' | 'session:keepGoing'): Promise<string | null>;
 export async function ask(event: string, payload?: unknown): Promise<string | null> {

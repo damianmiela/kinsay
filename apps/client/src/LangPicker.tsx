@@ -1,6 +1,7 @@
 // The translation language: a field that opens a list with a search (mockups batch 2). "No
 // translation" is always in the list; the last used languages come first.
 import { useState } from 'react';
+import { HalfMark } from './Bar';
 import { langList, langName, rememberLang } from './langs';
 import { t } from './texts';
 
@@ -8,10 +9,13 @@ export function LangPicker({
   value,
   onChange,
   startOpen = false,
+  mark,
 }: {
   value: string | null;
   onChange: (lang: string | null) => void;
   startOpen?: boolean;
+  /** Face to face: which half of the phone this language is for. */
+  mark?: 'top' | 'bottom';
 }) {
   const [open, setOpen] = useState(startOpen);
   const [query, setQuery] = useState('');
@@ -31,7 +35,10 @@ export function LangPicker({
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        {shown}
+        <span className="picker-value">
+          {mark && <HalfMark top={mark === 'top'} />}
+          {shown}
+        </span>
       </button>
       {open && (
         <div className="picker-drop">

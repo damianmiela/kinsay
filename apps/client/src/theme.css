@@ -39,6 +39,15 @@
   --on-foil: var(--on-accent);
   /* the reader's text size (the gear's A− A+) */
   --cap-scale: 1;
+  /* the control bar (mockups batch 3): dark like a video call's, its parts at 3:1 or more */
+  --bar: #14262c;
+  --bar-fill: rgba(255, 255, 255, 0.2);
+  --bar-edge: rgba(255, 255, 255, 0.5);
+  --bar-ink: #ffffff;
+  --bar-soft: rgba(255, 255, 255, 0.82);
+  --bar-top: #a9dde3;
+  --stop: #c63b33;
+  --amber: #ffd59e;
 }
 
 * {
@@ -596,4 +605,102 @@ a.btn {
 }
 .foot {
   flex-wrap: wrap;
+}
+
+/* ---------- mockups batch 3: the page's top, Home's two pictures, the sheets ---------- */
+.ibtn {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn.big {
+  min-height: 64px;
+  font-size: 21px;
+}
+.push {
+  flex: 1;
+}
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px 12px;
+  border: 2px solid #c3ccd5;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text-soft);
+  font: 700 18px var(--f-body);
+  cursor: pointer;
+}
+.mode.on {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.mode-pic {
+  width: 100%;
+  height: 86px;
+}
+.picker-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.halfmark {
+  flex: none;
+}
+.halfmark-fill {
+  fill: #bfe0e3;
+}
+.halfmark-edge {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.sheet-back.half {
+  background: transparent;
+}
+.sheet-back.half .sheet {
+  max-height: 62dvh;
+  box-shadow: 0 -10px 30px var(--shade-strong);
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sheet-head h2.t {
+  margin: 0;
+}
+.grp-h {
+  margin: 0 0 8px 4px;
+  color: var(--text-faint);
+  font-size: 16px;
+  font-weight: 700;
+}
+.li .balance {
+  margin-left: auto;
+}
+.li .balance.low {
+  color: var(--warn);
+}
+.invite-code {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-align: center;
 }
