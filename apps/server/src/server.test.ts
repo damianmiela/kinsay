@@ -1052,3 +1052,63 @@ describe('both sides of a call: a guest on the host balance (mockups batch 4)', 
     expect(speech.open().map((s) => s.target)).toEqual(['en']);
   });
 });
+
+describe('use and cost (mockups batch 5)', () => {
+  it('our use per UTC day with its stream-seconds, next to Soniox’s; admins only', async () => {
+    const asked: string[][] = [];
+    const usage = (from: string, to: string) => {
+      asked.push([from, to]);
+      return Promise.resolve([
+        { day: '2027-01-15', costUsd: 0.25, audioMs: 3_600_000, requests: 4 },
+      ]);
+    };
+    const { person, sock, get, admin, t } = await start(fakeSpeech(), 0.36 * EUR, { usage });
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    await next(host, 'state:session');
+    // two languages read: every second of audio is two stream-seconds
+    await ask(host, 'session:start', { lang: 'en', other: 'pl' });
+    // (the test's clock moves with the audio: the engine paces what it sends by it)
+    for (let i = 1; i <= 10; i++) {
+      host.emit('host:audio', new Uint8Array(3200).buffer, {
+        age: 0,
+        seq: i,
+        stream: 'mic-aaaaaaaa',
+      });
+      await next(host, 'captions:ack', (n: number) => n === i);
+      t.now += 100;
+    }
+    t.now += 1_000;
+    await ask(host, 'session:stop');
+    expect((await get('/admin/api/usage?days=7', p.cookie)).status).toBe(401);
+    const r = await get('/admin/api/usage?days=7', admin);
+    expect(r.status).toBe(200);
+    const ours = r.json.ours as {
+      day: string;
+      sessions: number;
+      streamSeconds: number;
+      charged: number;
+    }[];
+    expect(ours).toHaveLength(1);
+    expect(ours[0]!.sessions).toBe(1);
+    expect(ours[0]!.streamSeconds).toBe(2); // (1 s of audio × 2 streams)
+    expect(ours[0]!.charged).toBeGreaterThan(0);
+    expect(r.json.soniox).toEqual([
+      { day: '2027-01-15', costUsd: 0.25, audioMs: 3_600_000, requests: 4 },
+    ]);
+    // the window: whole UTC days, today's included
+    const [from, to] = asked[0]!;
+    expect(Date.parse(to!) - Date.parse(from!)).toBe(7 * 86_400_000);
+    expect(to!.endsWith('T00:00:00.000Z')).toBe(true);
+  });
+
+  it('Soniox not answering: our side all the same, and why', async () => {
+    const usage = () => Promise.reject(new Error('401'));
+    const { get, admin } = await start(fakeSpeech(), 0.36 * EUR, { usage });
+    const r = await get('/admin/api/usage', admin);
+    expect(r.status).toBe(200);
+    expect(r.json.days).toBe(30);
+    expect(r.json.soniox).toBeNull();
+    expect(r.json.sonioxError).toBe('401');
+  });
+});

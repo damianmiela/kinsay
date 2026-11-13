@@ -1,5 +1,5 @@
 // Pure helpers of the pages (tested).
-import type { CaptionText, CaptionsUpdate } from '@translate/shared';
+import { EUR, type CaptionText, type CaptionsUpdate } from '@translate/shared';
 
 /** Lines a page keeps (the server keeps 200 per text). */
 export const PAGE_LINES = 400;
@@ -30,4 +30,22 @@ export function mergeUpdate(prev: CaptionsUpdate, next: CaptionsUpdate): Caption
     heardLangs: { ...prev.heardLangs, ...next.heardLangs },
     ...(next.speaking ? { speaking: next.speaking } : {}),
   };
+}
+
+// ---------- the admin's "Use and cost" (mockups batch 5) ----------
+/** The days of the window, newest first (every day, used or not). */
+export function windowDays(from: string, days: number): string[] {
+  const start = Date.parse(`${from}T00:00:00Z`);
+  return Array.from({ length: days }, (_, i) =>
+    new Date(start + (days - 1 - i) * 86_400_000).toISOString().slice(0, 10),
+  );
+}
+
+/**
+ * The lowest price per stream-hour (micro-euros) that covers Soniox's cost per hour of audio with
+ * the margin: cost × dollar rate × (1 + margin); null without a cost.
+ */
+export function lowestPrice(usdPerHour: number | null, rate: number, marginPct: number) {
+  if (!usdPerHour || !(rate > 0) || !(marginPct >= 0)) return null;
+  return Math.ceil(usdPerHour * rate * (1 + marginPct / 100) * 100) * (EUR / 100);
 }

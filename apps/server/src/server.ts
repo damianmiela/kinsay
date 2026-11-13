@@ -9,6 +9,7 @@ import { Store, type Settings } from './db';
 import type { SpeechConnect } from '@translate/engine';
 import type { GoogleConfig, Mailer } from './signin';
 import { attachRealtime, type Realtime } from './realtime';
+import type { UsageSource } from './usage';
 
 export interface Config {
   adminPassword: string;
@@ -26,6 +27,8 @@ export interface Config {
   publicUrl?: string;
   /** (tests: a fake Google) */
   fetch?: typeof fetch;
+  /** Soniox's own numbers for the admin's "Use and cost" (none: not shown). */
+  usage?: UsageSource;
   clientDist?: string;
   now?: () => number;
   logger?: boolean;
@@ -88,6 +91,7 @@ export async function createServer(c: Config) {
     publicUrl: c.publicUrl,
     contact: c.contact,
     fetch: c.fetch,
+    usage: c.usage,
     now: c.now,
     warn: (m) => app.log.warn(m),
   });

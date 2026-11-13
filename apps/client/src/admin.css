@@ -160,3 +160,80 @@
   pointer-events: none;
   opacity: 0.6;
 }
+
+/* ---------- Use and cost (mockups batch 5) ---------- */
+.usage-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.seg2 {
+  display: inline-flex;
+  overflow: hidden;
+  border: 2px solid var(--line);
+  border-radius: var(--r-sm);
+}
+.seg2 button {
+  padding: 8px 14px;
+  border: 0;
+  background: var(--surface);
+  font: 700 16px var(--f-body);
+  cursor: pointer;
+}
+.seg2 button.on {
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+.stats.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+.stat small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-faint);
+  font-size: 16px;
+}
+.card.price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+  font-size: 16px;
+}
+.card.price label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.card.price .input {
+  width: 80px;
+  height: 44px;
+}
+.card.price .out {
+  color: var(--accent-strong);
+  font-size: 20px;
+}
+.tbl.usage tbody tr {
+  cursor: default;
+}
+.tbl.usage tbody tr:hover {
+  background: none;
+}
+.tbl.usage td.gap {
+  background: var(--warn-tint);
+}
+.tbl.usage tr.sum td {
+  border-top: 2px solid var(--line);
+  font-weight: 700;
+}
+@media (max-width: 900px) {
+  .stats.four {
+    grid-template-columns: 1fr 1fr;
+  }
+  .tbl.usage {
+    display: block;
+    overflow-x: auto;
+  }
+}

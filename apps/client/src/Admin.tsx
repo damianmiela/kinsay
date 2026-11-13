@@ -5,6 +5,7 @@ import { EUR, euros, GRANT_STEPS } from '@translate/shared';
 import { api } from './api';
 import { Logo, Sheet } from './bits';
 import { Qr } from './Qr';
+import { UsagePage } from './Usage';
 import './admin.css';
 
 interface Person {
@@ -84,7 +85,13 @@ function Login({ onIn }: { onIn: () => void }) {
   );
 }
 
-type Tab = 'requests' | 'people' | 'settings';
+type Tab = 'requests' | 'people' | 'usage' | 'settings';
+const TABS: Record<Tab, string> = {
+  requests: 'Requests',
+  people: 'People',
+  usage: 'Use and cost',
+  settings: 'Settings',
+};
 
 function Admin() {
   const [s, setS] = useState<State | null>(null);
@@ -162,9 +169,9 @@ function Admin() {
     <div className={`admin${busy ? ' busy' : ''}`}>
       <nav className="side">
         <Logo />
-        {(['requests', 'people', 'settings'] as const).map((k) => (
+        {(Object.keys(TABS) as Tab[]).map((k) => (
           <button key={k} className={`nav${tab === k ? ' on' : ''}`} onClick={() => setTab(k)}>
-            {k[0]!.toUpperCase() + k.slice(1)}
+            {TABS[k]}
             {k === 'requests' && waiting > 0 && <span className="n">{waiting}</span>}
           </button>
         ))}
@@ -338,6 +345,7 @@ function Admin() {
           </>
         )}
 
+        {tab === 'usage' && <UsagePage />}
         {tab === 'settings' && (
           <Settings s={s.settings} onSave={(v) => act('/admin/api/settings', v)} />
         )}

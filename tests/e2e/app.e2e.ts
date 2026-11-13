@@ -366,6 +366,15 @@ test('the admin: sign in, invite, a sign-in code with its QR; an encoded address
   await expect(page.locator('.digits span')).toHaveCount(6);
   await expect(page.locator('.sheet .qr')).toBeVisible();
   expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
+  // Use and cost: our side per UTC day (this test server has no Soniox key: it says so)
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Use and cost' }).click();
+  await expect(page.getByRole('heading', { name: 'Use and cost' })).toBeVisible();
+  await expect(page.getByText('No Soniox key on this server')).toBeVisible();
+  await expect(page.locator('.tbl.usage tbody tr')).toHaveCount(31); // (30 days and the sum)
+  await page.getByRole('button', { name: '7 days' }).click();
+  await expect(page.locator('.tbl.usage tbody tr')).toHaveCount(8);
+  await expect(page.getByText('Charge at least')).toBeVisible();
 });
 
 test('the pages ask nothing of any other site, and every text is 16 px or more', async ({

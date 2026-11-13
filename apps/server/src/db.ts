@@ -106,6 +106,12 @@ export class Store {
     this.db = new DatabaseSync(file);
     this.db.exec('pragma journal_mode = wal; pragma foreign_keys = on;');
     this.db.exec(SCHEMA);
+    // (each session's stream-seconds: audio × the streams it went to, for "Use and cost", 2026-11-13;
+    // older rows have none)
+    const cols = this.db.prepare('pragma table_info(ledger)').all() as { name: string }[];
+    if (!cols.some((c) => c.name === 'stream_seconds')) {
+      this.db.exec('alter table ledger add column stream_seconds integer');
+    }
     // (invitation requests answered before answering deleted them, 2026-11-12)
     this.db.exec(`delete from requests where kind = 'invite' and state != 'waiting'`);
   }
@@ -282,11 +288,11 @@ export class Store {
     personId: number,
     kind: LedgerKind,
     amount: number,
-    extra: { note?: string; lang?: string; seconds?: number } = {},
+    extra: { note?: string; lang?: string; seconds?: number; streamSeconds?: number } = {},
   ): number {
     const r = this.db
       .prepare(
-        'insert into ledger (person_id, at, kind, amount, note, lang, seconds) values (?, ?, ?, ?, ?, ?, ?)',
+        'insert into ledger (person_id, at, kind, amount, note, lang, seconds, stream_seconds) values (?, ?, ?, ?, ?, ?, ?, ?)',
       )
       .run(
         personId,
@@ -296,6 +302,7 @@ export class Store {
         extra.note ?? null,
         extra.lang ?? null,
         extra.seconds ?? null,
+        extra.streamSeconds === undefined ? null : Math.round(extra.streamSeconds),
       );
     return Number(r.lastInsertRowid);
   }
@@ -304,10 +311,34 @@ export class Store {
    * A session's use: one row per session, brought up to date every minute (a crash loses at most
    * a minute of it). The only row that changes is the running session's own.
    */
-  setUse(rowId: number, amount: number, lang: string, seconds: number) {
+  setUse(rowId: number, amount: number, lang: string, seconds: number, streamSeconds: number) {
     this.db
-      .prepare(`update ledger set amount = ?, lang = ?, seconds = ? where id = ? and kind = 'use'`)
-      .run(-Math.round(amount), lang, Math.round(seconds), rowId);
+      .prepare(
+        `update ledger set amount = ?, lang = ?, seconds = ?, stream_seconds = ? where id = ? and kind = 'use'`,
+      )
+      .run(-Math.round(amount), lang, Math.round(seconds), Math.round(streamSeconds), rowId);
+  }
+
+  /**
+   * Everyone's use per UTC day in [from, to) (ISO times; a session counts on the day it began):
+   * sessions, what was charged (micro-euros), stream-seconds (null rows: older sessions, counted
+   * apart).
+   */
+  usageByDay(from: string, to: string) {
+    return this.db
+      .prepare(
+        `select substr(at, 1, 10) as day, count(*) as sessions, -sum(amount) as charged,
+           coalesce(sum(stream_seconds), 0) as streamSeconds,
+           sum(case when stream_seconds is null then 1 else 0 end) as unknown
+         from ledger where kind = 'use' and at >= ? and at < ? group by day order by day desc`,
+      )
+      .all(from, to) as {
+      day: string;
+      sessions: number;
+      charged: number;
+      streamSeconds: number;
+      unknown: number;
+    }[];
   }
 
   balance(personId: number): number {

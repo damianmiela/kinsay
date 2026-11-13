@@ -181,3 +181,12 @@ You and someone else on a video call, each with the Windows app (no new download
 - [ ] Your Stop ends both; her Start waits until yours runs again ("Marta stopped at …").
 - [ ] With the switch off, the code only reads (as before); a second guest is told someone else captions already.
 - [ ] Account, the next day: that session's line names her language "(your guest)", and the cost counts both streams.
+
+## 18. Use and cost, in the admin (2026-11-13)
+
+- [ ] Admin → "Use and cost": the last 30 UTC days, newest first; 7 / 30 / 90 days switch it.
+- [ ] Our side per day: sessions, stream-hours (audio × the streams it went to) and what was charged. Sessions from before today have no stream-hours ("+" after the number, "older sessions" in the box).
+- [ ] Soniox's side per day: its audio hours, its cost in dollars, its cost per hour of audio, from its own usage API. If Soniox doesn't answer, the line says why and our side still shows.
+- [ ] The note says Soniox's numbers include the wedding app (the same key); a day where Soniox heard more than 10 % over our count is shaded.
+- [ ] The price helper: type the dollar rate and your margin: "Charge at least €… per stream-hour". The two numbers stay in this browser.
+- [ ] Compare one day with the Soniox console's own usage page: the dollars should match.

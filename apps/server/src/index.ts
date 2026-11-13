@@ -3,6 +3,7 @@ import { lookup } from 'node:dns/promises';
 import { resolve } from 'node:path';
 import { EUR } from '@translate/shared';
 import { sonioxConnect } from '@translate/engine';
+import { sonioxUsage } from './usage';
 
 /** What the speech service is told is being said. */
 const TOPIC = [
@@ -70,6 +71,7 @@ const server = await createServer({
   secret,
   dbFile: resolve(root, env.DATA_DIR ?? 'data', 'translate.db'),
   speech: env.SONIOX_API_KEY ? sonioxConnect(env.SONIOX_API_KEY, { topic: TOPIC }) : null,
+  ...(env.SONIOX_API_KEY ? { usage: sonioxUsage(env.SONIOX_API_KEY) } : {}),
   streams: Number(env.SONIOX_STREAMS ?? 10),
   defaults: {
     pricePerHour: price,

@@ -86,6 +86,8 @@ interface Channel {
   row?: number;
   cost: number;
   written: number;
+  /** Audio × the streams it went to, this session (the admin's stream-hours). */
+  streamSeconds: number;
   /** The balance at the last write (the credits run out between writes too). */
   balanceAt: number;
   seconds: number;
@@ -184,6 +186,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       hostLang: null,
       hostOther: null,
       cost: 0,
+      streamSeconds: 0,
       written: 0,
       balanceAt: 0,
       seconds: 0,
@@ -319,6 +322,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       const price = o.store.settings().pricePerHour;
       c.cost += (ms * streams * price) / 3_600_000;
       c.seconds += ms / 1000;
+      c.streamSeconds += (ms * streams) / 1000;
       // (written every FLUSH_MS, and at once when the credits run out: never minutes past zero)
       if (now() - c.flushedAt >= FLUSH_MS || c.balanceAt - (c.cost - c.written) <= 0) flush(c);
     } catch (e) {
@@ -337,8 +341,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         // (a guest's languages marked as theirs: the history says "your guest")
         const lang =
           [...langsOf(c), ...[...c.guestLangs].map((l) => `guest:${l}`)].join(', ') || HEARD;
-        if (!c.row) c.row = o.store.add(c.personId, 'use', -c.cost, { lang, seconds: c.seconds });
-        else o.store.setUse(c.row, c.cost, lang, c.seconds);
+        if (!c.row) {
+          c.row = o.store.add(c.personId, 'use', -c.cost, {
+            lang,
+            seconds: c.seconds,
+            streamSeconds: c.streamSeconds,
+          });
+        } else o.store.setUse(c.row, c.cost, lang, c.seconds, c.streamSeconds);
         c.written = c.cost;
       } catch (e) {
         warn(`credits: the use could not be written (${String(e)})`);
@@ -390,6 +399,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     c.cost = 0;
     c.written = 0;
     c.seconds = 0;
+    c.streamSeconds = 0;
     c.seqs.clear();
     c.kept.clear();
     c.guestLangs.clear();

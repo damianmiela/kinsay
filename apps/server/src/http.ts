@@ -2,6 +2,7 @@
 // and the admin's API. Captions go over Socket.IO (realtime.ts). Every POST must come from our own
 // pages (same origin); every answer is JSON.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { SonioxDay, UsageSource } from './usage';
 import { EUR, GRANT_STEPS } from '@translate/shared';
 import {
   ADMIN_COOKIE,
@@ -49,6 +50,8 @@ export interface HttpOptions {
   now?: () => number;
   /** (tests: a fake Google) */
   fetch?: typeof fetch;
+  /** Soniox's own numbers for "Use and cost" (none: no key; tests: a fake). */
+  usage?: UsageSource;
   warn?: (m: string) => void;
 }
 
@@ -352,6 +355,38 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
   app.addHook('preHandler', async (req, reply) => {
     const route = req.routeOptions.url ?? '';
     if (route.startsWith('/admin/api/') && !admin(req)) return fail(reply, 401, 'admin-only');
+  });
+
+  // "Use and cost" (mockups batch 5): everyone's use per UTC day next to Soniox's own, the last
+  // 7, 30 or 90 days (today included)
+  app.get('/admin/api/usage', async (req) => {
+    const q = req.query as { days?: string };
+    const days = [7, 30, 90].includes(Number(q.days)) ? Number(q.days) : 30;
+    const t = new Date((o.now ?? Date.now)());
+    const end = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate() + 1);
+    const start = end - days * 86_400_000;
+    const from = new Date(start).toISOString();
+    const to = new Date(end).toISOString();
+    let soniox: SonioxDay[] | null = null;
+    let sonioxError: string | undefined;
+    if (!o.usage) sonioxError = 'no key';
+    else {
+      try {
+        soniox = await o.usage(from, to);
+      } catch (e) {
+        sonioxError = e instanceof Error ? e.message : 'no answer';
+        o.warn?.(`Soniox usage: ${sonioxError}`);
+      }
+    }
+    return {
+      ok: true,
+      days,
+      from: from.slice(0, 10),
+      ours: o.store.usageByDay(from, to),
+      soniox,
+      ...(sonioxError ? { sonioxError } : {}),
+      pricePerHour: o.store.settings().pricePerHour,
+    };
   });
 
   app.get('/admin/api/state', () => ({
