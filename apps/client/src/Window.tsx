@@ -171,6 +171,11 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   const [quiet, setQuiet] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const { chooseSource } = mic;
+  // another of the host's devices took the microphone: the window stops sending
+  const elsewhere = !!view?.mic && !view.mic.here;
+  useEffect(() => {
+    if (elsewhere && mic.sending) mic.stopSending();
+  }, [elsewhere, mic]);
   useEffect(() => {
     chooseSource(source);
   }, [chooseSource, source]);

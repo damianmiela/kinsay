@@ -68,10 +68,14 @@ async function start(speech = fakeSpeech(), price = 0.36 * EUR, extra: Partial<C
     const signed = await post('/api/signin/code', { digits: code.json.digits });
     return { id, cookie: signed.cookie.split(';')[0]! };
   };
-  const sock = (opts: { cookie?: string; code?: string }) => {
+  const sock = (opts: { cookie?: string; code?: string; ua?: string }) => {
     const s: Socket = connect(url, {
       transports: ['websocket'],
-      extraHeaders: { origin: url, ...(opts.cookie ? { cookie: opts.cookie } : {}) },
+      extraHeaders: {
+        origin: url,
+        ...(opts.cookie ? { cookie: opts.cookie } : {}),
+        ...(opts.ua ? { 'user-agent': opts.ua } : {}),
+      },
       auth: opts.code ? { code: opts.code } : {},
       forceNew: true,
     });
@@ -788,5 +792,56 @@ describe('face to face, two-way (mockups batch 3)', () => {
     expect(await ask(host, 'session:lang', { lang: 'en' })).toEqual({ ok: true });
     expect((await v).lang).toBe('en');
     expect(speech.open().map((s) => s.target)).toContain('en');
+  });
+});
+
+describe('which microphone listens (mockups batch 3)', () => {
+  const PHONE_UA =
+    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36';
+  const PC_UA =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36';
+  const audio = (s: Socket, seq: number) =>
+    s.emit('host:audio', new Uint8Array(3200).buffer, { age: 0, seq, stream: 'mic-' + s.id });
+
+  it('the other pages see where it listens; "Use this one" moves it; gone, nobody listens', async () => {
+    const { person, sock, server, t } = await start();
+    const p = await person('Marta');
+    const phone = sock({ cookie: p.cookie, ua: PHONE_UA });
+    const pc = sock({ cookie: p.cookie, ua: PC_UA });
+    await Promise.all([next(phone, 'state:session'), next(pc, 'state:session')]);
+    const seen = next<SessionView>(pc, 'state:session', (v) => !!v.mic);
+    await ask(phone, 'session:start', { lang: 'pl' });
+    expect((await seen).mic).toEqual({ here: false, on: 'phone' });
+    // the computer takes over: the phone sees it, and its audio no longer counts
+    const moved = next<SessionView>(phone, 'state:session', (v) => v.mic?.here === false);
+    expect(await ask(pc, 'session:useMic')).toEqual({ ok: true });
+    expect((await moved).mic).toEqual({ here: false, on: 'computer' });
+    audio(phone, 1); // (not used: the computer listens)
+    // the computer's page went quiet: after a while nobody listens, every page says so
+    audio(pc, 1);
+    await next(pc, 'captions:ack');
+    const none = next<SessionView>(phone, 'state:session', (v) => v.running && !v.mic);
+    t.now += 11_000;
+    server.realtime.checkStops();
+    await none;
+    // a reader never learns where it listens; a page that closes leaves nobody listening
+    const back = next<SessionView>(pc, 'state:session', (v) => !!v.mic);
+    audio(phone, 2);
+    expect((await back).mic).toEqual({ here: false, on: 'phone' });
+    const left = next<SessionView>(pc, 'state:session', (v) => v.running && !v.mic);
+    phone.close();
+    await left;
+  });
+
+  it('a reader may not take the microphone', async () => {
+    const { person, sock } = await start();
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    const v = await next<SessionView>(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'pl' });
+    const reader = sock({ code: v.code });
+    const rv = await next<SessionView>(reader, 'state:session');
+    expect(rv.mic).toBeUndefined();
+    expect(await ask(reader, 'session:useMic')).toEqual({ ok: false, error: 'not-host' });
   });
 });

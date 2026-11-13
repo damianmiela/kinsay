@@ -138,6 +138,58 @@ test('the microphone: asked for with a picture the first time; blocked, the step
   await blocked.getByRole('button', { name: 'Stop' }).click();
 });
 
+test('two devices: the other says where it listens, "Use this one" moves it; Settings has Account and App language', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  const android =
+    'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+  const { page: phone, id } = await signedInPhone(browser, baseURL!, admin, {
+    userAgent: android,
+  });
+  // the same person on a computer
+  const code = await admin.post('/admin/api/signin-code', { id });
+  const pcCtx = await browser.newContext({ baseURL, permissions: ['microphone'] });
+  const pc = await pcCtx.newPage();
+  await pc.goto('/signin');
+  await pc.getByLabel('Type the sign-in code').fill(String(code.json.digits));
+  await pc.getByRole('button', { name: 'Sign in' }).click();
+  await expect(pc.getByText('Start live captions')).toBeVisible();
+
+  await phone.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(phone.locator('.cap-line').first()).toContainText('Sentence');
+  // the computer: the captions, and where it listens
+  await expect(pc.locator('.cbar .strip')).toContainText('Listening on your phone');
+  await expect(pc.locator('.cap-line').first()).toContainText('Sentence');
+  await pc.locator('.cbar').getByRole('button', { name: 'Use this one' }).click();
+  await expect(pc.locator('.cbar .strip')).toHaveCount(0);
+  await expect(phone.locator('.cbar .strip')).toContainText('Listening on your computer');
+  // the captions go on from the computer's microphone
+  const n = await phone.locator('.cap-line').count();
+  await expect.poll(() => phone.locator('.cap-line').count()).toBeGreaterThan(n);
+  // the phone's Settings: the Microphone group, Account as a sheet, App language as a list
+  await phone.getByRole('button', { name: 'Settings' }).click();
+  await expect(phone.locator('.sheet .grp', { hasText: 'Microphone' })).toContainText(
+    'your computer',
+  );
+  await phone.locator('.sheet .grp', { hasText: 'Account' }).locator('.li').click();
+  await expect(phone.locator('.sheet .acct-bal')).toContainText('€');
+  await expect(phone.getByRole('link', { name: 'History and devices' })).toHaveAttribute(
+    'target',
+    '_blank',
+  );
+  await phone.getByRole('button', { name: 'Back' }).click();
+  await phone.getByRole('button', { name: /App language/ }).click();
+  await expect(phone.locator('.sheet .lang-row')).toHaveCount(5);
+  await phone.keyboard.press('Escape');
+  // the phone takes it back
+  await phone.locator('.cbar').getByRole('button', { name: 'Use this one' }).click();
+  await expect(pc.locator('.cbar .strip')).toContainText('Listening on your phone');
+  await phone.getByRole('button', { name: 'Stop' }).click();
+  await pcCtx.close();
+});
+
 test('no translation: what is heard; the language button says Original and picks one', async ({
   browser,
   baseURL,

@@ -4,8 +4,8 @@
 // (Start/Stop · language · Settings) under them, or face to face between the two halves; Invite is
 // the first row of Settings. After Stop the page stays: the words to read again, the same button
 // says Start.
-import { useState } from 'react';
-import { LOW_BALANCE } from '@translate/shared';
+import { useEffect, useState } from 'react';
+import { LOW_BALANCE, type DeviceKind } from '@translate/shared';
 import {
   ControlBar,
   GearCb,
@@ -36,6 +36,18 @@ import { ask, useSession } from './useSession';
 type SheetName =
   null | 'gear' | 'invite' | 'lang' | 'langs' | 'top' | 'bottom' | 'allow' | 'blocked';
 
+/** "Listening on *your phone*": the device's name in bold, wherever the language puts it. */
+const ListeningOn = ({ on }: { on: DeviceKind }) => {
+  const [a, b] = t.listeningOn('|').split('|');
+  return (
+    <>
+      {a}
+      <b>{t.deviceName[on]}</b>
+      {b}
+    </>
+  );
+};
+
 /** While nothing has been said: a microphone whose rings say "it hears you", in no language. */
 const Hears = () => (
   <span className="hears" aria-hidden="true">
@@ -63,6 +75,12 @@ export function HostPage() {
   const [opening, setOpening] = useState(false);
   // (what the blocked sheet carries on with once the microphone is allowed)
   const [retry, setRetry] = useState<'start' | 'resume'>('start');
+
+  // another of the host's devices took the microphone: this one stops sending
+  const elsewhere = view?.mic && !view.mic.here ? view.mic.on : null;
+  useEffect(() => {
+    if (elsewhere && mic.sending) mic.stopSending();
+  }, [elsewhere, mic]);
 
   if (!view) {
     return (
@@ -131,6 +149,14 @@ export function HostPage() {
       else setProblem('mic');
     }
   };
+  /** "Use this one": this page's microphone listens from now on. */
+  const listenHere = async () => {
+    setOpening(true);
+    const err = await ask('session:useMic');
+    setOpening(false);
+    if (err) return setProblem(err);
+    await resumeMic();
+  };
   const pick = (which: 'lang' | 'top' | 'bottom') => (l: string | null) => {
     setSheet(face && which !== 'lang' && (view.running || here) ? 'langs' : null);
     if (which === 'lang') {
@@ -165,6 +191,19 @@ export function HostPage() {
             <SwitchRow label={t.showHeard} on={showHeard} onChange={setShowHeard} />
           )}
         </>
+      }
+      microphone={
+        view.running && elsewhere && !mic.sending ? (
+          <div className="li">
+            <span className="mic-ico">
+              <IconMic />
+            </span>
+            <span className="what cap-first">{t.deviceName[elsewhere]}</span>
+            <button className="pill" onClick={() => void listenHere()}>
+              {t.useThisOne}
+            </button>
+          </div>
+        ) : undefined
       }
     />
   );
@@ -328,15 +367,25 @@ export function HostPage() {
           <b>{stopLine[0]}.</b> {stopLine[1]}
         </Strip>
       )}
-      {view.running && !mic.sending && !opening && (
-        <Strip
-          tone="amber"
-          icon={<IconMic />}
-          action={{ label: t.turnItOn, onClick: () => void resumeMic() }}
-        >
-          <b>{t.micIsOff}</b>
-        </Strip>
-      )}
+      {view.running &&
+        !mic.sending &&
+        !opening &&
+        (elsewhere ? (
+          <Strip
+            icon={<IconMic />}
+            action={{ label: t.useThisOne, onClick: () => void listenHere() }}
+          >
+            <ListeningOn on={elsewhere} />
+          </Strip>
+        ) : (
+          <Strip
+            tone="amber"
+            icon={<IconMic />}
+            action={{ label: t.turnItOn, onClick: () => void resumeMic() }}
+          >
+            <b>{t.micIsOff}</b>
+          </Strip>
+        ))}
       {view.running && mic.sending && !canStayAwake && <Strip>{t.keepScreenOnLine}</Strip>}
       {view.running && view.service === 'error' && <Strip tone="amber">{t.serviceTrying}</Strip>}
       {view.running && low && (

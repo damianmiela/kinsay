@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EUR, euros, GRANT_STEPS, isSpeechLang, SPEECH_LANGS } from './index';
+import { deviceKind, EUR, euros, GRANT_STEPS, isSpeechLang, SPEECH_LANGS } from './index';
 
 describe('euros', () => {
   it('shows cents; a little above zero never shows as €0.00', () => {
@@ -21,5 +21,24 @@ describe('the speech service languages', () => {
     expect(isSpeechLang('tl')).toBe(true);
     expect(isSpeechLang('ceb')).toBe(false); // (Cebuano: not offered by the service)
     expect(isSpeechLang('heard')).toBe(false);
+  });
+});
+
+describe('deviceKind', () => {
+  it('a phone, a tablet, a computer', () => {
+    expect(deviceKind('Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) Mobile/15E148')).toBe(
+      'phone',
+    );
+    expect(
+      deviceKind('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/131.0 Mobile Safari/537.36'),
+    ).toBe('phone');
+    expect(deviceKind('Mozilla/5.0 (Linux; Android 14; SM-X710) Chrome/131.0 Safari/537.36')).toBe(
+      'tablet',
+    );
+    expect(deviceKind('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)')).toBe('tablet');
+    expect(deviceKind('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0 Safari/537.36')).toBe(
+      'computer',
+    );
+    expect(deviceKind('')).toBe('computer');
   });
 });

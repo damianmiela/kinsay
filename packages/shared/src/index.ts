@@ -115,6 +115,17 @@ export interface SessionView {
   stopped?: StopReason;
   /** The host only, shortly before: the session stops at this time unless they keep it going. */
   stopsAt?: number;
+  /** The host only, while it runs: which page's microphone listens (`here`: this one) and on what. */
+  mic?: { here: boolean; on: DeviceKind };
+}
+
+/** A device as people name it: "your phone", "your tablet", "your computer". */
+export type DeviceKind = 'phone' | 'tablet' | 'computer';
+/** From the browser's user agent (an iPad that says it is a Mac counts as a computer). */
+export function deviceKind(ua: string): DeviceKind {
+  if (/iPad|Tablet|Android(?!.*Mobile)/.test(ua)) return 'tablet';
+  if (/Mobi|iPhone|iPod|Android/.test(ua)) return 'phone';
+  return 'computer';
 }
 /** Why a session stopped: `quiet` no words for a while, `hours` its hours were up (as /live's). */
 export type StopReason = 'credits' | 'monthly' | 'global' | 'ended' | 'blocked' | 'quiet' | 'hours';
@@ -138,6 +149,8 @@ export interface ClientToServerEvents {
   'session:stop': Action;
   /** The host: the session goes on for another few hours ("Still listening?"). */
   'session:keepGoing': Action;
+  /** The host: this page's microphone listens from now on (the other page's stops). */
+  'session:useMic': Action;
   /** The page's language (host or reader): null = what is heard only. */
   'session:lang': Action<{ lang: Target | null; other?: Target | null }>;
   'host:audio': (chunk: ArrayBuffer, meta: AudioMeta) => void;

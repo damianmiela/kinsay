@@ -788,3 +788,31 @@ a.btn {
 .sheet:has(.lang-search) {
   height: 92dvh;
 }
+
+/* ---------- step 3: Account over running captions ---------- */
+.acct-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 18px;
+}
+.acct-bal {
+  font-size: 36px;
+}
+.acct-bal.low {
+  color: var(--warn);
+}
+.acct-more {
+  align-self: center;
+}
+.li .val {
+  margin-left: auto;
+  color: var(--text-soft);
+  font-size: 16px;
+}
+.li .mic-ico {
+  color: var(--text-faint);
+}
+.cap-first::first-letter {
+  text-transform: uppercase;
+}

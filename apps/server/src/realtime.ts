@@ -10,6 +10,8 @@ import {
   HEARD,
   type Ack,
   type ClientToServerEvents,
+  type DeviceKind,
+  deviceKind,
   type ServerToClientEvents,
   type SessionView,
   type StopReason,
@@ -39,6 +41,8 @@ export const CHANNEL_LANGS_MAX = 3;
 export const FLUSH_MS = 10_000;
 /** One microphone at a time: another page of the same host takes over after this much quiet. */
 export const MIC_QUIET_MS = 2_000;
+/** The listening page sent nothing for this long: nobody listens (checked with the stops). */
+const MIC_GONE_MS = 10_000;
 /** Language switches a page may make per minute (each opens and closes a paid stream: audit 30). */
 export const LANG_SWITCHES_PER_MIN = 10;
 /** Wrong reader codes an address may try per 10 minutes (IPv6 per /48: audit 30). */
@@ -86,6 +90,8 @@ interface Channel {
   flushedAt: number;
   micSocket?: string;
   micAt: number;
+  /** What the listening page is on (the other pages say "Listening on your phone"). */
+  micKind: DeviceKind;
   /** The last chunk number per audio stream of the page (a resend is confirmed, not used twice). */
   seqs: Map<string, number>;
   /** Its pages, host's and readers' (audit 30: never a scan of every socket). */
@@ -107,6 +113,7 @@ interface Data {
   other?: Target | null;
   personId?: number;
   deviceId?: number;
+  kind: DeviceKind;
 }
 type S = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, Data>;
 
@@ -168,6 +175,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       seconds: 0,
       flushedAt: now(),
       micAt: 0,
+      micKind: 'phone',
       seqs: new Map(),
       sockets: new Set(),
       idleSince: now(),
@@ -236,6 +244,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       v.code = c.code;
       v.balance = o.store.balance(c.personId) - (c.cost - c.written);
       if (c.running && now() >= c.keepUntil - ASK_MS) v.stopsAt = c.keepUntil;
+      if (c.running && c.micSocket) v.mic = { here: c.micSocket === s.id, on: c.micKind };
     }
     return v;
   }
@@ -312,6 +321,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     c.seconds = 0;
     c.seqs.clear();
     c.kept.clear();
+    c.micSocket = undefined;
     c.engine.discard();
     c.idleSince = now();
     stateAll(c);
@@ -371,6 +381,11 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         dropped = true;
       }
       if (dropped) c.engine.setLangs(langsOf(c));
+      // (the listening page went quiet: nobody listens, every page says so)
+      if (c.micSocket && t - c.micAt >= MIC_GONE_MS) {
+        c.micSocket = undefined;
+        stateAll(c);
+      }
       if (t - c.wordsAt >= QUIET_STOP_MS) stop(c, 'quiet');
       else if (t >= c.keepUntil) stop(c, 'hours');
       else if (t >= c.keepUntil - ASK_MS && !asked.has(c)) {
@@ -418,7 +433,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         codeFails.record(ip, now());
         return next(new Error('no-session'));
       }
-      s.data = { channel: c, role: 'reader', lang: null };
+      s.data = { channel: c, role: 'reader', lang: null, kind: 'phone' };
       return next();
     }
     const d = o.store.device(cookies[DEVICE_COOKIE]);
@@ -429,6 +444,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       lang: null,
       personId: d.person.id,
       deviceId: d.deviceId,
+      kind: deviceKind(s.handshake.headers['user-agent'] ?? ''),
     };
     next();
   });
@@ -538,9 +554,21 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
           byCode.set(c.code, c);
         }
       }
+      listenHere();
+      reply(cb, { ok: true });
+    });
+
+    /** This page's microphone is the one that listens (the others stop sending theirs). */
+    function listenHere() {
       c.micSocket = s.id;
       c.micAt = now();
+      c.micKind = s.data.kind;
       stateAll(c);
+    }
+
+    s.on('session:useMic', (cb) => {
+      if (!host() || !c.running) return reply(cb, { ok: false, error: 'not-host' });
+      listenHere();
       reply(cb, { ok: true });
     });
 
@@ -576,7 +604,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
           : 0;
       // one microphone at a time: another page takes over once the first has been quiet a while
       if (c.micSocket !== s.id && now() - c.micAt < MIC_QUIET_MS) return;
-      c.micSocket = s.id;
+      if (c.micSocket !== s.id) listenHere();
       c.micAt = now();
       if (seq) {
         s.emit('captions:ack', seq);
@@ -596,6 +624,10 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     s.on('disconnect', () => {
       const before = readNow(c);
       c.sockets.delete(s);
+      if (c.micSocket === s.id) {
+        c.micSocket = undefined;
+        stateAll(c);
+      }
       // (a language nobody reads any more: kept a while, then its stream ends)
       if (c.running) readersChanged(c, before);
       else c.engine.setLangs(langsOf(c));

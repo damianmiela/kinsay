@@ -109,3 +109,15 @@ On a phone:
 - [ ] Face to face with "No translation" in the top half: Start starts (it no longer asks again).
 - [ ] On a phone that has never used Translate (or a fresh private window): the first Start shows "Translate needs the microphone" with "Allow the microphone", and only then the browser's own question. The next Start goes straight on.
 - [ ] Block the microphone in the browser and tap Start: "The microphone is blocked" with this browser's steps (Chrome on Android, Safari on iPhone, Chrome on a computer…). Follow them: it carries on by itself (or with "Try again").
+
+## 11. The redesign, step 3: two devices and Settings (2026-11-13)
+
+With your phone and your computer, both signed in:
+
+- [ ] Start on the phone. The computer shows the captions and, above its bar, "Listening on your phone" with "Use this one".
+- [ ] "Use this one" on the computer: its line goes, the captions go on from the computer's microphone, the phone says "Listening on your computer" (and its microphone light goes off).
+- [ ] Back with "Use this one" on the phone. Close the listening page: the other one says "The microphone is off · Turn it on".
+- [ ] While it runs, ⚙ on the device that doesn't listen: a Microphone group ("Your computer" · Use this one).
+- [ ] ⚙ while it runs: Account opens over the captions (the balance, Ask for more, "History and devices" in a new tab); the captions keep going.
+- [ ] ⚙ → App language: a list of the five; picking one reloads the page in it.
+- [ ] The desktop window while the phone listens: it stops sending its own sound (its redesign comes in step 5).
