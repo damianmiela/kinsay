@@ -163,3 +163,9 @@ In the Windows app (no new download needed: it loads the page):
 - [ ] While this device listens, ⚙ has no App language (changing it would reload the page and stop the microphone); after Stop it's back.
 - [ ] The desktop window while your phone listens: ✕ closes it without asking (the phone's captions go on).
 - [ ] Good to know: an invitation code keeps working as long as captions are started with it at least once a day (it lasts a day from the last Start).
+
+## 16. The engine as its own package (2026-11-13)
+
+Nothing new to see: the captions engine moved into `packages/engine` (the source the wedding app will copy).
+
+- [ ] After the deploy: captions on your phone, a translation, a reader by the code: all as before.

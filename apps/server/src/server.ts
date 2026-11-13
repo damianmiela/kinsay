@@ -6,7 +6,7 @@ import { relative, resolve } from 'node:path';
 import { fromProxy, type TrustProxy } from './auth';
 import { routes } from './http';
 import { Store, type Settings } from './db';
-import type { SpeechConnect } from './engine';
+import type { SpeechConnect } from '@translate/engine';
 import type { GoogleConfig, Mailer } from './signin';
 import { attachRealtime, type Realtime } from './realtime';
 

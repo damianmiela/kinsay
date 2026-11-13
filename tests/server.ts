@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { EUR, HEARD } from '@translate/shared';
-import type { SpeechConnect } from '../apps/server/src/engine';
+import type { SpeechConnect } from '@translate/engine';
 import { createServer } from '../apps/server/src/server';
 
 const env = process.env;

@@ -2,7 +2,6 @@
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { HEARD } from '@translate/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyTokens,
@@ -23,11 +22,13 @@ import {
   STALL_PAUSE_MS,
   STREAM_MAX_MS,
   StreamPool,
-  TOPIC,
   type SpeechConnect,
   type SpeechEvents,
   type Token,
 } from './engine';
+import { HEARD } from './types';
+
+const TOPIC = [{ key: 'domain', value: 'Conversation' }];
 
 /** A fake speech service: what each language's latest stream got; the test answers for it. */
 function fakeService() {
@@ -419,7 +420,7 @@ describe('Soniox', () => {
     const { port } = srv.address() as AddressInfo;
     try {
       await new Promise<void>((ok) => {
-        sonioxConnect('the-key', `ws://127.0.0.1:${port}`)(target, {
+        sonioxConnect('the-key', { topic: TOPIC, url: `ws://127.0.0.1:${port}` })(target, {
           tokens: () => {},
           closed: () => ok(),
         });

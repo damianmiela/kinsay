@@ -8,6 +8,7 @@ COPY package.json package-lock.json ./
 COPY apps/client/package.json apps/client/
 COPY apps/server/package.json apps/server/
 COPY packages/shared/package.json packages/shared/
+COPY packages/engine/package.json packages/engine/
 RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run check && npm run build
@@ -20,6 +21,7 @@ COPY package.json package-lock.json ./
 COPY apps/client/package.json apps/client/
 COPY apps/server/package.json apps/server/
 COPY packages/shared/package.json packages/shared/
+COPY packages/engine/package.json packages/engine/
 # only the server's runtime packages: the client is already built
 RUN npm ci --omit=dev --ignore-scripts -w @translate/server && npm cache clean --force
 COPY --from=build /app/apps/server/dist apps/server/dist

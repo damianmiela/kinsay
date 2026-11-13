@@ -2,7 +2,13 @@
 import { lookup } from 'node:dns/promises';
 import { resolve } from 'node:path';
 import { EUR } from '@translate/shared';
-import { sonioxConnect } from './engine';
+import { sonioxConnect } from '@translate/engine';
+
+/** What the speech service is told is being said. */
+const TOPIC = [
+  { key: 'domain', value: 'Conversation' },
+  { key: 'topic', value: 'A conversation among family and friends' },
+];
 import { brevoMailer } from './signin';
 import type { TrustProxy } from './auth';
 import { createServer } from './server';
@@ -63,7 +69,7 @@ const server = await createServer({
   adminPassword,
   secret,
   dbFile: resolve(root, env.DATA_DIR ?? 'data', 'translate.db'),
-  speech: env.SONIOX_API_KEY ? sonioxConnect(env.SONIOX_API_KEY) : null,
+  speech: env.SONIOX_API_KEY ? sonioxConnect(env.SONIOX_API_KEY, { topic: TOPIC }) : null,
   streams: Number(env.SONIOX_STREAMS ?? 10),
   defaults: {
     pricePerHour: price,

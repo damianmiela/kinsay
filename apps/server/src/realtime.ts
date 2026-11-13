@@ -8,6 +8,7 @@ import type { Server as HttpServer } from 'node:http';
 import { Server, type Socket } from 'socket.io';
 import {
   HEARD,
+  isTarget,
   type Ack,
   type ClientToServerEvents,
   type DeviceKind,
@@ -31,7 +32,7 @@ import {
   type TrustProxy,
 } from './auth';
 import type { Person, Store } from './db';
-import { Engine, isTarget, StreamPool, type SpeechConnect } from './engine';
+import { Engine, StreamPool, type SpeechConnect } from '@translate/engine';
 
 /** A day: a reader's code works this long from the session's first Start. */
 export const CODE_MS = 24 * 3_600_000;

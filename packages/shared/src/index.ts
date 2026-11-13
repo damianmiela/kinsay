@@ -1,9 +1,21 @@
 // What the server and the pages share: the socket's events and the views it sends. Money is in
 // micro-euros (1 € = 1,000,000) everywhere: a minute of captions costs a fraction of a cent.
 
-/** A language code the speech service knows (ISO 639-1, e.g. "en", "tl"), or "heard": no translation. */
-export type Target = string;
-export const HEARD = 'heard';
+// The captions' own words come from the engine (one definition): a Target is a language code the
+// speech service knows (ISO 639-1, e.g. "en", "tl"), or HEARD: no translation.
+export {
+  HEARD,
+  type CaptionText,
+  type CaptionsUpdate,
+  type ServiceState,
+  type Target,
+} from '@translate/engine/types';
+import {
+  HEARD,
+  type CaptionsUpdate,
+  type ServiceState,
+  type Target,
+} from '@translate/engine/types';
 
 /**
  * The speech service's languages, every one of them a translation target too (Soniox's list,
@@ -72,28 +84,11 @@ export const SPEECH_LANGS = [
   'vi',
   'cy',
 ] as const;
+/** A language code as the speech service names them, or HEARD for none. */
+export const isTarget = (v: unknown): v is Target => v === HEARD || isSpeechLang(v);
+
 export const isSpeechLang = (v: unknown): v is string =>
   typeof v === 'string' && (SPEECH_LANGS as readonly string[]).includes(v);
-
-/** One text's caption lines: finished ones (numbered from `first`) and the one coming in. */
-export interface CaptionText {
-  lines: string[];
-  /** The number of `lines[0]` since the last clear (a page adds lines up by number). */
-  first: number;
-  live: string;
-}
-
-/** Every finished line's language as heard, by the line's number (the "heard" text only). */
-export interface CaptionsUpdate {
-  /** "heard" (what was recognized) and the page's language, if it reads one. */
-  texts: Partial<Record<Target, CaptionText>>;
-  /** The language of the last words heard (a code), while someone speaks. */
-  speaking?: string;
-  /** "heard": the language each line was heard in, by line number (for the labels). */
-  heardLangs?: Record<number, string>;
-}
-
-export type ServiceState = 'off' | 'idle' | 'live' | 'error';
 
 /** A session's state as one page sees it. */
 export interface SessionView {

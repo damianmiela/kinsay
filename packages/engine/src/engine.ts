@@ -1,18 +1,17 @@
-// The speech engine (taken over from the wedding app's captions, 2026-11-12): audio from a host's
-// page goes to the speech service (Soniox), one stream per language that is read; what comes back
-// becomes caption lines. Nothing is stored: lines live in memory while the session runs.
+// The captions engine (taken over from the wedding app's captions, 2026-11-12; a package of its
+// own since cleanup step 2): audio goes to the speech service (Soniox), one stream per language
+// that is read; what comes back becomes caption lines. It stores nothing: lines live in memory.
 // What Soniox sends (checked in the wedding's W1): per stream, words as tokens marked "original"
 // (heard, another language), "none" (heard, already in this stream's language) or "translation";
 // final tokens come once, non-final ones are a preview the next message replaces; "<end>" marks a
 // pause. Translations come final only, in chunks. A stream without translation gives what is heard.
 import {
   HEARD,
-  isSpeechLang,
   type CaptionText,
   type CaptionsUpdate,
   type ServiceState,
   type Target,
-} from '@translate/shared';
+} from './types';
 
 export interface Token {
   text: string;
@@ -41,12 +40,21 @@ export interface SpeechEvents {
 export type SpeechConnect = (target: Target, events: SpeechEvents) => SpeechStream;
 
 const SONIOX_URL = 'wss://stt-rt.soniox.com/transcribe-websocket';
-export const TOPIC = [
-  { key: 'domain', value: 'Conversation' },
-  { key: 'topic', value: 'A conversation among family and friends' },
-];
+/** What the speech service is told is being said (Soniox's `context.general`). */
+export type SpeechTopic = readonly { key: string; value: string }[];
 
-export function sonioxConnect(apiKey: string, url = SONIOX_URL): SpeechConnect {
+export interface SonioxOptions {
+  topic: SpeechTopic;
+  /** Names to spell right (they also stay as written in the translations). */
+  terms?: () => string[];
+  /** The languages most likely spoken: a nudge, not a limit. */
+  hints?: readonly string[];
+  url?: string;
+}
+
+/** The real service; tests pass a fake SpeechConnect. */
+export function sonioxConnect(apiKey: string, options: SonioxOptions): SpeechConnect {
+  const url = options.url ?? SONIOX_URL;
   return (target, events) => {
     // the key goes with the connection, never in the first message (Soniox refuses that from
     // 15 January 2027)
@@ -61,6 +69,7 @@ export function sonioxConnect(apiKey: string, url = SONIOX_URL): SpeechConnect {
     }, 15_000);
     ws.addEventListener('open', () => {
       clearTimeout(handshake);
+      const terms = options.terms?.() ?? [];
       ws.send(
         JSON.stringify({
           model: 'stt-rt-v6',
@@ -69,7 +78,8 @@ export function sonioxConnect(apiKey: string, url = SONIOX_URL): SpeechConnect {
           num_channels: 1,
           enable_language_identification: true,
           enable_endpoint_detection: true,
-          context: { general: TOPIC },
+          ...(options.hints?.length ? { language_hints: options.hints } : {}),
+          context: { general: options.topic, ...(terms.length ? { terms } : {}) },
           ...(target === HEARD
             ? {}
             : { translation: { type: 'one_way', target_language: target } }),
@@ -330,9 +340,6 @@ export function applyTokens(
   }
   return spoken;
 }
-
-/** A language code as the speech service names them (e.g. "en", "pt", "zh"); HEARD for none. */
-export const isTarget = (v: unknown): v is Target => v === HEARD || isSpeechLang(v);
 
 /**
  * One session's captions: a stream per language read (the first also gives what was heard; a

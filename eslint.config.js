@@ -23,6 +23,7 @@ export default defineConfig([
   {
     files: [
       'apps/server/**/*.ts',
+      'packages/engine/**/*.ts',
       'tests/**/*.{ts,mjs}',
       'desktop/*.mjs',
       '*.js',

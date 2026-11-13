@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { io as connect, type Socket } from 'socket.io-client';
 import { EUR, HEARD, type Ack, type SessionView } from '@translate/shared';
 import { createServer, type Config } from './server';
-import type { SpeechConnect, SpeechEvents, SpeechStream } from './engine';
+import type { SpeechConnect, SpeechEvents, SpeechStream } from '@translate/engine';
 
 const ADMIN = 'admin-password-for-tests';
 const SECRET = 's'.repeat(40);
