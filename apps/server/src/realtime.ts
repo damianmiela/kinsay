@@ -50,6 +50,11 @@ export const QUIET_STOP_MS = 15 * 60_000;
 export const HOURS_MS = 4 * 3_600_000;
 /** "Still listening?" shows this long before that stop. */
 export const ASK_MS = 10 * 60_000;
+/**
+ * A language nobody reads any more stays this long (its stream and its lines): a reader whose phone
+ * locked comes back to it at once (as /live's). It makes room when a new language needs it.
+ */
+export const LANG_KEEP_MS = 10 * 60_000;
 const TEXT_EVERY_MS = 150;
 /** Audio streams of a page remembered per channel (their last chunk number; audit 30). */
 const SEQS_MAX = 20;
@@ -80,6 +85,8 @@ interface Channel {
   sockets: Set<S>;
   textTimer?: NodeJS.Timeout;
   idleSince: number;
+  /** Languages nobody reads now, kept until a while after their last page left (LANG_KEEP_MS). */
+  kept: Map<Target, number>;
   /** When words last came (the quiet stop) and when the running session's hours are up. */
   wordsAt: number;
   keepUntil: number;
@@ -156,6 +163,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       idleSince: now(),
       wordsAt: 0,
       keepUntil: 0,
+      kept: new Map(),
       engine: undefined as unknown as Engine,
     };
     ch.engine = new Engine(
@@ -175,12 +183,29 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     return ch;
   }
 
-  /** The languages a channel's pages read: the host's first (its stream also gives what is heard). */
-  function langsOf(c: Channel): Target[] {
+  /** The languages a channel's pages read now: the host's first (its stream also gives what is heard). */
+  function readNow(c: Channel): Target[] {
     const all = [c.hostLang, ...[...c.sockets].map((s) => s.data.lang)].filter(
       (l): l is Target => !!l && l !== HEARD,
     );
     return [...new Set(all)];
+  }
+
+  /** What the channel captions: the languages read now and those kept a while after. */
+  function langsOf(c: Channel): Target[] {
+    const read = readNow(c);
+    return [...read, ...[...c.kept.keys()].filter((l) => !read.includes(l))];
+  }
+
+  /**
+   * Pages changed what they read (one left, switched, or came): a language read before and not now
+   * is kept (LANG_KEEP_MS), one read now is no longer only kept; then the streams follow.
+   */
+  function readersChanged(c: Channel, before: readonly Target[]) {
+    const read = readNow(c);
+    for (const l of before) if (!read.includes(l)) c.kept.set(l, now());
+    for (const l of read) c.kept.delete(l);
+    c.engine.setLangs(langsOf(c));
   }
 
   function view(s: S): SessionView {
@@ -271,6 +296,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     c.written = 0;
     c.seconds = 0;
     c.seqs.clear();
+    c.kept.clear();
     c.engine.discard();
     c.idleSince = now();
     stateAll(c);
@@ -322,6 +348,14 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     for (const c of byPerson.values()) {
       if (!c.running) continue;
       const t = now();
+      // (kept languages nobody came back to: their streams end)
+      let dropped = false;
+      for (const [l, at] of c.kept) {
+        if (t - at < LANG_KEEP_MS) continue;
+        c.kept.delete(l);
+        dropped = true;
+      }
+      if (dropped) c.engine.setLangs(langsOf(c));
       if (t - c.wordsAt >= QUIET_STOP_MS) stop(c, 'quiet');
       else if (t >= c.keepUntil) stop(c, 'hours');
       else if (t >= c.keepUntil - ASK_MS && !asked.has(c)) {
@@ -401,14 +435,24 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       if (!langSwitches.take(s.id, now())) return { ok: false, error: 'too-many' };
       const langs = new Set(langsOf(c));
       if (next && !langs.has(next)) {
+        // (a kept language nobody reads makes room first: the oldest)
+        const oldest = [...c.kept.entries()].sort((a, b) => a[1] - b[1])[0]?.[0];
+        if (langs.size >= CHANNEL_LANGS_MAX && oldest) {
+          c.kept.delete(oldest);
+          langs.delete(oldest);
+        }
         if (langs.size >= CHANNEL_LANGS_MAX) return { ok: false, error: 'too-many-langs' };
-        if (c.running && !c.engine.canAdd(1)) return { ok: false, error: 'service-full' };
+        if (c.running && !c.engine.canAdd(oldest && !c.kept.has(oldest) ? 0 : 1)) {
+          return { ok: false, error: 'service-full' };
+        }
       }
+      const before = readNow(c);
       s.data.lang = next;
       if (host()) c.hostLang = next;
-      // (a switched page sees its new language from now on: its history starts again)
+      // (a page sees a language new to the channel from now on: its history starts there; a kept
+      // one comes back with its lines)
       if (next && !langs.has(next)) c.engine.clearText(next);
-      c.engine.setLangs(langsOf(c));
+      readersChanged(c, before);
       s.emit('state:session', view(s));
       s.emit('captions', c.engine.update(next, true));
       return { ok: true };
@@ -428,7 +472,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       }
       const r = setLang((p as { lang?: unknown } | undefined)?.lang ?? null);
       if (!r.ok) return reply(cb, r);
-      // (the languages as the pages read them now: none left over from pages gone since)
+      // (a new session: no language left over from pages gone since)
+      if (!c.running) c.kept.clear();
       c.engine.setLangs(langsOf(c));
       if (!c.running) {
         c.running = true;
@@ -502,9 +547,11 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     });
 
     s.on('disconnect', () => {
+      const before = readNow(c);
       c.sockets.delete(s);
-      // (a language nobody reads any more: its stream ends; never one left for the next Start)
-      c.engine.setLangs(langsOf(c));
+      // (a language nobody reads any more: kept a while, then its stream ends)
+      if (c.running) readersChanged(c, before);
+      else c.engine.setLangs(langsOf(c));
       c.idleSince = now();
     });
   });

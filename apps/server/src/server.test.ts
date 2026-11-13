@@ -613,3 +613,82 @@ describe('sessions stop by themselves (as /live did)', () => {
     expect(await ask(reader, 'session:keepGoing')).toEqual({ ok: false, error: 'not-host' });
   });
 });
+
+describe('a language nobody reads stays a while (as /live did)', () => {
+  const session = async () => {
+    const env = await start();
+    const p = await env.person('Marta');
+    const host = env.sock({ cookie: p.cookie });
+    const first = await next<SessionView>(host, 'state:session');
+    expect(await ask(host, 'session:start', { lang: 'tl' })).toEqual({ ok: true });
+    host.emit('host:audio', new Uint8Array(3200).buffer, {
+      age: 0,
+      seq: 1,
+      stream: 'mic-aaaaaaaa',
+    });
+    await next(host, 'captions:ack');
+    const reader = async (lang: string) => {
+      const r = env.sock({ code: first.code! });
+      await next(r, 'state:session');
+      expect(await ask(r, 'session:lang', { lang })).toEqual({ ok: true });
+      return r;
+    };
+    const targets = () =>
+      env.speech
+        .open()
+        .map((s) => s.target)
+        .sort();
+    return { ...env, host, reader, targets, code: first.code! };
+  };
+  const gone = (s: Socket) =>
+    new Promise<void>((ok) => {
+      s.once('disconnect', () => setTimeout(ok, 50));
+      s.close();
+    });
+
+  it('its last reader leaves: kept 10 minutes with its lines, then its stream ends', async () => {
+    const { server, reader, targets, speech, sock, t, code } = await session();
+    const r = await reader('pl');
+    expect(targets()).toEqual(['pl', 'tl']);
+    speech
+      .open()
+      .find((s) => s.target === 'pl')!
+      .events.tokens([
+        { text: 'Dzień dobry.', translation_status: 'translation' },
+        { text: '<end>' },
+      ]);
+    await gone(r);
+    expect(targets()).toEqual(['pl', 'tl']); // (kept)
+    // back within the 10 minutes: what was said is there
+    t.now += 5 * 60_000;
+    const again = sock({ code });
+    await next(again, 'state:session');
+    const lines = next<{ texts: Record<string, { lines: string[] }> }>(
+      again,
+      'captions',
+      (u) => !!u.texts.pl,
+    );
+    expect(await ask(again, 'session:lang', { lang: 'pl' })).toEqual({ ok: true });
+    expect((await lines).texts.pl!.lines).toEqual(['Dzień dobry.']);
+    await gone(again);
+    // (someone still talks: the session itself goes on)
+    t.now += 6 * 60_000;
+    speech
+      .open()
+      .find((x) => x.target === 'tl')!
+      .events.tokens([{ text: 'Kumusta.', translation_status: 'translation' }, { text: '<end>' }]);
+    t.now += 4 * 60_000 + 1;
+    server.realtime.checkStops();
+    expect(targets()).toEqual(['tl']);
+  });
+
+  it('a kept language makes room for a new one (three at most)', async () => {
+    const { reader, targets } = await session();
+    await reader('pl');
+    const es = await reader('es');
+    await gone(es); // (es kept: three in all)
+    expect(targets()).toEqual(['es', 'pl', 'tl']);
+    await reader('de');
+    expect(targets()).toEqual(['de', 'pl', 'tl']);
+  });
+});

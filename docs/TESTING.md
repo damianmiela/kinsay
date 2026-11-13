@@ -72,3 +72,8 @@ The texts are drafts: a native speaker of each language should read every page o
 - [ ] Start captions and say nothing (or leave the phone in a quiet room) for 15 minutes: the session stops and says "nobody spoke for 15 minutes"; nothing more is charged.
 - [ ] Optional, a long session (a TV or radio playing): after 3 h 50 min "Still listening? The captions stop at …" with Keep going, on the phone and in the desktop window; Keep going: 4 more hours. Without it: stopped after 4 hours, "Stopped after 4 hours".
 - [ ] A reader never sees "Still listening?".
+
+## 6. A language stays a while after its last reader (2026-11-13)
+
+- [ ] A reader in another language than yours locks their phone (or closes the page) for a few minutes, then opens it again: what was said meanwhile is there at once, in their language.
+- [ ] A session with three languages: a reader who left frees their language for a new one (a fourth reader can pick another language); someone who wants a fourth while all three are read is told the session has three already.
