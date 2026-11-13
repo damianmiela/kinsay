@@ -93,6 +93,8 @@ interface Channel {
   micAt: number;
   /** What the listening page is on (the other pages say "Listening on your phone"). */
   micKind: DeviceKind;
+  /** Chosen (Start, "Use this one") and not yet heard from. */
+  micChosen?: boolean;
   /** The last chunk number per audio stream of the page (a resend is confirmed, not used twice). */
   seqs: Map<string, number>;
   /** Its pages, host's and readers' (audit 30: never a scan of every socket). */
@@ -228,10 +230,14 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     for (const l of before) if (!read.includes(l)) c.kept.set(l, now());
     for (const l of read) c.kept.delete(l);
     c.engine.setLangs(langsOf(c));
-    // (full, or no longer: the pages' language lists say which three)
+    fullChanged(c, before);
+  }
+
+  /** Full, or no longer: the pages' language lists say which three (running or not, audit 33). */
+  function fullChanged(c: Channel, before: readonly Target[]) {
     const full = (l: readonly Target[]) =>
       l.length >= CHANNEL_LANGS_MAX ? [...l].sort().join() : '';
-    if (full(before) !== full(read)) stateAll(c);
+    if (full(before) !== full(readNow(c))) stateAll(c);
   }
 
   function view(s: S): SessionView {
@@ -333,6 +339,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     c.seqs.clear();
     c.kept.clear();
     c.micSocket = undefined;
+    asked.delete(c);
     c.engine.discard();
     c.idleSince = now();
     stateAll(c);
@@ -342,6 +349,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   /** A channel goes for good: its pages are closed, its code no longer lets anyone in. */
   function drop(c: Channel) {
     stop(c, 'blocked', false);
+    asked.delete(c);
     for (const s of [...c.sockets]) s.disconnect(true);
     c.engine.close();
     byPerson.delete(c.personId);
@@ -416,6 +424,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         continue;
       }
       if (now() - c.idleSince < IDLE_CHANNEL_MS) continue;
+      asked.delete(c);
       c.engine.close();
       byPerson.delete(c.personId);
       byCode.delete(c.code);
@@ -572,9 +581,11 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     });
 
     /** This page's microphone is the one that listens (the others stop sending theirs). */
-    function listenHere() {
+    /** `chosen`: by Start or "Use this one": kept until it sends, however slow its microphone. */
+    function listenHere(chosen = true) {
       c.micSocket = s.id;
       c.micAt = now();
+      c.micChosen = chosen;
       c.micKind = s.data.kind;
       stateAll(c);
     }
@@ -616,8 +627,11 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
           ? Math.min(Math.max(m.age, 0), 600_000)
           : 0;
       // one microphone at a time: another page takes over once the first has been quiet a while
-      if (c.micSocket !== s.id && now() - c.micAt < MIC_QUIET_MS) return;
-      if (c.micSocket !== s.id) listenHere();
+      // (one chosen by Start or "Use this one" waits for its own audio, up to MIC_GONE_MS, audit 33)
+      const quiet = c.micChosen ? MIC_GONE_MS : MIC_QUIET_MS;
+      if (c.micSocket !== s.id && now() - c.micAt < quiet) return;
+      if (c.micSocket !== s.id) listenHere(false);
+      c.micChosen = false;
       c.micAt = now();
       if (seq) {
         s.emit('captions:ack', seq);
@@ -643,7 +657,10 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       }
       // (a language nobody reads any more: kept a while, then its stream ends)
       if (c.running) readersChanged(c, before);
-      else c.engine.setLangs(langsOf(c));
+      else {
+        c.engine.setLangs(langsOf(c));
+        fullChanged(c, before);
+      }
       c.idleSince = now();
     });
   });

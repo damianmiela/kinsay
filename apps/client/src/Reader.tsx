@@ -92,7 +92,8 @@ function Reading({
   const { view, update, error, online } = useSession(code);
   const [showHeard, setShowHeard] = useStored('tr-heard', false);
   const [scale, setScale] = useStored('tr-scale', 1);
-  const [aloud, setAloud] = useStored('tr-aloud', false);
+  // (not remembered: after a reload an iPhone says nothing until the button is tapped, audit 33)
+  const [aloud, setAloud] = useState(false);
   const [sheet, setSheet] = useState<null | 'gear' | 'lang'>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [earphones, setEarphones] = useState(false);

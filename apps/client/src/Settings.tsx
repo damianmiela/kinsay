@@ -64,7 +64,10 @@ export function SettingsSheet({
   microphone,
   account,
   leave,
+  appLang = true,
 }: {
+  /** False while this device listens: a new App language reloads the page (audit 33). */
+  appLang?: boolean;
   onClose: () => void;
   /** While captions run: half height, Account as a sheet, links in a new tab. */
   half: boolean;
@@ -138,11 +141,13 @@ export function SettingsSheet({
         </Group>
       )}
       <Group title={t.groupApp}>
-        <button className="li link-row" onClick={() => setPage('lang')}>
-          <span className="what">{t.pageLang}</span>
-          <span className="val">{UI_NAMES[ui]}</span>
-          <IconRight />
-        </button>
+        {appLang && (
+          <button className="li link-row" onClick={() => setPage('lang')}>
+            <span className="what">{t.pageLang}</span>
+            <span className="val">{UI_NAMES[ui]}</span>
+            <IconRight />
+          </button>
+        )}
         {isWindows && (
           <a className="li link-row" href="/download" target={target}>
             <span className="what">{download.foot}</span>
@@ -195,6 +200,7 @@ function AccountPart() {
   const [amount, setAmount] = useState(GRANT_STEPS[1]!);
   const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   useEffect(() => {
     void api<AccountView>('/api/me').then((r) => {
       if (r.ok) setMe(r);
@@ -204,8 +210,9 @@ function AccountPart() {
   const waiting = me.requests.some((r) => r.state === 'waiting');
   const send = async () => {
     setBusy(true);
-    await api('/api/ask', { amount });
+    const r = await api('/api/ask', { amount });
     setBusy(false);
+    setFailed(r.ok ? null : r.error === 'offline' ? t.offline : tw.failed);
     setTick((n) => n + 1);
   };
   return (
@@ -238,6 +245,7 @@ function AccountPart() {
           {t.sendRequest}
         </button>
       )}
+      {failed && <div className="note bad">{failed}</div>}
       <a className="link acct-more" href="/account" target="_blank" rel="noopener">
         {t.historyDevices}
       </a>

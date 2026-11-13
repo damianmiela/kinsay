@@ -127,7 +127,12 @@ export function LangButton({
     <button
       className="cb lang"
       onClick={onClick}
-      aria-label={other !== undefined ? t.languages : t.translateIntoSet}
+      // (the label says the choice too: a screen reader hears the language, audit 33)
+      aria-label={
+        other !== undefined
+          ? `${t.languages}: ${barName(other)}, ${barName(lang)}`
+          : `${t.translateIntoSet}: ${barName(lang)}`
+      }
     >
       {other !== undefined ? (
         <span className="two">
@@ -174,7 +179,7 @@ export function Strip({
         </button>
       )}
       {onClose && (
-        <button className="mini x" onClick={onClose} aria-label={t.back}>
+        <button className="mini x" onClick={onClose} aria-label={t.close}>
           <IconClose />
         </button>
       )}

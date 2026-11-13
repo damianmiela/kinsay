@@ -833,6 +833,28 @@ describe('which microphone listens (mockups batch 3)', () => {
     await left;
   });
 
+  it('a page chosen by "Use this one" keeps it while its microphone opens (audit 33)', async () => {
+    const { person, sock, t } = await start();
+    const p = await person('Marta');
+    const phone = sock({ cookie: p.cookie, ua: PHONE_UA });
+    const pc = sock({ cookie: p.cookie, ua: PC_UA });
+    await Promise.all([next(phone, 'state:session'), next(pc, 'state:session')]);
+    await ask(phone, 'session:start', { lang: 'pl' });
+    const moved = next<SessionView>(phone, 'state:session', (v) => v.mic?.here === false);
+    await ask(pc, 'session:useMic');
+    await moved;
+    // 3 s later the computer's microphone still opens; a late chunk from the phone doesn't take it
+    t.now += 3_000;
+    let back = false;
+    phone.on('state:session', (v: SessionView) => {
+      if (v.mic?.here) back = true;
+    });
+    audio(phone, 1);
+    audio(pc, 1);
+    await next(pc, 'captions:ack');
+    expect(back).toBe(false);
+  });
+
   it('a reader may not take the microphone', async () => {
     const { person, sock } = await start();
     const p = await person('Marta');
@@ -871,6 +893,23 @@ describe('the code and what readers see (mockups batch 3)', () => {
     const late = sock({ code: v.code });
     const err = await new Promise<Error>((res) => late.once('connect_error', res));
     expect(err.message).toBe('no-session');
+  });
+
+  it('stopped, a reader of a full session leaves: the others are told (audit 33)', async () => {
+    const { person, sock } = await start();
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    const v = await next<SessionView>(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'pl' });
+    const readers = [sock({ code: v.code }), sock({ code: v.code })];
+    await Promise.all(readers.map((r) => next(r, 'state:session')));
+    for (const [i, r] of readers.entries()) await ask(r, 'session:lang', { lang: ['en', 'de'][i] });
+    const stopped = next<SessionView>(readers[0]!, 'state:session', (x) => !x.running);
+    await ask(host, 'session:stop');
+    expect((await stopped).full).toBeDefined();
+    const freed = next<SessionView>(readers[0]!, 'state:session', (x) => !x.full);
+    readers[1]!.close();
+    expect((await freed).full).toBeUndefined();
   });
 
   it('a session with three languages tells its pages which', async () => {

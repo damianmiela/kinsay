@@ -4,7 +4,7 @@ import { euros, GRANT_STEPS, LOW_BALANCE, type AccountView } from '@translate/sh
 import { api } from './api';
 import { Foot, Logo } from './bits';
 import { langName } from './langs';
-import { duration, t } from './texts';
+import { duration, t, tw } from './texts';
 
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -92,6 +92,9 @@ export function AccountPage() {
             <button className="btn main" onClick={() => void send()}>
               {t.sendRequest}
             </button>
+          )}
+          {askState && askState !== 'sent' && askState !== 'already-asked' && (
+            <div className="note bad">{askState === 'offline' ? t.offline : tw.failed}</div>
           )}
         </div>
 

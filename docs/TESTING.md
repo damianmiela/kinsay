@@ -154,3 +154,12 @@ In the Windows app (no new download needed: it loads the page):
 - [ ] ✕ while the captions run: "Close the window and stop the captions?" with Stop and close / Keep them. Stopped: ✕ closes at once.
 - [ ] Your phone listening while the window is open: the window says "Listening on your phone" with Use this one.
 - [ ] Each line's language shows only once more than one language was heard (as on the phone).
+
+## 15. After audit 33 (2026-11-13)
+
+- [ ] Your phone runs the captions in one language; open them on your computer in another (its own language field): each shows its own, also after reloading either one.
+- [ ] "Use this one" on a computer that asks for the microphone first (a slow first time): the captions go on from it, never "The microphone is off".
+- [ ] On an iPhone or iPad that doesn't listen: ⚙ → "Read aloud on this device" speaks.
+- [ ] While this device listens, ⚙ has no App language (changing it would reload the page and stop the microphone); after Stop it's back.
+- [ ] The desktop window while your phone listens: ✕ closes it without asking (the phone's captions go on).
+- [ ] Good to know: an invitation code keeps working as long as captions are started with it at least once a day (it lasts a day from the last Start).

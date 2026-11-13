@@ -62,7 +62,10 @@ export function useReadAloud(
   const [saying, setSaying] = useState<number | null>(null);
   const [turn, setTurn] = useState(0);
   const said = useRef(-1);
-  const busy = useRef(false);
+  // the utterance being said: only its own end counts (a cancelled one's late error, or one the
+  // browser dropped without an end, never stops or mixes up the next: audit 33)
+  const current = useRef<SpeechSynthesisUtterance | null>(null);
+  const watchdog = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const textRef = useRef(text);
   const langOfRef = useRef(langOf);
   useEffect(() => {
@@ -75,13 +78,14 @@ export function useReadAloud(
     const t = textRef.current;
     said.current = t.first + t.lines.length - 1;
     return () => {
+      current.current = null;
+      clearTimeout(watchdog.current);
       speechSynthesis.cancel();
-      busy.current = false;
       setSaying(null);
     };
   }, [on, lang]);
   useEffect(() => {
-    if (!on || !canSpeak || busy.current) return;
+    if (!on || !canSpeak || current.current) return;
     const n = nextLine(said.current, text);
     if (n === null) return;
     said.current = n;
@@ -94,13 +98,17 @@ export function useReadAloud(
       u.lang = voice.lang;
     }
     const done = () => {
-      busy.current = false;
+      if (current.current !== u) return;
+      current.current = null;
+      clearTimeout(watchdog.current);
       setSaying(null);
       setTurn((x) => x + 1); // (the next line, if one came meanwhile)
     };
     u.onend = done;
     u.onerror = done;
-    busy.current = true;
+    current.current = u;
+    // (an end that never comes: a line takes about 80 ms a character, give it that and 2 s more)
+    watchdog.current = setTimeout(done, 2_000 + 80 * line.length);
     setSaying(n);
     speechSynthesis.speak(u);
   }, [on, text, lang, voices, turn]);

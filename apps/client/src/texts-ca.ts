@@ -83,7 +83,7 @@ export const ca: Texts = {
     fullLangs: (n) => `Els subtítols de ${n} ja tenen tres idiomes. Tria’n un.`,
     readAloudHere: 'Llegeix en veu alta en aquest dispositiu',
     leaveNamed: (n) => `Surt dels subtítols de ${n}`,
-    listeningOn: (d) => `Escoltant a ${d}`,
+    listeningOn: (d) => `Micròfon: ${d}`,
     deviceName: {
       phone: 'el teu telèfon',
       tablet: 'la teva tauleta',

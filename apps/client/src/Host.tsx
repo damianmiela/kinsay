@@ -21,11 +21,11 @@ import {
 import { Logo, Sheet } from './bits';
 import { CaptionsView } from './CaptionsView';
 import { LangPicker, LangSheet } from './LangPicker';
-import { barName } from './langs';
+import { barName, langName } from './langs';
 import { MicAsk, MicBlocked } from './MicSheets';
 import { markMicAsked, micAskedBefore, micPermission } from './mic/permission';
 import { useMic } from './mic/useMic';
-import { canSpeak, useReadAloud } from './readAloud';
+import { canSpeak, unlockSpeech, useReadAloud, voiceHelp } from './readAloud';
 import { Qr } from './Qr';
 import { AccountSheet, SettingsSheet, SwitchRow, TextSizeRow } from './Settings';
 import { useStored } from './store';
@@ -80,9 +80,10 @@ export function HostPage() {
   // another of the host's devices took the microphone: this one stops sending
   const elsewhere = view?.mic && !view.mic.here ? view.mic.on : null;
   // read aloud: only on a device that doesn't listen (its voice would be captioned again)
-  const [aloud, setAloud] = useStored('tr-aloud', false);
+  // (not remembered: after a reload an iPhone says nothing until the switch is tapped, audit 33)
+  const [aloud, setAloud] = useState(false);
   const aloudLang = mode === 'face' ? null : lang;
-  const { saying } = useReadAloud(
+  const { saying, noVoice } = useReadAloud(
     aloud && !!elsewhere && !!view?.running && mode !== 'face',
     update.texts[aloudLang ?? 'heard'] ?? { lines: [], first: 0, live: '' },
     aloudLang,
@@ -91,6 +92,18 @@ export function HostPage() {
   useEffect(() => {
     if (elsewhere && mic.sending) mic.stopSending();
   }, [elsewhere, mic]);
+  // this page's own languages: a page that (re)connects gets the channel's last ones from the
+  // server, which may be another device's (audit 33): it says its own while the captions run
+  const wantLang = mode === 'face' ? bottom : lang;
+  const wantOther = mode === 'face' ? top : undefined;
+  useEffect(() => {
+    if (!view?.running) return;
+    if (view.lang === wantLang && view.other === wantOther) return;
+    void ask(
+      'session:lang',
+      wantOther === undefined ? { lang: wantLang } : { lang: wantLang, other: wantOther },
+    );
+  }, [view?.running, view?.lang, view?.other, wantLang, wantOther]);
 
   if (!view) {
     return (
@@ -189,6 +202,7 @@ export function HostPage() {
     <SettingsSheet
       onClose={() => setSheet(null)}
       half={view.running}
+      appLang={!mic.sending}
       invite={view.code && (view.running || here) ? () => setSheet('invite') : undefined}
       account={{ name: view.hostName, balance: view.balance }}
       captions={
@@ -201,7 +215,14 @@ export function HostPage() {
             <SwitchRow label={t.showHeard} on={showHeard} onChange={setShowHeard} />
           )}
           {view.running && elsewhere && !face && canSpeak && (
-            <SwitchRow label={t.readAloudHere} on={aloud} onChange={setAloud} />
+            <SwitchRow
+              label={t.readAloudHere}
+              on={aloud}
+              onChange={(on) => {
+                if (on) unlockSpeech();
+                setAloud(on);
+              }}
+            />
           )}
         </>
       }
@@ -406,6 +427,12 @@ export function HostPage() {
       {view.running && !online && (
         <Strip tone="amber">
           <b>{t.noInternet}</b> {mic.sending ? t.offlineKept : t.comeBack}
+        </Strip>
+      )}
+      {view.running && aloud && noVoice && aloudLang && (
+        <Strip tone="amber" onClose={() => setAloud(false)}>
+          <b>{t.noVoice(langName(aloudLang).own)}</b>{' '}
+          {t.addVoice[voiceHelp(navigator.userAgent, navigator.maxTouchPoints > 1)]}
         </Strip>
       )}
       {view.running && online && view.service === 'error' && (

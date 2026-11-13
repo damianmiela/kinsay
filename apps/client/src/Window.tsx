@@ -306,7 +306,8 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     await resume();
   };
   const close = () => {
-    if (host && view.running) return setClosing(true);
+    // (only the listening window asks: closing one that only shows the captions stops nothing)
+    if (host && view.running && mic.sending) return setClosing(true);
     shell?.close();
   };
   const where = view.mic && !view.mic.here ? view.mic.on : null;
@@ -332,7 +333,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
             <button
               className="lang"
               onClick={() => setPicking((p) => !p)}
-              aria-label={tw.translateInto}
+              aria-label={`${tw.translateInto}: ${shown ? langName(shown).own : t.original}`}
             >
               {shown ? langName(shown).own : t.original} ▾
             </button>

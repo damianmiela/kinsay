@@ -161,6 +161,13 @@ test('two devices: the other says where it listens, "Use this one" moves it; Set
   // the computer: the captions, and where it listens
   await expect(pc.locator('.cbar .strip')).toContainText('Listening on your phone');
   await expect(pc.locator('.cap-line').first()).toContainText('Sentence');
+  // its own language, even across a reload (the server hands a page the last one set: audit 33)
+  await pc.evaluate(() => localStorage.setItem('tr-lang', JSON.stringify('pl')));
+  await pc.reload();
+  await expect(pc.locator('.cap-line').last()).toContainText('[pl] Sentence');
+  await expect(pc.locator('.cbar .cb.lang')).toHaveText(/Polski/);
+  // ... and the phone keeps its own (what is heard), also after its own reload
+  await expect(phone.locator('.cap-line').last()).not.toContainText('[pl]');
   await pc.locator('.cbar').getByRole('button', { name: 'Use this one' }).click();
   await expect(pc.locator('.cbar .strip')).toHaveCount(0);
   await expect(phone.locator('.cbar .strip')).toContainText('Listening on your computer');
