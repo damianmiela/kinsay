@@ -56,10 +56,14 @@ export const es: Texts = {
     groupApp: 'Aplicación',
     micIsOff: 'El micrófono está apagado',
     turnItOn: 'Encenderlo',
+    sendRequest: 'Enviar la solicitud',
+    yourRequest: (a) => `Tu solicitud: ${a}`,
+    thisOne: 'este',
+    offlineKept: 'Lo que se dice se guarda y se pone al día.',
+    sendAgain: 'Enviar de nuevo',
     codeUntil: (w) => `Funciona hasta ${w}`,
     signingIn: 'Entrando…',
     readAloud: 'Leer en voz alta',
-    reading: 'Leyendo',
     earphones: 'Mejor con auriculares',
     noVoice: (l) => `No hay voz en ${l} en este dispositivo`,
     addVoice: {
@@ -174,7 +178,7 @@ export const es: Texts = {
     tooManyLangs: 'Esta sesión ya lee tres idiomas. Elige uno de ellos.',
     serviceFull: 'El servicio de traducción está lleno ahora. Inténtalo en un minuto.',
     stop_credits: [
-      'Sin saldo',
+      'El saldo se ha agotado',
       'Los subtítulos se han parado. Pide más; recibirás un correo cuando se añada.',
     ],
     stop_monthly: [

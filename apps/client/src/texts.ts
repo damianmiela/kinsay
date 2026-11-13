@@ -61,10 +61,14 @@ const t_en = {
   groupApp: 'App',
   micIsOff: 'The microphone is off',
   turnItOn: 'Turn it on',
+  sendRequest: 'Send the request',
+  yourRequest: (a: string) => `Your request, ${a}`,
+  thisOne: 'this one',
+  offlineKept: 'What’s said is kept and caught up.',
+  sendAgain: 'Send it again',
   codeUntil: (w: string) => `Works until ${w}`,
   signingIn: 'Signing in…',
   readAloud: 'Read aloud',
-  reading: 'Reading',
   earphones: 'Best with earphones',
   noVoice: (l: string) => `No ${l} voice on this device`,
   addVoice: {
@@ -182,7 +186,7 @@ const t_en = {
   serviceFull: 'The translation service is full right now. Try again in a minute.',
   // stops
   stop_credits: [
-    'Out of credits',
+    'The balance is used up',
     'The captions stopped. Ask for more; you’ll get an email when they’re added.',
   ],
   stop_monthly: [
@@ -201,7 +205,7 @@ const t_en = {
   ],
   readerStopped: 'The captions stopped.',
   // account
-  creditsLeft: 'Credits left',
+  creditsLeft: 'Balance',
   history: 'History',
   welcome: 'Welcome',
   fromAdmin: 'Added',

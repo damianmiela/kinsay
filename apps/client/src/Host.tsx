@@ -27,7 +27,7 @@ import { markMicAsked, micAskedBefore, micPermission } from './mic/permission';
 import { useMic } from './mic/useMic';
 import { canSpeak, useReadAloud } from './readAloud';
 import { Qr } from './Qr';
-import { SettingsSheet, SwitchRow, TextSizeRow } from './Settings';
+import { AccountSheet, SettingsSheet, SwitchRow, TextSizeRow } from './Settings';
 import { useStored } from './store';
 import { clock, stopText, t, tw } from './texts';
 import { ui } from './ui';
@@ -35,7 +35,7 @@ import { canStayAwake } from './useAwake';
 import { ask, useSession } from './useSession';
 
 type SheetName =
-  null | 'gear' | 'invite' | 'lang' | 'langs' | 'top' | 'bottom' | 'allow' | 'blocked';
+  null | 'gear' | 'invite' | 'lang' | 'langs' | 'top' | 'bottom' | 'allow' | 'blocked' | 'account';
 
 /** "Listening on *your phone*": the device's name in bold, wherever the language puts it. */
 const ListeningOn = ({ on }: { on: DeviceKind }) => {
@@ -59,7 +59,7 @@ const Hears = () => (
 );
 
 export function HostPage() {
-  const { view, update, error } = useSession();
+  const { view, update, error, online } = useSession();
   const mic = useMic({ voice: true });
   const [mode, setMode] = useStored<'me' | 'face'>('tr-mode', 'me');
   const [lang, setLang] = useStored<string | null>('tr-lang', null);
@@ -250,6 +250,7 @@ export function HostPage() {
           onClose={() => setSheet(face && (view.running || here) ? 'langs' : null)}
         />
       )}
+      {sheet === 'account' && <AccountSheet onClose={() => setSheet(null)} />}
       {sheet === 'allow' && <MicAsk onAllow={() => void go()} onClose={() => setSheet(null)} />}
       {sheet === 'blocked' && (
         <MicBlocked
@@ -373,7 +374,7 @@ export function HostPage() {
           tone={stopped === 'quiet' || stopped === 'hours' ? undefined : 'amber'}
           action={
             stopped === 'credits'
-              ? { label: t.askForMore, onClick: () => window.location.assign('/account#ask') }
+              ? { label: t.askForMore, onClick: () => setSheet('account') }
               : undefined
           }
         >
@@ -400,14 +401,20 @@ export function HostPage() {
           </Strip>
         ))}
       {view.running && mic.sending && !canStayAwake && <Strip>{t.keepScreenOnLine}</Strip>}
-      {view.running && view.service === 'error' && <Strip tone="amber">{t.serviceTrying}</Strip>}
+      {/* (this device's own internet, apart from the service's problem: the listening one keeps
+          what is said and catches up) */}
+      {view.running && !online && (
+        <Strip tone="amber">
+          <b>{t.noInternet}</b> {mic.sending ? t.offlineKept : t.comeBack}
+        </Strip>
+      )}
+      {view.running && online && view.service === 'error' && (
+        <Strip tone="amber">{t.serviceTrying}</Strip>
+      )}
       {view.running && low && (
         <Strip
           tone="amber"
-          action={{
-            label: t.askForMore,
-            onClick: () => window.open('/account#ask', '_blank', 'noopener'),
-          }}
+          action={{ label: t.askForMore, onClick: () => setSheet('account') }}
           onClose={() => setLowSeen(true)}
         >
           <b>{t.lowLeft(Math.max(0, view.balance ?? 0))}</b>

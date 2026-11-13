@@ -252,12 +252,16 @@ test('a reader joins by the code: the host’s language first, then their own', 
   // a reader never sees the code or the balance, and has no Stop
   await expect(reader.locator('.balance')).toHaveCount(0);
   await expect(reader.getByRole('button', { name: 'Stop' })).toHaveCount(0);
-  // Read aloud: the word, the mark and the colour change; the earphones line the first time
+  // the reader's bar: Read aloud (an icon) where the host has Start/Stop, the language in the middle
+  const row = reader.locator('.cbar-row > *');
+  await expect(row.nth(0)).toHaveClass(/aloud/);
+  await expect(row.nth(1)).toHaveClass(/lang/);
+  // Read aloud: teal while it reads; the earphones line the first time
   await reader.getByRole('button', { name: 'Read aloud' }).click();
-  await expect(reader.locator('.cb.aloud.on')).toHaveText('Reading');
+  await expect(reader.locator('.cb.aloud.on')).toHaveAttribute('aria-pressed', 'true');
   await expect(reader.locator('.cbar .strip')).toContainText('Best with earphones');
-  await reader.getByRole('button', { name: 'Reading' }).click();
-  await expect(reader.locator('.cb.aloud')).toHaveText('Read aloud');
+  await reader.getByRole('button', { name: 'Read aloud' }).click();
+  await expect(reader.locator('.cb.aloud')).toHaveAttribute('aria-pressed', 'false');
   // no voice for a language: said, with where to add one, until ✕
   await reader.locator('.cbar .cb.lang').click();
   await pickInSheet(reader, 'deu', 'Deutsch');
@@ -301,9 +305,13 @@ test('the credits: used as the audio goes; at zero the session stops and says so
     await page.reload();
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     // stopped: the bar says why, its first button says Start again
-    await expect(page.locator('.cbar .strip', { hasText: 'Out of credits' })).toBeVisible();
-    await expect(page.locator('.cbar').getByRole('button', { name: 'Ask for more' })).toBeVisible();
+    await expect(page.locator('.cbar .strip', { hasText: 'The balance is used up' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
+    // Ask for more opens Account over the captions (never a page)
+    await page.locator('.cbar').getByRole('button', { name: 'Ask for more' }).click();
+    await expect(page.locator('.sheet .acct-bal')).toHaveText('€0.00');
+    await expect(page.locator('.cbar .strip', { hasText: 'used up' })).toBeAttached();
+    await page.keyboard.press('Escape');
   } finally {
     await admin.post('/admin/api/settings', { pricePerHour: 200_000 });
   }
@@ -311,8 +319,9 @@ test('the credits: used as the audio goes; at zero the session stops and says so
   await page.goto('/account');
   await expect(page.getByText('Captions, No translation')).toBeVisible();
   await page.getByRole('button', { name: '€2' }).click();
-  await page.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByText('Waiting')).toBeVisible();
+  await page.getByRole('button', { name: 'Send the request' }).click();
+  // the request in the history with its state
+  await expect(page.locator('.li', { hasText: 'Your request, €2' })).toContainText('Waiting');
   const state = await admin.get('/admin/api/state');
   const req = (state.requests as { id: number; person_id: number }[]).find(
     (r) => r.person_id === id,
@@ -322,7 +331,7 @@ test('the credits: used as the audio goes; at zero the session stops and says so
       .status,
   ).toBe(200);
   await page.reload();
-  await expect(page.getByText('Added').first()).toBeVisible();
+  await expect(page.locator('.li', { hasText: 'Your request, €2' })).toContainText('Added');
   expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
 });
 

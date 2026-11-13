@@ -165,6 +165,16 @@ export function SettingsSheet({
   );
 }
 
+/** Account on its own (Ask for more in the bar while captions run): never leaves the page. */
+export function AccountSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <Sheet label={t.groupAccount} onClose={onClose} half>
+      <Head title={t.groupAccount} onClose={onClose} />
+      <AccountPart />
+    </Sheet>
+  );
+}
+
 function AccountRow({ name, balance }: { name: string; balance?: number }) {
   return (
     <>
@@ -225,7 +235,7 @@ function AccountPart() {
         <p className="small">{t.alreadyAsked}</p>
       ) : (
         <button className="btn main" disabled={busy} onClick={() => void send()}>
-          {t.send}
+          {t.sendRequest}
         </button>
       )}
       <a className="link acct-more" href="/account" target="_blank" rel="noopener">

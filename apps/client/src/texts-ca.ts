@@ -57,10 +57,14 @@ export const ca: Texts = {
     groupApp: 'Aplicació',
     micIsOff: 'El micròfon està apagat',
     turnItOn: 'Engega’l',
+    sendRequest: 'Envia la sol·licitud',
+    yourRequest: (a) => `La teva sol·licitud: ${a}`,
+    thisOne: 'aquest',
+    offlineKept: 'El que es diu es guarda i es posa al dia.',
+    sendAgain: 'Torna-la a enviar',
     codeUntil: (w) => `Funciona fins ${w}`,
     signingIn: 'Entrant…',
     readAloud: 'Llegeix en veu alta',
-    reading: 'Llegint',
     earphones: 'Millor amb auriculars',
     noVoice: (l) => `No hi ha veu en ${l} en aquest dispositiu`,
     addVoice: {
@@ -179,7 +183,7 @@ export const ca: Texts = {
     tooManyLangs: 'Aquesta sessió ja llegeix tres llengües. Tria’n una.',
     serviceFull: 'El servei de traducció és ple ara mateix. Torna-ho a provar d’aquí a un minut.',
     stop_credits: [
-      'Sense saldo',
+      'El saldo s’ha esgotat',
       'Els subtítols s’han aturat. Demana’n més; rebràs un correu quan s’hi afegeixi.',
     ],
     stop_monthly: [

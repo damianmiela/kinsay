@@ -1,6 +1,7 @@
 // /join: someone else's captions, by their code (/join#K7P2QX from the QR code, or typed at the one
 // code door). No account needed. A reader starts in the host's language and may pick their own (one
-// more stream, paid by the host). Their bar (mockups batch 3): the language, Read aloud, Settings.
+// more stream, paid by the host). Their bar (mockups batch 3, Damian 2026-11-13): Read aloud where
+// the host has Start/Stop (an icon, like the gear), the language in the middle, Settings.
 import { useState } from 'react';
 import { ControlBar, GearCb, LangButton, Strip } from './Bar';
 import { Logo } from './bits';
@@ -79,22 +80,6 @@ const IconSpeaker = ({ off = false }: { off?: boolean }) => (
     )}
   </svg>
 );
-const IconCheck = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.4"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="m5 12 5 5 9-10" />
-  </svg>
-);
-
 function Reading({
   code,
   onBad,
@@ -195,20 +180,22 @@ function Reading({
         </>
       }
     >
-      <div className={`cbar-pair${canSpeak ? ' three' : ''}`}>
-        <LangButton lang={view.lang} onClick={() => setSheet('lang')} />
-        {canSpeak && (
-          <button
-            className={`cb aloud${aloud && !noVoice ? ' on' : ''}${noVoice ? ' dim' : ''}`}
-            aria-pressed={aloud}
-            onClick={toggleAloud}
-          >
-            {aloud && !noVoice ? <IconCheck /> : <IconSpeaker off={noVoice} />}
-            {aloud && !noVoice ? t.reading : t.readAloud}
-          </button>
-        )}
-        <GearCb onClick={() => setSheet('gear')} />
-      </div>
+      {/* (the same places as the host's: the left button, the language in the middle, Settings) */}
+      {canSpeak ? (
+        <button
+          className={`cb aloud${aloud && !noVoice ? ' on' : ''}${noVoice ? ' dim' : ''}`}
+          aria-pressed={aloud}
+          aria-label={t.readAloud}
+          title={t.readAloud}
+          onClick={toggleAloud}
+        >
+          <IconSpeaker off={noVoice} />
+        </button>
+      ) : (
+        <span />
+      )}
+      <LangButton lang={view.lang} onClick={() => setSheet('lang')} />
+      <GearCb onClick={() => setSheet('gear')} />
     </ControlBar>
   );
   return (

@@ -54,10 +54,14 @@ export const pl: Texts = {
     groupApp: 'Aplikacja',
     micIsOff: 'Mikrofon jest wyłączony',
     turnItOn: 'Włącz go',
+    sendRequest: 'Wyślij prośbę',
+    yourRequest: (a) => `Twoja prośba: ${a}`,
+    thisOne: 'to urządzenie',
+    offlineKept: 'To, co powiedziane, czeka i zostanie nadrobione.',
+    sendAgain: 'Wyślij ponownie',
     codeUntil: (w) => `Działa do ${w}`,
     signingIn: 'Logowanie…',
     readAloud: 'Czytaj na głos',
-    reading: 'Czyta',
     earphones: 'Najlepiej ze słuchawkami',
     noVoice: (l) => `Brak głosu: ${l} na tym urządzeniu`,
     addVoice: {
@@ -172,7 +176,7 @@ export const pl: Texts = {
     tooManyLangs: 'Ta sesja ma już trzy języki. Wybierz jeden z nich.',
     serviceFull: 'Usługa tłumaczenia jest teraz pełna. Spróbuj za minutę.',
     stop_credits: [
-      'Brak środków',
+      'Saldo się skończyło',
       'Napisy się zatrzymały. Poproś o więcej; dostaniesz e-mail, gdy zostaną dodane.',
     ],
     stop_monthly: [
@@ -190,7 +194,7 @@ export const pl: Texts = {
       'Spróbuje ponownie sama. Nic nie jest naliczane, dopóki nie działa.',
     ],
     readerStopped: 'Napisy się zatrzymały.',
-    creditsLeft: 'Pozostałe środki',
+    creditsLeft: 'Saldo',
     history: 'Historia',
     welcome: 'Na start',
     fromAdmin: 'Dodano',

@@ -59,6 +59,20 @@ export function SignInPage({ note }: { note?: string } = {}) {
 function EmailSignIn() {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<string>('idle');
+  // ("Send it again" after a minute: the first one is usually just slow)
+  const [again, setAgain] = useState(false);
+  useEffect(() => {
+    if (state !== 'sent') return;
+    const timer = setTimeout(() => setAgain(true), 60_000);
+    return () => clearTimeout(timer);
+  }, [state]);
+  const send = () => {
+    setState('busy');
+    setAgain(false);
+    void api('/api/signin/email', { email, lang: ui }).then((r) =>
+      setState(r.ok ? 'sent' : r.error),
+    );
+  };
   if (state === 'sent') {
     return (
       <div className="card" style={{ display: 'grid', gap: 12 }}>
@@ -66,6 +80,11 @@ function EmailSignIn() {
           {t.checkEmail}
         </h2>
         <p className="s">{t.checkEmailBody(email)}</p>
+        {again && (
+          <button className="btn" onClick={send}>
+            {t.sendAgain}
+          </button>
+        )}
         <button
           className="link"
           style={{ alignSelf: 'flex-start' }}
@@ -81,10 +100,7 @@ function EmailSignIn() {
       style={{ display: 'grid', gap: 12 }}
       onSubmit={(e) => {
         e.preventDefault();
-        setState('busy');
-        void api('/api/signin/email', { email, lang: ui }).then((r) =>
-          setState(r.ok ? 'sent' : r.error),
-        );
+        send();
       }}
     >
       <label>

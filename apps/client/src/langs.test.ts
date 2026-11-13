@@ -42,6 +42,6 @@ describe('texts', () => {
   });
   it('a stop the host ended says nothing; the others say why', () => {
     expect(stopText('ended')).toBeNull();
-    expect(stopText('credits')![0]).toBe('Out of credits');
+    expect(stopText('credits')![0]).toBe('The balance is used up');
   });
 });

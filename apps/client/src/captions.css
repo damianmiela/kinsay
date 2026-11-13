@@ -152,15 +152,6 @@ html:has(.cap-screen) body {
   grid-template-columns: 1fr 2fr 1fr;
   gap: 8px;
 }
-/* (a reader's: the language and Settings) */
-.cbar-row:has(> .cbar-pair) {
-  grid-template-columns: 1fr;
-}
-.cbar-pair {
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-  gap: 8px;
-}
 .cbar-msg {
   grid-column: 1 / -1;
   display: flex;
@@ -331,23 +322,8 @@ html:has(.cap-screen) body {
   border-radius: 50%;
   background: currentColor;
 }
-/* a reader's bar with Read aloud: the language, Read aloud, Settings (2 : 2 : 1) */
-.cbar-pair.three {
-  grid-template-columns: 2fr 2fr 1fr;
-}
-.cb.aloud {
-  border-color: var(--bar-edge);
-  background: transparent;
-  white-space: normal;
-  font-size: 16px;
-  line-height: 1.1;
-  text-align: center;
-}
-.cb.aloud svg {
-  flex: none;
-}
+/* a reader's Read aloud: an icon in Start/Stop's place; teal while it reads */
 .cb.aloud.on {
-  border-color: var(--accent);
   background: var(--accent);
 }
 .cb.aloud.dim {

@@ -57,10 +57,14 @@ export const de: Texts = {
     groupApp: 'App',
     micIsOff: 'Das Mikrofon ist aus',
     turnItOn: 'Einschalten',
+    sendRequest: 'Anfrage senden',
+    yourRequest: (a) => `Deine Anfrage: ${a}`,
+    thisOne: 'dieses',
+    offlineKept: 'Was gesagt wird, wird aufgehoben und nachgeholt.',
+    sendAgain: 'Noch einmal senden',
     codeUntil: (w) => `Gilt bis ${w}`,
     signingIn: 'Anmelden…',
     readAloud: 'Vorlesen',
-    reading: 'Liest vor',
     earphones: 'Am besten mit Kopfhörern',
     noVoice: (l) => `Keine Stimme für ${l} auf diesem Gerät`,
     addVoice: {
@@ -176,7 +180,7 @@ export const de: Texts = {
     tooManyLangs: 'Diese Sitzung liest schon drei Sprachen. Wähl eine davon.',
     serviceFull: 'Der Übersetzungsdienst ist gerade voll. Versuch es in einer Minute.',
     stop_credits: [
-      'Kein Guthaben mehr',
+      'Das Guthaben ist aufgebraucht',
       'Die Untertitel sind gestoppt. Bitte um mehr; du bekommst eine E-Mail, wenn es hinzugefügt ist.',
     ],
     stop_monthly: [

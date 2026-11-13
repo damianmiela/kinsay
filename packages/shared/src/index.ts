@@ -198,4 +198,4 @@ export const EUR = 1_000_000;
 export const GRANT_STEPS = [1, 2, 5, 10].map((e) => e * EUR);
 export const WELCOME = 1 * EUR;
 /** Below this the host's page warns once. */
-export const LOW_BALANCE = 50_000;
+export const LOW_BALANCE = 500_000;

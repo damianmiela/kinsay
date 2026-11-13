@@ -134,3 +134,12 @@ With your phone and your computer, both signed in:
 - [ ] ⚙ → "Leave Marta's captions": "You left Marta's captions" with Join again and Type another code.
 - [ ] Airplane mode on a reader's phone: "No internet. The captions come back by themselves."; off again: they come back.
 - [ ] Your computer while your phone listens: ⚙ has "Read aloud on this device".
+
+## 13. The redesign, step 5 (first part): the reader's bar, the bar's messages, Account (2026-11-13)
+
+- [ ] A reader's bar: Read aloud (an icon, teal while it reads) on the left where the host has Start/Stop, the language in the middle, ⚙ on the right.
+- [ ] Under €0.50: the low balance shows on Home and once in the bar while captions run (✕ puts it away); "Ask for more" opens Account over the captions.
+- [ ] At zero: "The balance is used up" in the bar, Start instead of Stop, "Ask for more" opens Account over the captions.
+- [ ] The listening phone in airplane mode: "No internet. What's said is kept and caught up."; back online, the words come in.
+- [ ] Account (from Home): the name and the balance on top, Ask for more and "Send the request" right under it; the request in the history as "Your request, €2 · Waiting", then "Added" once granted; devices named "Your phone" / "Your computer" ("this one" for this device).
+- [ ] Sign in by email: "Check your email"; after a minute "Send it again" appears.
