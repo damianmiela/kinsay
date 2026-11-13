@@ -207,7 +207,13 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
       </Glass>
     );
   }
-  if (!view) return <Glass />;
+  if (!view) {
+    return (
+      <Glass>
+        {error === 'too-many-pages' && <div className="lw-note warn">{t.tooManyPages}</div>}
+      </Glass>
+    );
+  }
   const host = view.role === 'host';
   const shown = view.lang;
 

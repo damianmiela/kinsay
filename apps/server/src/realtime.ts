@@ -21,6 +21,7 @@ import {
   DEVICE_COOKIE,
   RateLimiter,
   clientIp,
+  ipBucket,
   wideBucket,
   isSameOrigin,
   isSessionCode,
@@ -55,6 +56,10 @@ export const ASK_MS = 10 * 60_000;
  * locked comes back to it at once (as /live's). It makes room when a new language needs it.
  */
 export const LANG_KEEP_MS = 10 * 60_000;
+/** Pages open at once from one address (IPv6 per /64): a family on one Wi-Fi shares one (as /live's). */
+export const PAGES_PER_IP_MAX = 50;
+/** The error a page over that gets: it says so and tries again by itself. */
+export const TOO_MANY_PAGES = 'too-many-pages';
 const TEXT_EVERY_MS = 150;
 /** Audio streams of a page remembered per channel (their last chunk number; audit 30). */
 const SEQS_MAX = 20;
@@ -382,7 +387,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   }, 60_000);
   tidy.unref();
 
+  // pages open per address (PAGES_PER_IP_MAX)
+  const perIp = new Map<string, number>();
+  const addressOf = (s: S) =>
+    ipBucket(clientIp({ headers: s.handshake.headers, socket: s.request.socket }, o.trustProxy));
+
   io.use((s, next) => {
+    if ((perIp.get(addressOf(s)) ?? 0) >= PAGES_PER_IP_MAX) return next(new Error(TOO_MANY_PAGES));
     const cookies = parseCookies(s.handshake.headers.cookie);
     const auth = (s.handshake.auth ?? {}) as { code?: unknown };
     const code = typeof auth.code === 'string' ? auth.code.toUpperCase() : undefined;
@@ -413,6 +424,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   });
 
   io.on('connection', (s) => {
+    const address = addressOf(s);
+    perIp.set(address, (perIp.get(address) ?? 0) + 1);
+    s.once('disconnect', () => {
+      const n = (perIp.get(address) ?? 1) - 1;
+      if (n > 0) perIp.set(address, n);
+      else perIp.delete(address);
+    });
     const c = s.data.channel;
     // (a channel dropped while this socket was being let in)
     if (byPerson.get(c.personId) !== c) return void s.disconnect(true);

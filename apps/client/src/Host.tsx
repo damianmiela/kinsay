@@ -13,7 +13,7 @@ import { clock, stopText, t, tw } from './texts';
 import { ask, useSession } from './useSession';
 
 export function HostPage() {
-  const { view, update } = useSession();
+  const { view, update, error } = useSession();
   const mic = useMic({ voice: true });
   const [lang, setLang] = useStored<string | null>('tr-lang', null);
   const [faceToFace, setFaceToFace] = useStored('tr-face', true);
@@ -29,6 +29,11 @@ export function HostPage() {
         <div className="bar">
           <Logo />
         </div>
+        {error === 'too-many-pages' && (
+          <div className="body">
+            <div className="note warn">{t.tooManyPages}</div>
+          </div>
+        )}
       </div>
     );
   }

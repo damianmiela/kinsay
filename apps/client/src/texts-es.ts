@@ -94,6 +94,8 @@ export const es: Texts = {
     codeLabel: 'El código',
     codeHelp: 'Quien empezó los subtítulos lo ve en «Invitar».',
     join: 'Unirse',
+    tooManyPages:
+      'Hay demasiadas páginas de Translate abiertas en esta conexión a internet. Cierra algunas: esta página lo vuelve a intentar sola.',
     tooManyLangs: 'Esta sesión ya lee tres idiomas. Elige uno de ellos.',
     serviceFull: 'El servicio de traducción está lleno ahora. Inténtalo en un minuto.',
     stop_credits: [

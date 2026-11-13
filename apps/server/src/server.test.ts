@@ -692,3 +692,33 @@ describe('a language nobody reads stays a while (as /live did)', () => {
     expect(targets()).toEqual(['de', 'pl', 'tl']);
   });
 });
+
+describe('pages from one address (as /live did)', () => {
+  it('50 at most: the next is refused and says so; another address is fine; one closed lets one in', async () => {
+    const { url, person } = await start(fakeSpeech(), 0.36 * EUR, { trustProxy: true });
+    const p = await person('Marta');
+    const open = (ip: string) =>
+      new Promise<Socket | string>((ok) => {
+        const s: Socket = connect(url, {
+          transports: ['websocket'],
+          forceNew: true,
+          reconnection: false,
+          extraHeaders: { origin: url, cookie: p.cookie, 'x-forwarded-for': ip },
+        });
+        closers.push(() => {
+          s.close();
+          return Promise.resolve();
+        });
+        s.once('connect', () => ok(s));
+        s.once('connect_error', (e) => ok(e.message));
+      });
+    const pages: (Socket | string)[] = [];
+    for (let i = 0; i < 50; i++) pages.push(await open('198.51.100.7'));
+    expect(pages.every((x) => typeof x !== 'string')).toBe(true);
+    expect(await open('198.51.100.7')).toBe('too-many-pages');
+    expect(typeof (await open('203.0.113.9'))).not.toBe('string');
+    (pages[0] as Socket).close();
+    await new Promise((r) => setTimeout(r, 100));
+    expect(typeof (await open('198.51.100.7'))).not.toBe('string');
+  });
+});

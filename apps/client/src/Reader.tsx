@@ -71,6 +71,11 @@ function Reading({ code, onBad }: { code: string; onBad: () => void }) {
         <div className="bar">
           <Logo />
         </div>
+        {error === 'too-many-pages' && (
+          <div className="body">
+            <div className="note warn">{t.tooManyPages}</div>
+          </div>
+        )}
       </div>
     );
   }

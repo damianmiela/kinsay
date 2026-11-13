@@ -95,6 +95,8 @@ export const ca: Texts = {
     codeLabel: 'El codi',
     codeHelp: 'Qui ha començat els subtítols el veu a «Convida».',
     join: 'Uneix-t’hi',
+    tooManyPages:
+      'Hi ha massa pàgines de Translate obertes en aquesta connexió a internet. Tanca’n algunes: aquesta pàgina ho torna a provar sola.',
     tooManyLangs: 'Aquesta sessió ja llegeix tres llengües. Tria’n una.',
     serviceFull: 'El servei de traducció és ple ara mateix. Torna-ho a provar d’aquí a un minut.',
     stop_credits: [

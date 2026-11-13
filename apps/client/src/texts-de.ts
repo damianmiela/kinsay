@@ -96,6 +96,8 @@ export const de: Texts = {
     codeLabel: 'Der Code',
     codeHelp: 'Wer die Untertitel gestartet hat, sieht ihn unter „Einladen“.',
     join: 'Mitlesen',
+    tooManyPages:
+      'Auf dieser Internetverbindung sind zu viele Translate-Seiten offen. Schließ ein paar: Diese Seite versucht es von selbst noch einmal.',
     tooManyLangs: 'Diese Sitzung liest schon drei Sprachen. Wähl eine davon.',
     serviceFull: 'Der Übersetzungsdienst ist gerade voll. Versuch es in einer Minute.',
     stop_credits: [

@@ -23,7 +23,12 @@ export function useSession(code?: string) {
       });
     };
     const onCaptions = (u: CaptionsUpdate) => setUpdate((was) => mergeUpdate(was, u));
-    const onError = (e: Error) => setError(e.message);
+    // (too many pages from this connection: it says so and tries again by itself, as /live's)
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const onError = (e: Error) => {
+      setError(e.message);
+      if (e.message === 'too-many-pages') retry = setTimeout(() => socket.connect(), 30_000);
+    };
     // (the server closed this page: signed out, blocked, the account or its session gone; Socket.IO
     // never comes back by itself then: the page starts again and shows where it stands, audit 32)
     const onGone = (reason: string) => {
@@ -38,6 +43,7 @@ export function useSession(code?: string) {
       socket.off('state:session', onState);
       socket.off('captions', onCaptions);
       socket.off('connect_error', onError);
+      clearTimeout(retry);
       socket.off('disconnect', onGone);
       socket.disconnect();
     };

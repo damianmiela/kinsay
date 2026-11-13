@@ -77,3 +77,7 @@ The texts are drafts: a native speaker of each language should read every page o
 
 - [ ] A reader in another language than yours locks their phone (or closes the page) for a few minutes, then opens it again: what was said meanwhile is there at once, in their language.
 - [ ] A session with three languages: a reader who left frees their language for a new one (a fourth reader can pick another language); someone who wants a fourth while all three are read is told the session has three already.
+
+## 7. Pages per connection (2026-11-13)
+
+Nothing to see normally: one internet connection (a family's Wi-Fi) may have 50 Translate pages open at once. Beyond that a page says "Too many Translate pages are open on this internet connection" and tries again by itself every 30 seconds. (Hard to reach by hand; the server tests check it.)

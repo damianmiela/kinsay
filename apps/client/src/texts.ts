@@ -101,6 +101,8 @@ const t_en = {
   codeLabel: 'The code',
   codeHelp: 'The person who started the captions sees it under "Invite".',
   join: 'Join',
+  tooManyPages:
+    'Too many Translate pages are open on this internet connection. Close some: this page tries again by itself.',
   tooManyLangs: 'This session reads three languages already. Choose one of them.',
   serviceFull: 'The translation service is full right now. Try again in a minute.',
   // stops

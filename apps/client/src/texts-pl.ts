@@ -92,6 +92,8 @@ export const pl: Texts = {
     codeLabel: 'Kod',
     codeHelp: 'Osoba, która włączyła napisy, widzi go pod „Zaproś”.',
     join: 'Dołącz',
+    tooManyPages:
+      'Na tym połączeniu internetowym otwarto zbyt wiele stron Translate. Zamknij kilka: ta strona spróbuje ponownie sama.',
     tooManyLangs: 'Ta sesja ma już trzy języki. Wybierz jeden z nich.',
     serviceFull: 'Usługa tłumaczenia jest teraz pełna. Spróbuj za minutę.',
     stop_credits: [
