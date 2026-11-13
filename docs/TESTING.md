@@ -169,3 +169,15 @@ In the Windows app (no new download needed: it loads the page):
 Nothing new to see: the captions engine moved into `packages/engine` (the source the wedding app will copy).
 
 - [ ] After the deploy: captions on your phone, a translation, a reader by the code: all as before.
+
+## 17. Both sides of a call, on one account (2026-11-13)
+
+You and someone else on a video call, each with the Windows app (no new download: it loads the page):
+
+- [ ] Start your captions (phone or window). Invite someone: under the code, "Their computer can caption the call too" (off). Turn it on.
+- [ ] Her app, not signed in: "Enter their code", your code, Join: "Marta's captions · on Marta's balance", Listen to (This computer's sound first), Translate into (her app's language), Start, and "Just read Marta's captions".
+- [ ] She starts with This computer's sound: her window shows what she hears from the call (you) in her language; yours shows her in yours. Nothing doubled.
+- [ ] Your bar (phone and window): "Your guest's computer captions the call too" with "Stop theirs": it stops only hers.
+- [ ] Your Stop ends both; her Start waits until yours runs again ("Marta stopped at …").
+- [ ] With the switch off, the code only reads (as before); a second guest is told someone else captions already.
+- [ ] Account, the next day: that session's line names her language "(your guest)", and the cost counts both streams.

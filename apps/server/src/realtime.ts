@@ -104,6 +104,12 @@ interface Channel {
   idleSince: number;
   /** Languages nobody reads now, kept until a while after their last page left (LANG_KEEP_MS). */
   kept: Map<Target, number>;
+  /** The host's switch: a page with the code may caption its own side (off; a new code: off). */
+  guestAllowed: boolean;
+  /** A guest's captions (one at a time): its own engine and streams, on this balance. */
+  guest?: { socket: string; engine: Engine };
+  /** The languages guests read this session (its history line names them). */
+  guestLangs: Set<Target>;
   /** When words last came (the quiet stop) and when the running session's hours are up. */
   wordsAt: number;
   keepUntil: number;
@@ -111,7 +117,10 @@ interface Channel {
 
 interface Data {
   channel: Channel;
-  role: 'host' | 'reader';
+  role: 'host' | 'reader' | 'guest';
+  /** A guest whose captions ended: when, and why (its page says so). */
+  guestStoppedAt?: number;
+  guestWhy?: StopReason;
   lang: Target | null;
   /** Face to face (the host's page): the top half's language too. */
   other?: Target | null;
@@ -187,6 +196,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       wordsAt: 0,
       keepUntil: 0,
       kept: new Map(),
+      guestAllowed: false,
+      guestLangs: new Set(),
       engine: undefined as unknown as Engine,
     };
     ch.engine = new Engine(o.speech, {
@@ -210,7 +221,10 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     const all = [
       c.hostLang,
       c.hostOther,
-      ...[...c.sockets].flatMap((s) => [s.data.lang, s.data.other ?? null]),
+      // (a guest's language is its own engine's, never the host's streams)
+      ...[...c.sockets]
+        .filter((s) => s.data.role !== 'guest')
+        .flatMap((s) => [s.data.lang, s.data.other ?? null]),
     ].filter((l): l is Target => !!l && l !== HEARD);
     return [...new Set(all)];
   }
@@ -242,6 +256,22 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
 
   function view(s: S): SessionView {
     const c = s.data.channel;
+    if (s.data.role === 'guest') {
+      const g = c.guest?.socket === s.id ? c.guest : undefined;
+      const e = g ? g.engine : c.engine;
+      return {
+        role: 'guest',
+        hostName: c.hostName,
+        running: !!g,
+        hostRunning: c.running,
+        guestAllowed: c.guestAllowed,
+        service: e.service,
+        ...(g && e.error ? { error: e.error } : {}),
+        lang: s.data.lang,
+        ...(!g && s.data.guestStoppedAt ? { stoppedAt: s.data.guestStoppedAt } : {}),
+        ...(!g && s.data.guestWhy ? { stopped: s.data.guestWhy } : {}),
+      };
+    }
     const v: SessionView = {
       role: s.data.role,
       hostName: c.hostName,
@@ -255,7 +285,9 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     };
     const read = readNow(c);
     if (read.length >= CHANNEL_LANGS_MAX) v.full = read;
+    if (c.guestAllowed) v.guestAllowed = true;
     if (s.data.role === 'host') {
+      if (c.guest) v.guestRunning = true;
       v.code = c.code;
       v.codeUntil = c.codeUntil;
       v.balance = o.store.balance(c.personId) - (c.cost - c.written);
@@ -273,7 +305,10 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     c.textTimer ??= setTimeout(() => {
       c.textTimer = undefined;
       for (const s of c.sockets) {
-        s.emit('captions', c.engine.update(s.data.lang, false, s.data.other));
+        // (a guest's page gets its own engine's captions only, while they run)
+        const e =
+          s.data.role !== 'guest' ? c.engine : c.guest?.socket === s.id ? c.guest.engine : null;
+        if (e) s.emit('captions', e.update(s.data.lang, false, s.data.other));
       }
     }, TEXT_EVERY_MS);
   }
@@ -299,7 +334,9 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     c.flushedAt = now();
     if (c.cost) {
       try {
-        const lang = langsOf(c).join(', ') || HEARD;
+        // (a guest's languages marked as theirs: the history says "your guest")
+        const lang =
+          [...langsOf(c), ...[...c.guestLangs].map((l) => `guest:${l}`)].join(', ') || HEARD;
         if (!c.row) c.row = o.store.add(c.personId, 'use', -c.cost, { lang, seconds: c.seconds });
         else o.store.setUse(c.row, c.cost, lang, c.seconds);
         c.written = c.cost;
@@ -327,7 +364,24 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     return undefined;
   }
 
+  /** A guest's captions end (the host's switch, Stop, the host's own end, the page gone). */
+  function stopGuest(c: Channel, why?: StopReason) {
+    const g = c.guest;
+    if (!g) return;
+    c.guest = undefined;
+    // (her page's news first: the engine's own end tells every page at once)
+    const s = [...c.sockets].find((x) => x.id === g.socket);
+    if (s) {
+      s.data.guestStoppedAt = now();
+      s.data.guestWhy = why;
+    }
+    g.engine.discard();
+    g.engine.close();
+    stateAll(c);
+  }
+
   function stop(c: Channel, why?: StopReason, write = true) {
+    stopGuest(c, why);
     if (c.running && write) flush(c, false);
     if (c.running) c.stoppedAt = now();
     c.running = false;
@@ -338,6 +392,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     c.seconds = 0;
     c.seqs.clear();
     c.kept.clear();
+    c.guestLangs.clear();
     c.micSocket = undefined;
     asked.delete(c);
     c.engine.discard();
@@ -572,6 +627,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
           byCode.delete(c.code);
           c.code = newCode();
           byCode.set(c.code, c);
+          c.guestAllowed = false; // (a new code starts off again)
         }
         // (the code lasts a day from the last Start: never out an hour into a session)
         c.codeUntil = now() + CODE_MS;
@@ -596,6 +652,89 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       reply(cb, { ok: true });
     });
 
+    s.on('session:guestAllow', (p, cb) => {
+      if (!host()) return reply(cb, { ok: false, error: 'not-host' });
+      c.guestAllowed = typeof p === 'object' && p !== null && (p as { on?: unknown }).on === true;
+      if (!c.guestAllowed) stopGuest(c, 'ended');
+      stateAll(c);
+      reply(cb, { ok: true });
+    });
+
+    s.on('session:stopGuest', (cb) => {
+      if (!host()) return reply(cb, { ok: false, error: 'not-host' });
+      stopGuest(c, 'ended');
+      reply(cb, { ok: true });
+    });
+
+    /**
+     * A page that came by the code captions its own side of a call (mockups batch 4): only with the
+     * host's switch on, while the host's own captions run, one guest at a time, the host's balance
+     * and limits counting; its own engine (its streams from the same pool), its captions to it only.
+     */
+    s.on('guest:start', (p, cb) => {
+      if (s.data.role === 'host') return reply(cb, { ok: false, error: 'not-guest' });
+      if (!c.guestAllowed) return reply(cb, { ok: false, error: 'guest-off' });
+      if (!c.running) return reply(cb, { ok: false, error: 'host-not-running' });
+      if (c.guest && c.guest.socket !== s.id) return reply(cb, { ok: false, error: 'guest-taken' });
+      if (c.guest) return reply(cb, { ok: true });
+      const lang = asLang(
+        typeof p === 'object' && p !== null ? ((p as { lang?: unknown }).lang ?? null) : null,
+      );
+      if (lang === undefined) return reply(cb, { ok: false, error: 'bad-lang' });
+      const why = cannotRun(c.personId);
+      if (why) return reply(cb, { ok: false, error: why });
+      if (!langSwitches.take(s.id, now())) return reply(cb, { ok: false, error: 'too-many' });
+      if (!c.engine.canAdd(1)) return reply(cb, { ok: false, error: 'service-full' });
+      // (her reading language leaves the host's streams: her own engine reads it now)
+      const before = readNow(c);
+      s.data.role = 'guest';
+      s.data.lang = lang;
+      delete s.data.other;
+      s.data.guestStoppedAt = undefined;
+      s.data.guestWhy = undefined;
+      readersChanged(c, before);
+      const engine = new Engine(o.speech, {
+        onText: () => {
+          c.wordsAt = now();
+          textSoon(c);
+        },
+        onStatus: () => stateAll(c),
+        onSent: (ms, streams) => sent(c, ms, streams),
+        now,
+        warn,
+        pool,
+        ...(lang ? { langs: [lang] } : {}),
+      });
+      c.guest = { socket: s.id, engine };
+      c.guestLangs.add(lang ?? HEARD);
+      stateAll(c);
+      s.emit('captions', engine.update(lang, true));
+      reply(cb, { ok: true });
+    });
+
+    s.on('guest:lang', (p, cb) => {
+      const g = c.guest;
+      if (!g || g.socket !== s.id) return reply(cb, { ok: false, error: 'not-guest' });
+      const lang = asLang(
+        typeof p === 'object' && p !== null ? ((p as { lang?: unknown }).lang ?? null) : null,
+      );
+      if (lang === undefined) return reply(cb, { ok: false, error: 'bad-lang' });
+      if (lang === s.data.lang) return reply(cb, { ok: true });
+      if (!langSwitches.take(s.id, now())) return reply(cb, { ok: false, error: 'too-many' });
+      s.data.lang = lang;
+      g.engine.setLangs([lang ?? HEARD]);
+      c.guestLangs.add(lang ?? HEARD);
+      s.emit('state:session', view(s));
+      s.emit('captions', g.engine.update(lang, true));
+      reply(cb, { ok: true });
+    });
+
+    s.on('guest:stop', (cb) => {
+      if (c.guest?.socket !== s.id) return reply(cb, { ok: false, error: 'not-guest' });
+      stopGuest(c, 'ended');
+      reply(cb, { ok: true });
+    });
+
     s.on('session:stop', (cb) => {
       if (!host()) return reply(cb, { ok: false, error: 'not-host' });
       stop(c, 'ended');
@@ -611,11 +750,14 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     });
 
     s.on('host:audio', (chunk, meta) => {
-      if (!host()) return;
+      const guest = s.data.role === 'guest';
+      if (!host() && !guest) return;
       const m = (typeof meta === 'object' && meta ? meta : {}) as Record<string, unknown>;
       const seq = Number.isSafeInteger(m.seq) ? (m.seq as number) : 0;
+      // a guest's audio goes to its own engine, the host's to the session's
+      const engine = guest ? (c.guest?.socket === s.id ? c.guest.engine : null) : c.engine;
       // (stopped: confirmed all the same, so the page never sends it again)
-      if (!c.running) {
+      if (!c.running || !engine) {
         if (seq) s.emit('captions:ack', seq);
         return;
       }
@@ -628,11 +770,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
           : 0;
       // one microphone at a time: another page takes over once the first has been quiet a while
       // (one chosen by Start or "Use this one" waits for its own audio, up to MIC_GONE_MS, audit 33)
-      const quiet = c.micChosen ? MIC_GONE_MS : MIC_QUIET_MS;
-      if (c.micSocket !== s.id && now() - c.micAt < quiet) return;
-      if (c.micSocket !== s.id) listenHere(false);
-      c.micChosen = false;
-      c.micAt = now();
+      if (!guest) {
+        const quiet = c.micChosen ? MIC_GONE_MS : MIC_QUIET_MS;
+        if (c.micSocket !== s.id && now() - c.micAt < quiet) return;
+        if (c.micSocket !== s.id) listenHere(false);
+        c.micChosen = false;
+        c.micAt = now();
+      }
       if (seq) {
         s.emit('captions:ack', seq);
         if (seq <= (c.seqs.get(stream) ?? 0)) return; // (sent again after a break: it came already)
@@ -645,10 +789,11 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       }
       const bytes = chunk instanceof Buffer ? chunk : new Uint8Array(chunk);
       if (bytes.length % 2) return;
-      c.engine.audio(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length), now() - age);
+      engine.audio(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length), now() - age);
     });
 
     s.on('disconnect', () => {
+      if (c.guest?.socket === s.id) stopGuest(c);
       const before = readNow(c);
       c.sockets.delete(s);
       if (c.micSocket === s.id) {
@@ -679,6 +824,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       for (const c of byPerson.values()) {
         if (c.running) flush(c, false);
         c.engine.close();
+        c.guest?.engine.close();
       }
       io.engine.close();
     },

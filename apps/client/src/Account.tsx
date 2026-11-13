@@ -42,7 +42,13 @@ export function AccountPage() {
       ? t.captionsIn(
           (h.lang ?? '')
             .split(', ')
-            .map((c) => (c === 'heard' ? t.noTranslation : langName(c).own))
+            .map((c) => {
+              // (a guest's language on this balance: mockups batch 4)
+              const g = c.startsWith('guest:');
+              const code = g ? c.slice(6) : c;
+              const name = code === 'heard' ? t.noTranslation : langName(code).own;
+              return g ? `${name} (${t.yourGuest})` : name;
+            })
             .join(', '),
         )
       : h.kind === 'welcome'

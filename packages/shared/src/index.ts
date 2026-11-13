@@ -92,7 +92,8 @@ export const isSpeechLang = (v: unknown): v is string =>
 
 /** A session's state as one page sees it. */
 export interface SessionView {
-  role: 'host' | 'reader';
+  /** `guest`: a page that came by the code and captions its own side of a call (mockups batch 4). */
+  role: 'host' | 'reader' | 'guest';
   /** The code readers join with (the host only). */
   code?: string;
   /** The host's first name (readers see it). */
@@ -118,6 +119,12 @@ export interface SessionView {
   stoppedAt?: number;
   /** The session reads as many languages as it may: these (a reader picks one of them). */
   full?: Target[];
+  /** The host lets a page with the code caption its own side of a call, on the host's balance. */
+  guestAllowed?: boolean;
+  /** The host only: a guest's captions run now (on this balance). */
+  guestRunning?: boolean;
+  /** A guest only: the host's own captions run (a guest may start only then). */
+  hostRunning?: boolean;
 }
 
 /** A device as people name it: "your phone", "your tablet", "your computer". */
@@ -152,6 +159,14 @@ export interface ClientToServerEvents {
   'session:keepGoing': Action;
   /** The host: this page's microphone listens from now on (the other page's stops). */
   'session:useMic': Action;
+  /** The host: a page with the code may caption its own side of the call (off by default). */
+  'session:guestAllow': Action<{ on: boolean }>;
+  /** The host: the guest's captions end (the host's own go on). */
+  'session:stopGuest': Action;
+  /** A page that came by the code: captions of its own sound, on the host's balance. */
+  'guest:start': Action<{ lang: Target | null }>;
+  'guest:lang': Action<{ lang: Target | null }>;
+  'guest:stop': Action;
   /** The page's language (host or reader): null = what is heard only. */
   'session:lang': Action<{ lang: Target | null; other?: Target | null }>;
   'host:audio': (chunk: ArrayBuffer, meta: AudioMeta) => void;

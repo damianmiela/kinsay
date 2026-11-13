@@ -933,3 +933,122 @@ describe('the code and what readers see (mockups batch 3)', () => {
     });
   });
 });
+
+describe('both sides of a call: a guest on the host balance (mockups batch 4)', () => {
+  const audio = (s: Socket, seq: number) =>
+    s.emit('host:audio', new Uint8Array(3200).buffer, { age: 0, seq, stream: 'mic-' + s.id });
+  async function session() {
+    const env = await start();
+    const p = await env.person('Marta');
+    const host = env.sock({ cookie: p.cookie });
+    const v = await next<SessionView>(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'en' });
+    audio(host, 1);
+    await next(host, 'captions:ack');
+    const guest = env.sock({ code: v.code });
+    await next(guest, 'state:session');
+    return { ...env, p, host, guest, code: v.code! };
+  }
+
+  it('only with the host switch on; then her own stream, her captions only to her', async () => {
+    const { host, guest, speech } = await session();
+    expect(await ask(guest, 'guest:start', { lang: 'tl' })).toEqual({
+      ok: false,
+      error: 'guest-off',
+    });
+    const allowed = next<SessionView>(guest, 'state:session', (v) => !!v.guestAllowed);
+    expect(await ask(host, 'session:guestAllow', { on: true })).toEqual({ ok: true });
+    await allowed;
+    const told = next<SessionView>(host, 'state:session', (v) => !!v.guestRunning);
+    const mine = next<SessionView>(guest, 'state:session', (v) => v.role === 'guest' && v.running);
+    expect(await ask(guest, 'guest:start', { lang: 'tl' })).toEqual({ ok: true });
+    await Promise.all([told, mine]);
+    // her computer's sound opens her own stream (Tagalog) and goes to it only; her reading
+    // language (the host's English) left the host's streams
+    const en = speech.open().find((s) => s.target === 'en')!;
+    const enBytes = en.bytes;
+    audio(guest, 1);
+    await next(guest, 'captions:ack');
+    expect(speech.open().map((s) => s.target)).toEqual(['en', 'tl']);
+    const tl = speech.open().find((s) => s.target === 'tl')!;
+    expect(tl.bytes).toBe(3200);
+    expect(en.bytes).toBe(enBytes);
+    // a host's page never gets her captions; she never gets the host's
+    let hostSawTl = false;
+    host.on('captions', (u: { texts: Record<string, unknown> }) => {
+      if (u.texts.tl) hostSawTl = true;
+    });
+    tl.events.tokens([{ text: ' Kumusta.', translation_status: 'translation', is_final: true }]);
+    const got = await next<{ texts: Record<string, { live: string }> }>(guest, 'captions', (u) =>
+      String(u.texts.tl?.live ?? '').includes('Kumusta'),
+    );
+    expect(got.texts.en).toBeUndefined();
+    expect(hostSawTl).toBe(false);
+  });
+
+  it('one guest at a time; the host stops hers or the whole session; a new code starts off', async () => {
+    const { host, guest, sock, code, speech } = await session();
+    await ask(host, 'session:guestAllow', { on: true });
+    await ask(guest, 'guest:start', { lang: 'tl' });
+    const other = sock({ code });
+    await next(other, 'state:session');
+    expect(await ask(other, 'guest:start', { lang: 'de' })).toEqual({
+      ok: false,
+      error: 'guest-taken',
+    });
+    // "Stop theirs": hers ends, the host's goes on
+    audio(guest, 1);
+    await next(guest, 'captions:ack');
+    const ended = next<SessionView>(
+      guest,
+      'state:session',
+      (v) => v.role === 'guest' && !v.running,
+    );
+    await ask(host, 'session:stopGuest');
+    expect((await ended).stoppedAt).toBeDefined();
+    expect(speech.open().map((s) => s.target)).toEqual(['en']);
+    // she starts again; the host's Stop ends both, and she can't start while it's stopped
+    await ask(guest, 'guest:start', { lang: 'tl' });
+    const both = next<SessionView>(guest, 'state:session', (v) => !v.running && !v.hostRunning);
+    await ask(host, 'session:stop');
+    await both;
+    expect(await ask(guest, 'guest:start', { lang: 'tl' })).toEqual({
+      ok: false,
+      error: 'host-not-running',
+    });
+    // a reader is no host: the host's actions stay the host's
+    expect(await ask(other, 'session:guestAllow', { on: true })).toEqual({
+      ok: false,
+      error: 'not-host',
+    });
+    expect(await ask(other, 'session:stopGuest')).toEqual({ ok: false, error: 'not-host' });
+  });
+
+  it('her audio is paid from the host balance, her language named as the guest’s', async () => {
+    const { host, guest, get, p, t } = await session();
+    await ask(host, 'session:guestAllow', { on: true });
+    await ask(guest, 'guest:start', { lang: 'tl' });
+    for (let i = 2; i < 12; i++) audio(guest, i);
+    await next(guest, 'captions:ack', (n: number) => n === 11);
+    t.now += 60_000;
+    await ask(host, 'session:stop');
+    const me = await get('/api/me', p.cookie);
+    const use = (me.json.history as { kind: string; lang?: string; amount: number }[]).find(
+      (h) => h.kind === 'use',
+    )!;
+    expect(use.lang).toContain('guest:tl');
+    expect(use.amount).toBeLessThan(0);
+  });
+
+  it('her page closing ends her captions', async () => {
+    const { host, guest, speech } = await session();
+    await ask(host, 'session:guestAllow', { on: true });
+    await ask(guest, 'guest:start', { lang: 'tl' });
+    audio(guest, 1);
+    await next(guest, 'captions:ack');
+    const gone = next<SessionView>(host, 'state:session', (v) => v.running && !v.guestRunning);
+    guest.close();
+    await gone;
+    expect(speech.open().map((s) => s.target)).toEqual(['en']);
+  });
+});

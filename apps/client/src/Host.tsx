@@ -18,7 +18,7 @@ import {
   StartStop,
   Strip,
 } from './Bar';
-import { Logo, Sheet } from './bits';
+import { Logo, Sheet, Toggle } from './bits';
 import { CaptionsView } from './CaptionsView';
 import { LangPicker, LangSheet } from './LangPicker';
 import { barName, langName } from './langs';
@@ -245,7 +245,12 @@ export function HostPage() {
     <>
       {sheet === 'gear' && settings}
       {sheet === 'invite' && view.code && (
-        <InviteSheet code={view.code} until={view.codeUntil} onClose={() => setSheet(null)} />
+        <InviteSheet
+          code={view.code}
+          until={view.codeUntil}
+          guestAllowed={!!view.guestAllowed}
+          onClose={() => setSheet(null)}
+        />
       )}
       {sheet === 'langs' && (
         <LanguagesSheet
@@ -433,6 +438,11 @@ export function HostPage() {
         <Strip tone="amber" onClose={() => setAloud(false)}>
           <b>{t.noVoice(langName(aloudLang).own)}</b>{' '}
           {t.addVoice[voiceHelp(navigator.userAgent, navigator.maxTouchPoints > 1)]}
+        </Strip>
+      )}
+      {view.running && view.guestRunning && (
+        <Strip action={{ label: t.stopTheirs, onClick: () => void ask('session:stopGuest') }}>
+          {t.guestRunsToo}
         </Strip>
       )}
       {view.running && online && view.service === 'error' && (
@@ -627,10 +637,13 @@ function FaceToFacePicture() {
 function InviteSheet({
   code,
   until,
+  guestAllowed,
   onClose,
 }: {
   code: string;
   until?: number;
+  /** Their computer may caption its own side of a call, on this balance (mockups batch 4). */
+  guestAllowed: boolean;
   onClose: () => void;
 }) {
   const link = `${window.location.origin}/join#${code}`;
@@ -659,6 +672,19 @@ function InviteSheet({
         >
           {copied ? t.copied : t.copyLink}
         </button>
+      </div>
+      <div className="list">
+        <div className="li">
+          <span className="what">
+            {t.guestAllow}
+            <small>{t.guestAllowSmall}</small>
+          </span>
+          <Toggle
+            on={guestAllowed}
+            onChange={(on) => void ask('session:guestAllow', { on })}
+            label={t.guestAllow}
+          />
+        </div>
       </div>
       {until && (
         <p className="small center">

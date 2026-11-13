@@ -423,6 +423,52 @@ test('face to face: both halves follow their newest line alike; scrolled back, "
   }
 });
 
+test('both sides of a call: the host allows it, the guest’s window captions her side on his balance', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  const { page: host } = await signedInPhone(browser, baseURL!, admin);
+  await host.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(host.locator('.cap-line').first()).toContainText('Sentence');
+  await host.getByRole('button', { name: 'Settings' }).click();
+  await host.getByRole('button', { name: 'Invite someone' }).click();
+  const code = (await host.locator('.sheet .invite-code').textContent())!.trim();
+  // her window (never signed in): the code, while the switch is still off: only reading
+  const ctx = await browser.newContext({
+    baseURL,
+    viewport: { width: 760, height: 360 },
+    permissions: ['microphone'],
+  });
+  const win = await ctx.newPage();
+  await win.goto('/window');
+  await win.getByRole('button', { name: 'Enter their code' }).click();
+  await win.getByLabel('The code').fill(code);
+  await win.getByRole('button', { name: 'Join' }).click();
+  await expect(win.locator('.lw .cap-line').first()).toContainText('Sentence');
+  await expect(win.getByRole('button', { name: 'Start' })).toHaveCount(0);
+  // the host switches it on (in Invite): her window offers her own captions
+  await host.getByRole('switch', { name: 'Their computer can caption the call too' }).click();
+  await host.keyboard.press('Escape');
+  await expect(win.locator('.lw-who')).toContainText('on ');
+  await expect(win.getByRole('button', { name: /^Just read/ })).toBeVisible();
+  await win.getByRole('button', { name: /^Microphone/ }).click();
+  await win.getByRole('button', { name: 'Start' }).click();
+  await expect(win.locator('.lw .cap-line').last()).toContainText('Sentence', { timeout: 10_000 });
+  await expect(win.locator('.lw-live')).toBeVisible();
+  // the host's page says so, and stops only hers
+  await expect(host.locator('.cbar .strip', { hasText: 'captions the call too' })).toBeVisible();
+  await host.locator('.cbar').getByRole('button', { name: 'Stop theirs' }).click();
+  await expect(win.getByRole('button', { name: 'Start' })).toBeVisible();
+  await expect(host.locator('.cbar .strip', { hasText: 'captions the call too' })).toHaveCount(0);
+  await expect(host.getByRole('button', { name: 'Stop' })).toBeVisible();
+  // the host's Stop: she can't start again until he does ("Waiting"/"stopped at")
+  await host.getByRole('button', { name: 'Stop' }).click();
+  await expect(win.locator('.lw-note')).toContainText(/stopped at/);
+  await expect(win.getByRole('button', { name: 'Start' })).toBeDisabled();
+  await ctx.close();
+});
+
 test('the subtitles window: signed in through the person’s own browser, then its captions', async ({
   browser,
   baseURL,

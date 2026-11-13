@@ -340,6 +340,21 @@ describe('what the wedding needs too', () => {
     expect(e.behind).toBe(false);
     expect([...fake.streams.values()].every((s) => s.ended)).toBe(true);
   });
+
+  it('undrain: a drain no longer wanted never ends the streams (audit 34)', () => {
+    vi.useFakeTimers();
+    const { e, fake } = engine();
+    e.audio(chunk());
+    fake.streams.get(HEARD)!.events.closed('500 something broke');
+    for (let i = 0; i < 12; i++) e.audio(chunk());
+    const done = vi.fn();
+    e.drain(done);
+    e.undrain();
+    vi.advanceTimersByTime(5_001 + 2_000);
+    expect(done).not.toHaveBeenCalled();
+    expect(fake.streams.get(HEARD)!.ended).toBe(false);
+    expect(fake.streams.get(HEARD)!.bytes).toBeGreaterThan(0);
+  });
 });
 
 describe('the shared pool of streams', () => {

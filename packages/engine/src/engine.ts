@@ -583,6 +583,14 @@ export class Engine {
     this.pump();
   }
 
+  /**
+   * A drain no longer wanted (the wedding's Start while a Stop still sends what was kept): the
+   * streams go on, `done` is never called (audit 34).
+   */
+  undrain(): void {
+    this.drained = undefined;
+  }
+
   private pumpLater(ms: number) {
     this.pumpTimer ??= setTimeout(() => this.pump(), Math.max(1, Math.ceil(ms)));
   }
@@ -702,7 +710,9 @@ export class Engine {
             now - this.stallRestartAt >= STALL_GAP_MS
           ) {
             this.stallRestartAt = now;
-            this.warn(`captions: words heard but nothing in ${target}: the streams start again`);
+            this.warn(
+              `captions: words heard but nothing in ${target} for ${Math.round((now - heardSince) / 1000)} s: the streams start again`,
+            );
             this.endStreams();
           }
         }

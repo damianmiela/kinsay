@@ -15,6 +15,7 @@ import { useMic } from './mic/useMic';
 import { Qr } from './Qr';
 import { useStored } from './store';
 import { clock, stopText, t, tw } from './texts';
+import { ui } from './ui';
 import { ask, useSession } from './useSession';
 import './window.css';
 
@@ -172,6 +173,8 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   const [problem, setProblem] = useState<string | null>(null);
   // (✕ while the captions run asks first: closing would stop them)
   const [closing, setClosing] = useState(false);
+  // (a page that came by the code, the host letting it caption its own side: it chose to only read)
+  const [justRead, setJustRead] = useState(false);
   const { chooseSource } = mic;
   // another of the host's devices took the microphone: the window stops sending
   const elsewhere = !!view?.mic && !view.mic.here;
@@ -222,20 +225,29 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     );
   }
   const host = view.role === 'host';
+  // a guest (mockups batch 4): her own captions of her side of the call, on the host's balance;
+  // `offer`: a page that came by the code while the host lets it
+  const guest = view.role === 'guest';
+  const offer = view.role === 'reader' && !!view.guestAllowed && !justRead;
+  const runs = host || guest;
   const shown = view.lang;
+  // (a guest's language: the one she picked here, else the app's)
+  const guestLang = lang ?? ui;
 
   const start = async () => {
     setProblem(null);
-    const err = await ask('session:start', { lang });
+    const err = await (host
+      ? ask('session:start', { lang })
+      : ask('guest:start', { lang: guestLang }));
     if (err) return setProblem(err);
     if ((await mic.startSending()) === 'failed') {
-      await ask('session:stop');
+      await ask(host ? 'session:stop' : 'guest:stop');
       setProblem('sound');
     }
   };
   const stop = async () => {
     mic.stopSending();
-    await ask('session:stop');
+    await ask(host ? 'session:stop' : 'guest:stop');
   };
   const resume = async () => {
     setProblem(null);
@@ -243,8 +255,12 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   };
   const changeLang = async (next: string | null) => {
     setPicking(false);
-    if (host) setLang(next);
-    if (view.running || !host) setProblem(await ask('session:lang', { lang: next }));
+    if (host || guest || offer) setLang(next);
+    if (guest) {
+      if (view.running) setProblem(await ask('guest:lang', { lang: next }));
+    } else if (!offer && (view.running || !host)) {
+      setProblem(await ask('session:lang', { lang: next }));
+    }
   };
   const switchSource = () => {
     const next = source === 'system' ? 'mic' : 'system';
@@ -262,8 +278,10 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     }
   };
 
-  // the start panel: a host whose session isn't running
-  const panel = host && !view.running;
+  // the start panel: a host's or a guest's captions that don't run, or a page offered them
+  const panel = (runs && !view.running) || offer;
+  // (a guest may start only while the host's own captions run)
+  const hostOn = guest ? !!view.hostRunning : view.running;
   const stopped = view.stopped && view.stopped !== 'ended' ? stopText(view.stopped) : null;
   const fromStop = problem ? stopText(problem as never) : null;
   const note =
@@ -277,19 +295,31 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
             ? { cls: 'warn', head: t.tooManyLangs, body: '' }
             : fromStop
               ? { cls: 'bad', head: fromStop[0], body: fromStop[1] }
-              : problem
-                ? { cls: 'bad', head: tw.failed, body: '' }
-                : stopped
-                  ? { cls: 'bad', head: stopped[0], body: stopped[1] }
-                  : view.service === 'error'
-                    ? { cls: 'warn', head: t.serviceDown[0], body: t.serviceDown[1] }
-                    : quiet && mic.sending
+              : problem === 'guest-taken'
+                ? { cls: 'warn', head: t.guestTaken, body: '' }
+                : problem === 'guest-off'
+                  ? { cls: 'warn', head: t.guestOff, body: '' }
+                  : problem && problem !== 'host-not-running'
+                    ? { cls: 'bad', head: tw.failed, body: '' }
+                    : (guest || offer) && !hostOn
                       ? {
                           cls: '',
-                          head: source === 'system' ? tw.waitingSound : tw.waitingVoice,
-                          body: source === 'system' ? tw.waitingSoundBody : '',
+                          head: view.stoppedAt
+                            ? t.hostStopped(clock(view.stoppedAt), view.hostName)
+                            : t.waitingHost(view.hostName),
+                          body: '',
                         }
-                      : null;
+                      : stopped
+                        ? { cls: 'bad', head: stopped[0], body: stopped[1] }
+                        : view.service === 'error'
+                          ? { cls: 'warn', head: t.serviceDown[0], body: t.serviceDown[1] }
+                          : quiet && mic.sending
+                            ? {
+                                cls: '',
+                                head: source === 'system' ? tw.waitingSound : tw.waitingVoice,
+                                body: source === 'system' ? tw.waitingSoundBody : '',
+                              }
+                            : null;
   const text: CaptionText = update.texts[shown ?? HEARD] ?? EMPTY;
   // (what is heard: each line's language once more than one was heard, as on the website)
   const labels =
@@ -307,7 +337,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   };
   const close = () => {
     // (only the listening window asks: closing one that only shows the captions stops nothing)
-    if (host && view.running && mic.sending) return setClosing(true);
+    if (runs && view.running && mic.sending) return setClosing(true);
     shell?.close();
   };
   const where = view.mic && !view.mic.here ? view.mic.on : null;
@@ -324,7 +354,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
         <div className="lw-ctl">
           <span className="lw-grip" aria-hidden="true" />
           {/* the phone's bar: Stop (or Start) · the language · Settings; then the window's own */}
-          {host && view.running && (
+          {runs && view.running && (
             <button className="stop" onClick={() => void stop()}>
               ■ {t.stop}
             </button>
@@ -391,7 +421,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
               {t.inviteTitle}
             </button>
           )}
-          {host && (
+          {(runs || offer) && (
             <>
               <h6>{t.groupMic}</h6>
               {(['system', 'mic'] as const).map((src) => (
@@ -441,6 +471,12 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
               </button>
             </>
           )}
+          {(guest || offer) && (
+            <>
+              <h6>{t.groupAccount}</h6>
+              <span className="r">{t.onBalance(view.hostName)}</span>
+            </>
+          )}
           <h6>{t.groupApp}</h6>
           <label className="r">
             {t.pageLang}
@@ -456,6 +492,11 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
 
       {(panel || picking) && !locked && (
         <div className="lw-panel">
+          {panel && !host && (
+            <p className="lw-who">
+              <b>{t.hostsCaptions(view.hostName)}</b> · {t.onBalance(view.hostName)}
+            </p>
+          )}
           {panel && (
             <div className="lw-row">
               <span className="k">{tw.listenTo}</span>
@@ -478,17 +519,22 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
             <div className="lw-go-row">
               <LangPicker
                 inline
-                value={panel ? lang : shown}
+                value={panel ? (host ? lang : guestLang) : shown}
                 onChange={(l) => (panel ? setLang(l) : void changeLang(l))}
                 startOpen={picking && !panel}
               />
               {panel && (
-                <button className="lw-go" onClick={() => void start()}>
+                <button className="lw-go" disabled={!host && !hostOn} onClick={() => void start()}>
                   {t.start}
                 </button>
               )}
             </div>
           </div>
+          {offer && (
+            <button className="lw-link" onClick={() => setJustRead(true)}>
+              {t.justRead(view.hostName)}
+            </button>
+          )}
           {panel && note && <Note note={note} />}
         </div>
       )}
@@ -510,6 +556,14 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
         </div>
       )}
       {!panel && note && <Note note={note} />}
+      {host && view.guestRunning && (
+        <div className="lw-note">
+          {t.guestRunsToo}{' '}
+          <button className="lw-small" onClick={() => void ask('session:stopGuest')}>
+            {t.stopTheirs}
+          </button>
+        </div>
+      )}
       {host && view.stopsAt && (
         <div className="lw-note warn">
           <b>{t.stillListening(clock(view.stopsAt))}</b>{' '}
@@ -528,7 +582,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
           </button>
         </div>
       )}
-      {host && view.running && !mic.sending && !where && (
+      {runs && view.running && !mic.sending && !where && (
         <div className="lw-note warn">
           <b>{t.micIsOff}</b>{' '}
           <button className="lw-small" onClick={() => void resume()}>
@@ -538,11 +592,10 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
       )}
 
       {qr && view.code && (
-        <button
+        <div
           className="lw-qr"
-          autoFocus
-          aria-label={tw.closeQr}
-          onClick={() => setQr(false)}
+          role="dialog"
+          aria-label={tw.readAlong}
           onKeyDown={(e) => e.key === 'Escape' && setQr(false)}
         >
           <Qr text={`${window.location.origin}/join#${view.code}`} px={120} />
@@ -550,8 +603,28 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
             <b>{tw.readAlong}</b>
             <br />
             {tw.readAlongBody(view.code)}
+            <button
+              className="lw-guest"
+              role="switch"
+              aria-checked={!!view.guestAllowed}
+              onClick={() => void ask('session:guestAllow', { on: !view.guestAllowed })}
+            >
+              <span>
+                {t.guestAllow}
+                <small>{t.guestAllowSmall}</small>
+              </span>
+              <span className={`lw-tog${view.guestAllowed ? ' on' : ''}`} aria-hidden="true" />
+            </button>
           </span>
-        </button>
+          <button
+            className="lw-qr-x"
+            autoFocus
+            aria-label={tw.closeQr}
+            onClick={() => setQr(false)}
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       {locked && (
