@@ -189,18 +189,17 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       kept: new Map(),
       engine: undefined as unknown as Engine,
     };
-    ch.engine = new Engine(
-      o.speech,
-      () => {
+    ch.engine = new Engine(o.speech, {
+      onText: () => {
         ch.wordsAt = now();
         textSoon(ch);
       },
-      () => stateAll(ch),
-      (ms, streams) => sent(ch, ms, streams),
+      onStatus: () => stateAll(ch),
+      onSent: (ms, streams) => sent(ch, ms, streams),
       now,
       warn,
       pool,
-    );
+    });
     byPerson.set(p.id, ch);
     byCode.set(code, ch);
     return ch;

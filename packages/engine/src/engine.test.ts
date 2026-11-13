@@ -22,6 +22,7 @@ import {
   STALL_PAUSE_MS,
   STREAM_MAX_MS,
   StreamPool,
+  type SonioxOptions,
   type SpeechConnect,
   type SpeechEvents,
   type Token,
@@ -70,7 +71,13 @@ function engine(
 ) {
   const fake = fakeService();
   const status = vi.fn();
-  const e = new Engine(fake.connect, () => {}, status, o.sent, Date.now, o.warn, o.pool ?? null);
+  const e = new Engine(fake.connect, {
+    onText: () => {},
+    onStatus: status,
+    onSent: o.sent,
+    warn: o.warn,
+    pool: o.pool ?? null,
+  });
   return { e, fake, status };
 }
 
@@ -288,6 +295,53 @@ describe('the engine', () => {
   });
 });
 
+describe('what the wedding needs too', () => {
+  it('the languages at the start; each finished line with when its audio was recorded; lines kept', () => {
+    const fake = fakeService();
+    const lines: [string, string, number, number][] = [];
+    const e = new Engine(fake.connect, {
+      onText: () => {},
+      onStatus: () => {},
+      langs: ['pl', 'en'],
+      linesKept: 2,
+      onLine: (target, line, n, at) => lines.push([target, line, n, at]),
+    });
+    e.audio(chunk(), 1_000);
+    expect([...fake.streams.keys()]).toEqual(['pl', 'en']);
+    const pl = fake.streams.get('pl')!.events;
+    for (const w of ['One.', 'Two.', 'Three.']) {
+      pl.tokens([tok(` ${w}`, 'translation'), tok('<end>', 'none')]);
+    }
+    expect(lines.filter((l) => l[0] === 'pl')).toEqual([
+      ['pl', 'One.', 0, 1_000],
+      ['pl', 'Two.', 1, 1_000],
+      ['pl', 'Three.', 2, 1_000],
+    ]);
+    expect(e.text('pl').lines).toEqual(['Two.', 'Three.']);
+    // the server's end: what was coming in is finished (and reported)
+    pl.tokens([tok(' Four', 'translation')]);
+    e.close();
+    expect(lines.at(-1)).toEqual(['pl', 'Four', 3, 1_000]);
+  });
+
+  it('behind while kept audio waits; drain sends it, then ends the streams and says so', () => {
+    vi.useFakeTimers();
+    const { e, fake, status } = engine();
+    e.audio(chunk());
+    fake.streams.get(HEARD)!.events.closed('500 something broke');
+    for (let i = 0; i < 12; i++) e.audio(chunk());
+    expect(e.behind).toBe(true);
+    expect(status).toHaveBeenCalled();
+    const done = vi.fn();
+    e.drain(done);
+    expect(done).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(5_001 + 2_000);
+    expect(done).toHaveBeenCalledOnce();
+    expect(e.behind).toBe(false);
+    expect([...fake.streams.values()].every((s) => s.ended)).toBe(true);
+  });
+});
+
 describe('the shared pool of streams', () => {
   it('opens nothing without room, says so after a while, opens when room comes back', () => {
     vi.useFakeTimers();
@@ -385,7 +439,7 @@ describe('the watchdog', () => {
 
 describe('Soniox', () => {
   /** A WebSocket server that reads the first (masked) frame and closes. */
-  async function firstMessage(target: string) {
+  async function firstMessage(target: string, extra: Partial<SonioxOptions> = {}) {
     const seen: { auth?: string; first?: Record<string, unknown> } = {};
     const srv = createServer();
     srv.on('upgrade', (req, socket) => {
@@ -420,10 +474,13 @@ describe('Soniox', () => {
     const { port } = srv.address() as AddressInfo;
     try {
       await new Promise<void>((ok) => {
-        sonioxConnect('the-key', { topic: TOPIC, url: `ws://127.0.0.1:${port}` })(target, {
-          tokens: () => {},
-          closed: () => ok(),
-        });
+        sonioxConnect('the-key', { topic: TOPIC, url: `ws://127.0.0.1:${port}`, ...extra })(
+          target,
+          {
+            tokens: () => {},
+            closed: () => ok(),
+          },
+        );
       });
     } finally {
       srv.close();
@@ -440,6 +497,17 @@ describe('Soniox', () => {
       context: { general: TOPIC },
     });
     expect(seen.first).not.toHaveProperty('api_key');
+  });
+
+  it('names to spell right and the likely languages, when given (the wedding)', async () => {
+    const seen = await firstMessage('pl', { terms: () => ['Anna', 'Ben'], hints: ['pl', 'es'] });
+    expect(seen.first).toMatchObject({
+      language_hints: ['pl', 'es'],
+      context: { general: TOPIC, terms: ['Anna', 'Ben'] },
+    });
+    const plain = await firstMessage('pl');
+    expect(plain.first).not.toHaveProperty('language_hints');
+    expect(plain.first!.context).not.toHaveProperty('terms');
   });
 
   it('no translation: a stream without one', async () => {

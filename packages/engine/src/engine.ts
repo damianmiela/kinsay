@@ -207,7 +207,13 @@ export class LineBuilder {
   /** Called with each finished line and its number. */
   onLine?: (line: string, n: number) => void;
 
-  constructor(private readonly now: () => number = Date.now) {}
+  constructor(
+    private readonly now: () => number = Date.now,
+    /** Finished lines kept (a page that comes gets them: its history). */
+    private readonly kept = LINES_KEPT,
+    /** `view()`'s default: the whole preview (the wedding's host), or only its settled words. */
+    private readonly fullPreview = false,
+  ) {}
 
   get preview(): string {
     return this.rawPreview;
@@ -281,7 +287,7 @@ export class LineBuilder {
     if (!text) return;
     this.lines.push(text);
     this.count++;
-    if (this.lines.length > LINES_KEPT) this.lines.splice(0, this.lines.length - LINES_KEPT);
+    if (this.lines.length > this.kept) this.lines.splice(0, this.lines.length - this.kept);
     this.onLine?.(text, this.count - 1);
   }
 
@@ -293,7 +299,7 @@ export class LineBuilder {
   }
 
   /** The last `n` finished lines and the line coming in (readers get only settled preview words). */
-  view(n = LINES_SENT, preview = false): CaptionText {
+  view(n = LINES_SENT, preview = this.fullPreview): CaptionText {
     const lines = this.lines.slice(-n);
     return {
       lines,
@@ -341,11 +347,42 @@ export function applyTokens(
   return spoken;
 }
 
+/** What an app gives its engine (everything but the two callbacks has a default). */
+export interface EngineOptions {
+  /** Some text changed (the caller sends it out, throttled). */
+  onText: () => void;
+  /** The service's state changed (or `behind`). */
+  onStatus: () => void;
+  /** Audio sent: `ms` to each of `streams` streams (Translate's credits). */
+  onSent?: (ms: number, streams: number) => void;
+  /**
+   * Each finished line: its text (HEARD or a language), its number, and when its audio was
+   * recorded (later than now after a break; the wedding's transcripts).
+   */
+  onLine?: (target: Target, line: string, n: number, recordedAt: number) => void;
+  now?: () => number;
+  /** Problems worth one line in the server's log. */
+  warn?: (message: string) => void;
+  /** The streams this engine may hold (null: no limit, the tests). */
+  pool?: StreamPool | null;
+  /** The languages at the start (default: HEARD alone; the wedding: its five). */
+  langs?: readonly Target[];
+  /** Finished lines kept per text (default LINES_KEPT). */
+  linesKept?: number;
+  /** Audio kept while it can't go to the service (default BACKLOG_MAX_MS). */
+  backlogMaxMs?: number;
+  /** `error` while no stream can open, the service full (default SERVICE_FULL). */
+  fullError?: string;
+  /** The texts' `view()` gives the whole preview by default (the wedding's host). */
+  fullPreview?: boolean;
+}
+
 /**
  * One session's captions: a stream per language read (the first also gives what was heard; a
  * session nobody reads a translation of has one stream without translation), opened with the
  * first audio and ended after IDLE_MS without any. Audio that can't go at once is kept and caught
- * up at twice real time. `onSent` counts each stream's audio for the credits.
+ * up at twice real time. `onSent` counts each stream's audio for the credits; `onLine` gets every
+ * finished line with when it was said.
  */
 export class Engine {
   readonly heard: LineBuilder;
@@ -375,28 +412,57 @@ export class Engine {
   private held = new Map<SpeechStream, () => void>();
   private fullSince = 0;
   private stallRestartAt = -Infinity;
+  /** Catching up kept audio (more than a second behind). */
+  behind = false;
+  /** When the audio just sent was recorded: the time of the lines it finishes. */
+  private audioAt = 0;
+  /** drain(): what to do once the kept audio is sent. */
+  private drained: (() => void) | undefined;
+  private readonly onText: () => void;
+  private readonly onStatus: () => void;
+  private readonly onSent: (ms: number, streams: number) => void;
+  private readonly now: () => number;
+  private readonly warn: (message: string) => void;
+  private readonly pool: StreamPool | null;
+  private readonly kept: number;
+  private readonly backlogMax: number;
+  private readonly fullError: string;
 
   constructor(
     private readonly connect: SpeechConnect | null,
-    /** Some text changed (the caller sends it out, throttled). */
-    private readonly onText: () => void,
-    /** The service's state changed. */
-    private readonly onStatus: () => void,
-    /** Audio sent: `ms` to each of `streams` streams (the credits). */
-    private readonly onSent: (ms: number, streams: number) => void = () => {},
-    private readonly now: () => number = Date.now,
-    private readonly warn: (message: string) => void = () => {},
-    private readonly pool: StreamPool | null = null,
+    private readonly options: EngineOptions,
   ) {
+    this.onText = options.onText;
+    this.onStatus = options.onStatus;
+    this.onSent = options.onSent ?? (() => {});
+    this.now = options.now ?? Date.now;
+    this.warn = options.warn ?? (() => {});
+    this.pool = options.pool ?? null;
+    this.kept = options.linesKept ?? LINES_KEPT;
+    this.backlogMax = options.backlogMaxMs ?? BACKLOG_MAX_MS;
+    this.fullError = options.fullError ?? SERVICE_FULL;
     this.service = connect ? 'idle' : 'off';
-    this.heard = new LineBuilder(now);
-    this.heard.onLine = (_, n) => {
-      if (this.speaking) this.heardLangs.set(n, this.speaking);
-      for (const k of this.heardLangs.keys()) {
-        if (k > n - LINES_KEPT) break;
-        this.heardLangs.delete(k);
+    this.heard = this.builder(HEARD);
+    if (options.langs?.length) {
+      this.wanted = [...options.langs];
+      for (const t of this.wanted) this.text(t);
+    }
+  }
+
+  /** A text's builder, its finished lines reported with when they were said. */
+  private builder(target: Target): LineBuilder {
+    const b = new LineBuilder(this.now, this.kept, this.options.fullPreview);
+    b.onLine = (line, n) => {
+      if (target === HEARD) {
+        if (this.speaking) this.heardLangs.set(n, this.speaking);
+        for (const k of this.heardLangs.keys()) {
+          if (k > n - this.kept) break;
+          this.heardLangs.delete(k);
+        }
       }
+      this.options.onLine?.(target, line, n, this.audioAt || this.now());
     };
+    return b;
   }
 
   /** The texts' builder for a language (HEARD: what was heard). */
@@ -404,7 +470,7 @@ export class Engine {
     if (target === HEARD) return this.heard;
     let t = this.texts.get(target);
     if (!t) {
-      t = new LineBuilder(this.now);
+      t = this.builder(target);
       this.texts.set(target, t);
     }
     return t;
@@ -413,9 +479,9 @@ export class Engine {
   /** What a page reading `target` gets (`all`: every kept line, a page that just came). */
   update(target: Target | null, all = false, also?: Target | null): CaptionsUpdate {
     const n = all ? Infinity : LINES_SENT;
-    const heard = this.heard.view(n);
+    const heard = this.heard.view(n, false);
     const texts: CaptionsUpdate['texts'] = { [HEARD]: heard };
-    for (const t of [target, also]) if (t && t !== HEARD) texts[t] = this.text(t).view(n);
+    for (const t of [target, also]) if (t && t !== HEARD) texts[t] = this.text(t).view(n, false);
     const heardLangs: Record<number, string> = {};
     for (let i = heard.first; i < heard.first + heard.lines.length; i++) {
       const l = this.heardLangs.get(i);
@@ -424,12 +490,15 @@ export class Engine {
     return { texts, heardLangs, ...(this.speaking ? { speaking: this.speaking } : {}) };
   }
 
-  /** Audio from the host's page (16 kHz 16-bit mono PCM), recorded at `recordedAt`. */
+  /**
+   * Audio (16 kHz 16-bit mono PCM), recorded at `recordedAt` (earlier when the page kept it during a
+   * break in its internet).
+   */
   audio(chunk: Uint8Array, recordedAt = this.now()): void {
     if (!this.connect || this.closed) return;
     this.backlog.push({ chunk: chunk.slice(), at: recordedAt });
     this.backlogMs += chunk.length / BYTES_PER_MS;
-    const keep = this.fullSince ? FULL_KEEP_MS : BACKLOG_MAX_MS;
+    const keep = this.fullSince ? FULL_KEEP_MS : this.backlogMax;
     while (this.backlogMs > keep && this.backlog.length > 1) {
       this.backlogMs -= this.backlog.shift()!.chunk.length / BYTES_PER_MS;
     }
@@ -485,6 +554,7 @@ export class Engine {
       this.backlogMs -= ms;
       this.budget -= ms;
       this.sentMs += ms;
+      this.audioAt = next.at;
       for (const s of this.streams.values()) s.send(next.chunk);
       this.onSent(ms, this.streams.size);
       sent = true;
@@ -493,6 +563,24 @@ export class Engine {
       this.armIdle();
       if (this.service !== 'live') this.setService('live');
     }
+    const behind = this.backlogMs > 1_000;
+    if (behind !== this.behind) {
+      this.behind = behind;
+      this.onStatus();
+    }
+    // drain(): the kept audio is sent, the streams end (their last words still come)
+    if (this.drained && !this.backlog.length) {
+      const done = this.drained;
+      this.drained = undefined;
+      this.endStreams();
+      done();
+    }
+  }
+
+  /** Sends what is kept, then ends the streams and calls `done` (the wedding's Stop). */
+  drain(done: () => void): void {
+    this.drained = done;
+    this.pump();
   }
 
   private pumpLater(ms: number) {
@@ -502,7 +590,7 @@ export class Engine {
   private open() {
     if (this.pool && this.pool.free < this.wanted.length) return this.full();
     this.fullSince = 0;
-    if (this.error === SERVICE_FULL) this.setService('idle');
+    if (this.error === this.fullError) this.setService('idle');
     this.openedAt = this.now();
     this.sentMs = 0;
     this.wanted.forEach((t, i) => this.openStream(t, i === 0));
@@ -516,8 +604,8 @@ export class Engine {
       return;
     }
     this.fullSince ||= now;
-    if (now - this.fullSince >= FULL_WARN_MS && this.error !== SERVICE_FULL) {
-      this.setService('error', SERVICE_FULL);
+    if (now - this.fullSince >= FULL_WARN_MS && this.error !== this.fullError) {
+      this.setService('error', this.fullError);
       this.warn('captions: no free stream to the speech service (its limit is reached)');
     }
   }
@@ -743,25 +831,45 @@ export class Engine {
     this.text(target).clear();
   }
 
-  /** The session's end: everything goes at once, the late words dropped. */
+  /** Every text empty (the wedding host's "clear"). */
+  clear(): void {
+    for (const t of [...this.texts.values(), this.heard]) t.clear();
+    this.heardLangs.clear();
+    this.speaking = undefined;
+    this.onText();
+  }
+
+  /**
+   * The session's end: everything goes at once, the kept audio, the streams (their last words
+   * dropped), every line. The pause before the next try stays on purpose: a failing service is asked
+   * at most once a minute, whoever starts (the wedding's audit 20).
+   */
   discard(): void {
     this.generation++;
     this.backlog = [];
     this.backlogMs = 0;
+    this.drained = undefined;
     clearTimeout(this.pumpTimer);
     this.pumpTimer = undefined;
+    this.behind = false;
     this.endStreams();
     if (this.service === 'error') this.setService('idle');
-    for (const t of [...this.texts.values(), this.heard]) t.clear();
-    this.heardLangs.clear();
+    this.clear();
   }
 
+  /** The server's end: the streams close, what was coming in is finished (`onLine` gets it). */
   close(): void {
-    this.discard();
+    // (late words after this start no timer)
     this.closed = true;
     clearTimeout(this.idleTimer);
     clearTimeout(this.settleTimer);
     clearTimeout(this.pumpTimer);
+    // (the map emptied first, as in endStreams(): a connection still opening reports its end at
+    // once, and that is no failure of the service)
+    const streams = [...this.streams.values()];
+    this.streams.clear();
+    for (const s of streams) this.ending(s);
+    for (const t of [...this.texts.values(), this.heard]) t.finish();
   }
 }
 
