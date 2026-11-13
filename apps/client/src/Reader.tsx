@@ -3,10 +3,10 @@
 // the host).
 import { useState } from 'react';
 import { ControlBar, GearCb, LangButton, Strip } from './Bar';
-import { Logo, Sheet } from './bits';
+import { Logo } from './bits';
 import { useStored } from './store';
 import { CaptionsView } from './CaptionsView';
-import { LangPicker } from './LangPicker';
+import { LangSheet } from './LangPicker';
 import { SettingsSheet, SwitchRow, TextSizeRow } from './Settings';
 import { t, tw } from './texts';
 import { ask, useSession } from './useSession';
@@ -126,10 +126,12 @@ function Reading({ code, onBad }: { code: string; onBad: () => void }) {
         waiting={view.running ? t.waitingReader : t.waitingHost(view.hostName)}
       />
       {sheet === 'lang' && (
-        <Sheet label={t.translateIntoSet} onClose={() => setSheet(null)}>
-          <h2 className="t">{t.translateIntoSet}</h2>
-          <LangPicker value={view.lang} onChange={(l) => void changeLang(l)} startOpen />
-        </Sheet>
+        <LangSheet
+          title={t.translateIntoSet}
+          value={view.lang}
+          onPick={(l) => void changeLang(l)}
+          onClose={() => setSheet(null)}
+        />
       )}
       {sheet === 'gear' && (
         <SettingsSheet

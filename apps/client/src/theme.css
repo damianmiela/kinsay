@@ -704,3 +704,87 @@ a.btn {
   letter-spacing: 0.14em;
   text-align: center;
 }
+
+/* ---------- step 2: the language list, the microphone's sheets ---------- */
+.lang-row .val {
+  margin-left: auto;
+  color: var(--text-soft);
+  font-size: 16px;
+}
+.lang-row .tick {
+  color: var(--accent);
+  font-weight: 700;
+}
+.lang-row[aria-selected='true'] {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+.lang-row .what small {
+  font-weight: 400;
+}
+.lang-group:not(:first-child) .lang-row {
+  border-top: 0;
+}
+.letter {
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+  font-size: 16px;
+  font-weight: 700;
+}
+.lang-group:first-child .letter {
+  border-top: 0;
+}
+.sheet-head.start {
+  justify-content: flex-start;
+  gap: 12px;
+}
+.lang-search {
+  position: sticky;
+  top: -20px;
+  z-index: 1;
+  flex: none;
+}
+.permit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 0;
+  text-align: center;
+}
+.permit h2.t {
+  margin: 0;
+}
+.permit .btn {
+  width: 100%;
+}
+.permit-pic {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+.permit-pic.warn {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.permit .steps {
+  align-self: stretch;
+  text-align: left;
+}
+.steps .k {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-weight: 700;
+}
+/* (Other languages keeps its height while typing: the field never jumps) */
+.sheet:has(.lang-search) {
+  height: 92dvh;
+}

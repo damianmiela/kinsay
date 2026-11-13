@@ -80,6 +80,8 @@ export interface Mic {
   /** Starts sending: 'started' once the input runs, 'failed' (it says why), or 'cancelled' (a Stop came first). */
   startSending: () => Promise<StartResult>;
   stopSending: () => void;
+  /** The last start failed because the browser (or the person) blocked the microphone. */
+  wasBlocked: () => boolean;
 }
 
 /** The input's level for the meter (see Mic.levels). */
@@ -216,6 +218,7 @@ export function useMic({ voice = false } = {}): Mic {
   }, []);
   const [waiting, setWaiting] = useState(0);
   const close = useRef<(() => void) | null>(null);
+  const blocked = useRef(false);
   const starting = useRef<Promise<boolean> | null>(null);
   const sendingNow = useRef(false);
   const [asks] = useState(() => new SendAsks());
@@ -249,6 +252,7 @@ export function useMic({ voice = false } = {}): Mic {
 
   async function start(): Promise<boolean> {
     setProblem(null);
+    blocked.current = false;
     let stream: MediaStream | undefined;
     let ctx: AudioContext | undefined;
     try {
@@ -386,6 +390,7 @@ export function useMic({ voice = false } = {}): Mic {
         save(DEVICE_KEY, '');
         setProblem(t.micGone);
       } else {
+        blocked.current = err.name === 'NotAllowedError';
         setProblem(
           err.name === 'NotAllowedError' ? t.micDenied : t.micFailed(err.message || err.name),
         );
@@ -423,6 +428,7 @@ export function useMic({ voice = false } = {}): Mic {
         return 'started';
       });
     },
+    wasBlocked: () => blocked.current,
     stopSending: () => {
       const ask = asks.stop();
       close.current?.();

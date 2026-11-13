@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { langList, langName } from './langs';
+import { describe, expect, it, vi } from 'vitest';
+import { langList, langName, rememberLang, usedBefore } from './langs';
 import { duration, stopText } from './texts';
 
 describe('language names', () => {
@@ -15,6 +15,22 @@ describe('language names', () => {
     expect(langList('pl')).toContain('pl');
     expect(langList('polish')).toEqual(['pl']);
     expect(langList('zzzz')).toEqual([]);
+  });
+  it('a search matches the start of a word of either name; the whole list A to Z', () => {
+    expect(langList('hu')).toEqual(['hu']);
+    expect(langList('ungar')).toEqual([]);
+    const all = langList('').map((c) => langName(c).here);
+    expect(all).toEqual([...all].sort((a, b) => a.localeCompare(b, 'en')));
+  });
+  it('used before: at most two, never one of the five', () => {
+    const kept = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => kept.get(k) ?? null,
+      setItem: (k: string, v: string) => kept.set(k, v),
+    });
+    for (const c of ['tl', 'pl', 'fr', 'hu', 'it']) rememberLang(c);
+    expect(usedBefore()).toEqual(['it', 'hu']);
+    vi.unstubAllGlobals();
   });
 });
 

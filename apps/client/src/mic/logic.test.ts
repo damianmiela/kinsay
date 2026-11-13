@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { AudioOutbox, CHUNK_SAMPLES, makeResampler, peak, randomId, SendAsks } from './logic';
+import {
+  AudioOutbox,
+  CHUNK_SAMPLES,
+  makeResampler,
+  micHelp,
+  peak,
+  randomId,
+  SendAsks,
+} from './logic';
 
 describe('makeResampler', () => {
   it('48 kHz → 16 kHz: every 3 samples become one, in 100 ms chunks', () => {
@@ -100,5 +108,28 @@ describe('randomId (2026-10-10)', () => {
     const a = randomId();
     expect(a).toMatch(/^[0-9a-f]{32}$/);
     expect(randomId()).not.toBe(a);
+  });
+});
+
+describe('micHelp', () => {
+  it('the steps for each browser', () => {
+    const android =
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+    const iphone =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
+    const mac =
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15';
+    const win =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0';
+    expect(micHelp(android)).toBe('chromeAndroid');
+    expect(micHelp(android.replace('Chrome/', 'SamsungBrowser/26.0 Chrome/'))).toBe('other');
+    expect(micHelp(iphone)).toBe('safariIos');
+    expect(micHelp(iphone.replace('Version/18.1', 'CriOS/131.0'))).toBe('other');
+    expect(micHelp(mac)).toBe('safari');
+    expect(micHelp(mac, true)).toBe('safariIos'); // an iPad
+    expect(micHelp(win)).toBe('chrome');
+    expect(micHelp('Mozilla/5.0 (Windows NT 10.0; rv:133.0) Gecko/20100101 Firefox/133.0')).toBe(
+      'firefox',
+    );
   });
 });

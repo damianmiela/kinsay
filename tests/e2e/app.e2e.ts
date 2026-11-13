@@ -61,6 +61,83 @@ test('face to face, two-way: each half in its person’s language, the bar betwe
   await expect(page.locator('.cap-line').first()).toBeVisible();
 });
 
+test('the language list: no keyboard first; Other languages has the search and A to Z', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  const { page } = await signedInPhone(browser, baseURL!, admin);
+  await page.locator('.picker-field').click();
+  const rows = page.locator('.sheet .lang-row');
+  // no translation, then the five; nothing to type yet
+  await expect(rows).toHaveCount(6);
+  await expect(rows.nth(0)).toContainText('No translation');
+  await expect(rows.nth(1)).toContainText('Polski');
+  await expect(page.locator('.sheet input')).toHaveCount(0);
+  await page.locator('.sheet').getByRole('button', { name: 'Other languages' }).click();
+  // the whole list under letters, the search on top
+  await expect(page.locator('.sheet .letter').first()).toHaveText('A');
+  expect(await rows.count()).toBe(60);
+  await page.locator('.sheet .lang-search').fill('hu');
+  await expect(rows).toHaveCount(1);
+  await rows.first().click();
+  await expect(page.locator('.picker-field')).toContainText('Magyar');
+  // used before: on the short list from now on
+  await page.locator('.picker-field').click();
+  await expect(page.locator('.sheet .lang-row', { hasText: 'Magyar' })).toContainText(
+    'used before',
+  );
+  expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
+});
+
+test('the microphone: asked for with a picture the first time; blocked, the steps, then on by itself', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  const { ctx } = await signedInPhone(browser, baseURL!, admin);
+  // (the browser's answer played by the page: "prompt" (it would ask), "denied", "granted")
+  const phone = async (state: string) => {
+    const page = await ctx.newPage();
+    await page.addInitScript((first) => {
+      const w = window as unknown as { mic: string };
+      w.mic = first;
+      const gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = (c) =>
+        w.mic === 'denied' ? Promise.reject(new DOMException('no', 'NotAllowedError')) : gum(c);
+      const query = navigator.permissions.query.bind(navigator.permissions);
+      navigator.permissions.query = (d) =>
+        d.name === 'microphone'
+          ? Promise.resolve({ state: w.mic, onchange: null } as never)
+          : query(d);
+    }, state);
+    await page.goto('/');
+    return page;
+  };
+  const first = await phone('prompt');
+  await first.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(first.getByText('Translate needs the microphone')).toBeVisible();
+  await first.getByRole('button', { name: 'Allow the microphone' }).click();
+  await expect(first.locator('.cap-line').first()).toContainText('Sentence');
+  await first.getByRole('button', { name: 'Stop' }).click();
+  // asked once: the next Start goes straight on
+  await first.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(first.getByRole('button', { name: 'Stop' })).toBeVisible();
+  await expect(first.getByText('Translate needs the microphone')).toHaveCount(0);
+  await first.getByRole('button', { name: 'Stop' }).click();
+  await first.close();
+
+  const blocked = await phone('denied');
+  await blocked.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(blocked.getByText('The microphone is blocked')).toBeVisible();
+  await expect(blocked.locator('.steps li')).toHaveCount(2); // (this browser's: Chrome's)
+  await expect(blocked.locator('.steps .k').first()).toHaveText('Microphone');
+  await blocked.evaluate(() => ((window as unknown as { mic: string }).mic = 'granted'));
+  await expect(blocked.getByText('The microphone is blocked')).toHaveCount(0);
+  await expect(blocked.locator('.cap-line').first()).toContainText('Sentence');
+  await blocked.getByRole('button', { name: 'Stop' }).click();
+});
+
 test('no translation: what is heard; the language button says Original and picks one', async ({
   browser,
   baseURL,

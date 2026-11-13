@@ -4,8 +4,14 @@ import { PASSWORD } from './playwright.config';
 
 export const PHONE = { viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true };
 
-/** The admin, as a signed-in API client (Playwright's request context keeps the cookie). */
-export async function adminApi(browser: Browser, baseURL: string) {
+/**
+ * The admin, as a signed-in API client (Playwright's request context keeps the cookie). Signed in
+ * once for all the tests: the login allows 10 an address in 15 minutes.
+ */
+let admin: ReturnType<typeof login> | undefined;
+export const adminApi = (browser: Browser, baseURL: string) => (admin ??= login(browser, baseURL));
+
+async function login(browser: Browser, baseURL: string) {
   const ctx = await browser.newContext({ baseURL });
   const r = await ctx.request.post('/admin/login', {
     data: { password: PASSWORD },
@@ -47,17 +53,19 @@ export async function signedInPhone(
   return { ctx, page, id, name };
 }
 
-/** Picks a language in a searchable field (the `nth` on the page; the first matching one). */
+/** Picks a language with the field (the `nth` on the page), in the sheet it opens. */
 export async function pickLang(page: Page, search: string, name: string, nth = 0) {
   await page.locator('.picker-field').nth(nth).click();
-  await page.locator('.picker-drop input').fill(search);
-  await page.locator('.picker-list button', { hasText: name }).first().click();
+  await pickInSheet(page, search, name);
 }
 
-/** Picks a language in a sheet's list (it opens with the list open). */
+/** Picks a language in the open list: from the short list, else through "Other languages". */
 export async function pickInSheet(page: Page, search: string, name: string) {
-  await page.locator('.sheet .picker-drop input').fill(search);
-  await page.locator('.sheet .picker-list button', { hasText: name }).first().click();
+  const short = page.locator('.sheet .lang-row', { hasText: name });
+  if (await short.count()) return short.first().click();
+  await page.locator('.sheet').getByRole('button', { name: 'Other languages' }).click();
+  await page.locator('.sheet .lang-search').fill(search);
+  await page.locator('.sheet .lang-row', { hasText: name }).first().click();
 }
 
 /** No text on the page smaller than 16 px (older people read these pages). */

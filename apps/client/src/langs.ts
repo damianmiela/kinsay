@@ -1,5 +1,5 @@
 // The speech service's languages for people: each in its own name and in the page's language
-// (the browser's Intl.DisplayNames: no list of names to keep), the last used first.
+// (the browser's Intl.DisplayNames: no list of names to keep).
 import { SPEECH_LANGS } from '@translate/shared';
 import { t } from './texts';
 import { ui } from './ui';
@@ -44,18 +44,33 @@ export function rememberLang(code: string) {
   }
 }
 
-/** Every language, the last used first, then by the page's name; `query` filters (any of its names). */
+/** The list's own five, first and in this order (mockups batch 3). */
+export const MAIN_LANGS = ['pl', 'en', 'de', 'es', 'ca'] as const;
+
+/** At most two languages used before that aren't among the five. */
+export const usedBefore = (): string[] =>
+  recentLangs()
+    .filter((c) => !MAIN_LANGS.includes(c as never))
+    .slice(0, 2);
+
+/**
+ * Every language A to Z by the page's name for it; `query` keeps those where a word of either name
+ * starts with it ("hu": Magyar, Hungarian), or the code itself.
+ */
 export function langList(query: string): string[] {
   const q = query.trim().toLocaleLowerCase();
-  const recent = recentLangs();
-  const all = [...SPEECH_LANGS].sort((a, b) => langName(a).here.localeCompare(langName(b).here));
-  const ordered = [...recent, ...all.filter((c) => !recent.includes(c))];
-  if (!q) return ordered;
-  return ordered.filter((c) => {
+  const all = [...SPEECH_LANGS].sort((a, b) =>
+    langName(a).here.localeCompare(langName(b).here, ui),
+  );
+  if (!q) return all;
+  const starts = (name: string) =>
+    name
+      .toLocaleLowerCase()
+      .split(/[\s()-]+/)
+      .some((w) => w.startsWith(q)) || name.toLocaleLowerCase().startsWith(q);
+  return all.filter((c) => {
     const n = langName(c);
-    return (
-      n.own.toLocaleLowerCase().includes(q) || n.here.toLocaleLowerCase().includes(q) || c === q
-    );
+    return starts(n.own) || starts(n.here) || c === q;
   });
 }
 

@@ -149,3 +149,21 @@ export class AudioOutbox {
     }
   }
 }
+
+/** Which steps unblock the microphone in this browser (the blocked sheet's pictures). */
+export type MicHelp = 'chromeAndroid' | 'chrome' | 'safariIos' | 'safari' | 'firefox' | 'other';
+
+/** `touch`: an iPad says it is a Mac; it has touch points. */
+export function micHelp(ua: string, touch = false): MicHelp {
+  const apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && touch);
+  if (apple) return /CriOS|FxiOS|EdgiOS/.test(ua) ? 'other' : 'safariIos';
+  if (/Android/.test(ua)) {
+    return /Chrome\//.test(ua) && !/SamsungBrowser|Firefox|OPR|EdgA/.test(ua)
+      ? 'chromeAndroid'
+      : 'other';
+  }
+  if (/Firefox\//.test(ua)) return 'firefox';
+  if (/Chrome\/|Edg\//.test(ua)) return 'chrome';
+  if (/Macintosh/.test(ua) && /Safari\//.test(ua)) return 'safari';
+  return 'other';
+}

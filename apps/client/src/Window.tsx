@@ -409,6 +409,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
             {/* (the language and Start side by side: the window's default height holds both rows) */}
             <div className="lw-go-row">
               <LangPicker
+                inline
                 value={panel ? lang : shown}
                 onChange={(l) => (panel ? setLang(l) : void changeLang(l))}
                 startOpen={picking && !panel}

@@ -20,8 +20,10 @@ import {
 } from './Bar';
 import { Logo, Sheet } from './bits';
 import { CaptionsView } from './CaptionsView';
-import { LangPicker } from './LangPicker';
+import { LangPicker, LangSheet } from './LangPicker';
 import { barName } from './langs';
+import { MicAsk, MicBlocked } from './MicSheets';
+import { markMicAsked, micAskedBefore, micPermission } from './mic/permission';
 import { useMic } from './mic/useMic';
 import { Qr } from './Qr';
 import { SettingsSheet, SwitchRow, TextSizeRow } from './Settings';
@@ -31,7 +33,8 @@ import { ui } from './ui';
 import { canStayAwake } from './useAwake';
 import { ask, useSession } from './useSession';
 
-type SheetName = null | 'gear' | 'invite' | 'lang' | 'langs' | 'top' | 'bottom';
+type SheetName =
+  null | 'gear' | 'invite' | 'lang' | 'langs' | 'top' | 'bottom' | 'allow' | 'blocked';
 
 /** While nothing has been said: a microphone whose rings say "it hears you", in no language. */
 const Hears = () => (
@@ -58,6 +61,8 @@ export function HostPage() {
   const [here, setHere] = useState(false);
   // (the microphone is opening, perhaps asking: "the microphone is off" would be wrong meanwhile)
   const [opening, setOpening] = useState(false);
+  // (what the blocked sheet carries on with once the microphone is allowed)
+  const [retry, setRetry] = useState<'start' | 'resume'>('start');
 
   if (!view) {
     return (
@@ -83,18 +88,33 @@ export function HostPage() {
     const err = await ask('session:lang', next);
     if (err) setProblem(err);
   };
+  const blockedSheet = (from: 'start' | 'resume') => {
+    setRetry(from);
+    setSheet('blocked');
+  };
   const start = async () => {
-    if (face && !top) return setSheet('top');
+    // (the microphone asked for with a picture the first time, before the browser asks)
+    const p = await micPermission();
+    if (p === 'denied') return blockedSheet('start');
+    if (p !== 'granted' && !micAskedBefore()) return setSheet('allow');
+    await go();
+  };
+  const go = async () => {
+    setSheet(null);
     setProblem(null);
     const err = await ask('session:start', langs());
     if (err) return setProblem(err);
+    const wasHere = here;
     setHere(true);
     setOpening(true);
+    markMicAsked();
     const r = await mic.startSending();
     setOpening(false);
     if (r === 'failed') {
       await ask('session:stop');
-      setProblem('mic');
+      if (!mic.wasBlocked()) return setProblem('mic');
+      setHere(wasHere);
+      blockedSheet('start');
     }
   };
   const stop = async () => {
@@ -106,10 +126,13 @@ export function HostPage() {
     setOpening(true);
     const r = await mic.startSending();
     setOpening(false);
-    if (r === 'failed') setProblem('mic');
+    if (r === 'failed') {
+      if (mic.wasBlocked()) blockedSheet('resume');
+      else setProblem('mic');
+    }
   };
   const pick = (which: 'lang' | 'top' | 'bottom') => (l: string | null) => {
-    setSheet(face && which !== 'lang' ? 'langs' : null);
+    setSheet(face && which !== 'lang' && (view.running || here) ? 'langs' : null);
     if (which === 'lang') {
       setLang(l);
       void send(langs(false, top, bottom, l));
@@ -166,16 +189,24 @@ export function HostPage() {
         />
       )}
       {(sheet === 'lang' || sheet === 'top' || sheet === 'bottom') && (
-        <Sheet label={t.translateIntoSet} onClose={() => setSheet(face ? 'langs' : null)}>
-          <h2 className="t">
-            {sheet === 'top' ? t.topHalf : sheet === 'bottom' ? t.bottomHalf : t.translateIntoSet}
-          </h2>
-          <LangPicker
-            value={sheet === 'top' ? top : sheet === 'bottom' ? bottom : lang}
-            onChange={pick(sheet)}
-            startOpen
-          />
-        </Sheet>
+        <LangSheet
+          title={
+            sheet === 'top' ? t.topHalf : sheet === 'bottom' ? t.bottomHalf : t.translateIntoSet
+          }
+          value={sheet === 'top' ? top : sheet === 'bottom' ? bottom : lang}
+          onPick={pick(sheet)}
+          onClose={() => setSheet(face && (view.running || here) ? 'langs' : null)}
+        />
+      )}
+      {sheet === 'allow' && <MicAsk onAllow={() => void go()} onClose={() => setSheet(null)} />}
+      {sheet === 'blocked' && (
+        <MicBlocked
+          onAllowed={() => {
+            setSheet(null);
+            void (retry === 'resume' ? resumeMic() : go());
+          }}
+          onClose={() => setSheet(null)}
+        />
       )}
     </>
   );
@@ -218,11 +249,16 @@ export function HostPage() {
             <>
               <div>
                 <span className="lbl">{t.topHalf}</span>
-                <LangPicker value={top} onChange={setTop} mark="top" />
+                <LangPicker value={top} onChange={setTop} mark="top" title={t.topHalf} />
               </div>
               <div>
                 <span className="lbl">{t.bottomHalf}</span>
-                <LangPicker value={bottom} onChange={setBottom} mark="bottom" />
+                <LangPicker
+                  value={bottom}
+                  onChange={setBottom}
+                  mark="bottom"
+                  title={t.bottomHalf}
+                />
               </div>
             </>
           ) : (

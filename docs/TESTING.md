@@ -98,3 +98,14 @@ On a phone:
 - [ ] Stop: the words stay on screen, the first button says Start again; Start begins with an empty screen.
 - [ ] Turn the microphone off in the browser: the bar says "The microphone is off" with "Turn it on" (never for a moment while it is still opening).
 - [ ] A reader (the code from Invite): their name and a Live mark above the captions, the language and ⚙ in the bar, no Stop; the host's Stop takes the Live mark away.
+
+## 10. The redesign, step 2: the language list and the microphone (2026-11-13)
+
+On a phone:
+
+- [ ] Tap a language field: a list without the keyboard: No translation, Polski, English, Deutsch, Español, Català, then up to two languages used before ("used before"), then "Other languages".
+- [ ] Other languages: the search field with the keyboard and the whole list A to Z under letters; typing "hu" finds Magyar (Hungarian); the sheet keeps its height while typing; ‹ goes back.
+- [ ] The language button in the bar (while captions run) opens the same list; in face to face, each half's too.
+- [ ] Face to face with "No translation" in the top half: Start starts (it no longer asks again).
+- [ ] On a phone that has never used Translate (or a fresh private window): the first Start shows "Translate needs the microphone" with "Allow the microphone", and only then the browser's own question. The next Start goes straight on.
+- [ ] Block the microphone in the browser and tap Start: "The microphone is blocked" with this browser's steps (Chrome on Android, Safari on iPhone, Chrome on a computer…). Follow them: it carries on by itself (or with "Try again").
