@@ -63,9 +63,12 @@ export function SonioxLive() {
   // every 5 s while the page is open and in sight (nothing is asked otherwise)
   useEffect(() => {
     let stop = false;
+    let asking = false;
     const load = () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible' || asking) return;
+      asking = true;
       void api<Now>('/admin/api/soniox/now').then((r) => {
+        asking = false;
         if (!stop && r.ok) setNow(r);
       });
     };
@@ -178,7 +181,8 @@ export function SonioxLive() {
           </button>
           {org && (
             <span className="faint">
-              · the other {Math.max(0, limit - now.translate.share)} stay the wedding app’s
+              · the other {Math.max(0, limit - now.translate.share)} left for the wedding app (on
+              its day: 5 or less here)
             </span>
           )}
           {saved && <span className="small">{saved}</span>}

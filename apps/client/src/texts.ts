@@ -61,6 +61,7 @@ const t_en = {
   groupApp: 'App',
   micIsOff: 'The microphone is off',
   turnItOn: 'Turn it on',
+  guestCantRun: (n: string) => `${n}’s captions can’t run now.`,
   guestAllow: 'Their computer can caption the call too',
   guestAllowSmall: 'On your balance: one more language while it runs',
   guestRunsToo: 'Your guest’s computer captions the call too',

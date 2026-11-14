@@ -54,6 +54,7 @@ export const pl: Texts = {
     groupApp: 'Aplikacja',
     micIsOff: 'Mikrofon jest wyłączony',
     turnItOn: 'Włącz go',
+    guestCantRun: (n) => `Napisy: ${n} nie mogą teraz działać.`,
     guestAllow: 'Ich komputer też może tłumaczyć rozmowę',
     guestAllowSmall: 'Z twojego salda: jeszcze jeden język, póki działa',
     guestRunsToo: 'Komputer twojego gościa też tłumaczy rozmowę',

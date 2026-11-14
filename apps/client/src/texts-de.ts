@@ -57,6 +57,7 @@ export const de: Texts = {
     groupApp: 'App',
     micIsOff: 'Das Mikrofon ist aus',
     turnItOn: 'Einschalten',
+    guestCantRun: (n) => `Die Untertitel von ${n} können gerade nicht laufen.`,
     guestAllow: 'Ihr Computer kann den Anruf auch untertiteln',
     guestAllowSmall: 'Von deinem Guthaben: eine Sprache mehr, solange es läuft',
     guestRunsToo: 'Der Computer deines Gastes untertitelt den Anruf auch',

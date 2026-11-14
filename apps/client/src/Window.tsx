@@ -4,7 +4,13 @@
 // batch 2 part 7 (its sign-in: the person's own browser, the same digits on both). One language, as
 // every page here: the translation, or what is heard without one. Only the captions show; the
 // controls appear while the mouse is over it.
-import { useEffect, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { euros, HEARD, type CaptionText } from '@translate/shared';
 import { api } from './api';
 import { UiLangSelect } from './bits';
@@ -28,6 +34,19 @@ interface LiveShell {
   close(): void;
 }
 const shell = (window as { liveShell?: LiveShell }).liveShell;
+/** This page's own random token as a guest (a reconnected page takes its place back). */
+function guestToken(): string {
+  try {
+    const kept = sessionStorage.getItem('tr-guest-token');
+    if (kept) return kept;
+    const made = crypto.randomUUID();
+    sessionStorage.setItem('tr-guest-token', made);
+    return made;
+  } catch {
+    return (guestToken.made ??= crypto.randomUUID());
+  }
+}
+guestToken.made = undefined as string | undefined;
 /** No sound for this long after Start: the window says it is waiting. */
 const QUIET_MS = 8_000;
 const EMPTY: CaptionText = { lines: [], first: 0, live: '' };
@@ -175,6 +194,32 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   const [closing, setClosing] = useState(false);
   // (a page that came by the code, the host letting it caption its own side: it chose to only read)
   const [justRead, setJustRead] = useState(false);
+  // a guest's captions carry on after a break in her internet (audit 35, M2): she was a guest, her
+  // page dropped (not the server ending hers): back with the same token, she starts again by itself
+  const wasGuest = useRef(false);
+  const resumeGuest = useRef(false);
+  useEffect(() => {
+    if (view?.role === 'guest' && view.running) wasGuest.current = true;
+    else if (online && view?.role === 'reader' && !resumeGuest.current) wasGuest.current = false;
+  }, [view, online]);
+  useEffect(() => {
+    if (!online && wasGuest.current) resumeGuest.current = true;
+  }, [online]);
+  useEffect(() => {
+    if (!online || !resumeGuest.current || view?.role !== 'reader') return;
+    if (!view.guestAllowed || !view.running) return;
+    resumeGuest.current = false;
+    void ask('guest:start', { lang: lang ?? ui, token: guestToken() }).then((err) => {
+      if (err) setProblem(err);
+    });
+  }, [online, view, lang]);
+  // her captions ended (by the host, or a stop of the server's): her computer's sound stays
+  // here (audit 35, L1); the host's own window likewise when the server ended the session
+  useEffect(() => {
+    if (!view || !mic.sending || resumeGuest.current) return;
+    const runs = view.role === 'host' || view.role === 'guest';
+    if (!runs || !view.running) mic.stopSending();
+  }, [view, mic]);
   const { chooseSource } = mic;
   // another of the host's devices took the microphone: the window stops sending
   const elsewhere = !!view?.mic && !view.mic.here;
@@ -238,7 +283,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     setProblem(null);
     const err = await (host
       ? ask('session:start', { lang })
-      : ask('guest:start', { lang: guestLang }));
+      : ask('guest:start', { lang: guestLang, token: guestToken() }));
     if (err) return setProblem(err);
     if ((await mic.startSending()) === 'failed') {
       await ask(host ? 'session:stop' : 'guest:stop');
@@ -295,31 +340,35 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
             ? { cls: 'warn', head: t.tooManyLangs, body: '' }
             : fromStop
               ? { cls: 'bad', head: fromStop[0], body: fromStop[1] }
-              : problem === 'guest-taken'
-                ? { cls: 'warn', head: t.guestTaken, body: '' }
-                : problem === 'guest-off'
-                  ? { cls: 'warn', head: t.guestOff, body: '' }
-                  : problem && problem !== 'host-not-running'
-                    ? { cls: 'bad', head: tw.failed, body: '' }
-                    : (guest || offer) && !hostOn
-                      ? {
-                          cls: '',
-                          head: view.stoppedAt
-                            ? t.hostStopped(clock(view.stoppedAt), view.hostName)
-                            : t.waitingHost(view.hostName),
-                          body: '',
-                        }
-                      : stopped
-                        ? { cls: 'bad', head: stopped[0], body: stopped[1] }
-                        : view.service === 'error'
-                          ? { cls: 'warn', head: t.serviceDown[0], body: t.serviceDown[1] }
-                          : quiet && mic.sending
-                            ? {
-                                cls: '',
-                                head: source === 'system' ? tw.waitingSound : tw.waitingVoice,
-                                body: source === 'system' ? tw.waitingSoundBody : '',
-                              }
-                            : null;
+              : (guest || offer) &&
+                  problem &&
+                  ['credits', 'monthly', 'global', 'blocked'].includes(problem)
+                ? { cls: 'bad', head: t.guestCantRun(view.hostName), body: '' }
+                : problem === 'guest-taken'
+                  ? { cls: 'warn', head: t.guestTaken, body: '' }
+                  : problem === 'guest-off'
+                    ? { cls: 'warn', head: t.guestOff, body: '' }
+                    : problem && problem !== 'host-not-running'
+                      ? { cls: 'bad', head: tw.failed, body: '' }
+                      : (guest || offer) && !hostOn
+                        ? {
+                            cls: '',
+                            head: view.stoppedAt
+                              ? t.hostStopped(clock(view.stoppedAt), view.hostName)
+                              : t.waitingHost(view.hostName),
+                            body: '',
+                          }
+                        : stopped
+                          ? { cls: 'bad', head: stopped[0], body: stopped[1] }
+                          : view.service === 'error'
+                            ? { cls: 'warn', head: t.serviceDown[0], body: t.serviceDown[1] }
+                            : quiet && mic.sending
+                              ? {
+                                  cls: '',
+                                  head: source === 'system' ? tw.waitingSound : tw.waitingVoice,
+                                  body: source === 'system' ? tw.waitingSoundBody : '',
+                                }
+                              : null;
   const text: CaptionText = update.texts[shown ?? HEARD] ?? EMPTY;
   // (what is heard: each line's language once more than one was heard, as on the website)
   const labels =

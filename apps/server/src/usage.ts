@@ -88,18 +88,28 @@ export function parsePeaks(body: unknown): SonioxPeak[] {
  */
 export function sonioxUsage(apiKey: string, fetcher: typeof fetch = fetch): UsageSource {
   const kept = new Map<string, { at: number; value: unknown }>();
-  async function ask<T>(path: string, keepMs: number, parse: (b: unknown) => T): Promise<T> {
+  // (a question already on its way is shared: a slow Soniox never stacks up calls, audit 35)
+  const going = new Map<string, Promise<unknown>>();
+  function ask<T>(path: string, keepMs: number, parse: (b: unknown) => T): Promise<T> {
     const hit = kept.get(path);
-    if (hit && Date.now() - hit.at < keepMs) return hit.value as T;
+    if (hit && Date.now() - hit.at < keepMs) return Promise.resolve(hit.value as T);
+    const on = going.get(path);
+    if (on) return on as Promise<T>;
+    const p = fetchOne(path, parse).finally(() => going.delete(path));
+    going.set(path, p);
+    return p.then((value) => {
+      if (kept.size > 50) kept.clear();
+      kept.set(path, { at: Date.now(), value });
+      return value;
+    });
+  }
+  async function fetchOne<T>(path: string, parse: (b: unknown) => T): Promise<T> {
     const r = await fetcher(`${API}${path}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(10_000),
     });
     if (!r.ok) throw new Error(String(r.status));
-    const value = parse(await r.json());
-    if (kept.size > 50) kept.clear();
-    kept.set(path, { at: Date.now(), value });
-    return value;
+    return parse(await r.json());
   }
   const q = (start: string, end: string) =>
     `start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}`;

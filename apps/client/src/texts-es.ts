@@ -56,6 +56,7 @@ export const es: Texts = {
     groupApp: 'Aplicación',
     micIsOff: 'El micrófono está apagado',
     turnItOn: 'Encenderlo',
+    guestCantRun: (n) => `Los subtítulos de ${n} no pueden funcionar ahora.`,
     guestAllow: 'Su ordenador también puede subtitular la llamada',
     guestAllowSmall: 'De tu saldo: un idioma más mientras funcione',
     guestRunsToo: 'El ordenador de tu invitado también subtitula la llamada',

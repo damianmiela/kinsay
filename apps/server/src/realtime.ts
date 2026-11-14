@@ -42,6 +42,8 @@ export const CHANNEL_LANGS_MAX = 3;
 export const FLUSH_MS = 10_000;
 /** One microphone at a time: another page of the same host takes over after this much quiet. */
 export const MIC_QUIET_MS = 2_000;
+/** A session's guest may start this often a minute (reconnects included). */
+const GUEST_STARTS_PER_MIN = 10;
 /** The listening page sent nothing for this long: nobody listens (checked with the stops). */
 const MIC_GONE_MS = 10_000;
 /** Language switches a page may make per minute (each opens and closes a paid stream: audit 30). */
@@ -109,7 +111,14 @@ interface Channel {
   /** The host's switch: a page with the code may caption its own side (off; a new code: off). */
   guestAllowed: boolean;
   /** A guest's captions (one at a time): its own engine and streams, on this balance. */
-  guest?: { socket: string; engine: Engine };
+  guest?: {
+    socket: string;
+    engine: Engine;
+    /** The page's own random token: its reconnected page takes the place back (audit 35, M2). */
+    token: string;
+    /** Its own audio streams' last chunk numbers (never pushing the host's out: audit 35, L3). */
+    seqs: Map<string, number>;
+  };
   /** The languages guests read this session (its history line names them). */
   guestLangs: Set<Target>;
   /** When words last came (the quiet stop) and when the running session's hours are up. */
@@ -161,6 +170,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   const byCode = new Map<string, Channel>();
   const codeFails = new RateLimiter(CODE_FAILS_MAX, 10 * 60_000);
   const langSwitches = new RateLimiter(LANG_SWITCHES_PER_MIN, 60_000);
+  // (a guest's starts per session: reconnecting pages can't churn the host's streams, audit 35, L4)
+  const guestStarts = new RateLimiter(GUEST_STARTS_PER_MIN, 60_000);
 
   function newCode(): string {
     for (;;) {
@@ -387,6 +398,14 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     }
     g.engine.discard();
     g.engine.close();
+    // (she reads again: "Just read" and Start both back, audit 35, L2)
+    if (s) {
+      const before = readNow(c);
+      s.data.role = 'reader';
+      s.data.lang = c.hostLang;
+      readersChanged(c, before);
+      s.emit('captions', c.engine.update(s.data.lang, true));
+    }
     stateAll(c);
   }
 
@@ -686,11 +705,20 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       if (s.data.role === 'host') return reply(cb, { ok: false, error: 'not-guest' });
       if (!c.guestAllowed) return reply(cb, { ok: false, error: 'guest-off' });
       if (!c.running) return reply(cb, { ok: false, error: 'host-not-running' });
-      if (c.guest && c.guest.socket !== s.id) return reply(cb, { ok: false, error: 'guest-taken' });
-      if (c.guest) return reply(cb, { ok: true });
-      const lang = asLang(
-        typeof p === 'object' && p !== null ? ((p as { lang?: unknown }).lang ?? null) : null,
-      );
+      const q = (typeof p === 'object' && p !== null ? p : {}) as {
+        lang?: unknown;
+        token?: unknown;
+      };
+      const token = typeof q.token === 'string' && /^[\w-]{16,64}$/.test(q.token) ? q.token : '';
+      if (c.guest && c.guest.socket === s.id) return reply(cb, { ok: true });
+      // (the same page back after a break, its old socket not yet known dead: its place, at once)
+      if (c.guest && token && c.guest.token === token) stopGuest(c);
+      if (c.guest) return reply(cb, { ok: false, error: 'guest-taken' });
+      if (!token) return reply(cb, { ok: false, error: 'bad-token' });
+      if (!guestStarts.take(String(c.personId), now())) {
+        return reply(cb, { ok: false, error: 'too-many' });
+      }
+      const lang = asLang(q.lang ?? null);
       if (lang === undefined) return reply(cb, { ok: false, error: 'bad-lang' });
       const why = cannotRun(c.personId);
       if (why) return reply(cb, { ok: false, error: why });
@@ -705,10 +733,9 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       s.data.guestWhy = undefined;
       readersChanged(c, before);
       const engine = new Engine(o.speech, {
-        onText: () => {
-          c.wordsAt = now();
-          textSoon(c);
-        },
+        // (only the host's own words keep the session from its quiet stop: a guest's never keep it
+        // running after the host has gone, audit 35, M1)
+        onText: () => textSoon(c),
         onStatus: () => stateAll(c),
         onSent: (ms, streams) => sent(c, ms, streams),
         now,
@@ -716,7 +743,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         pool,
         ...(lang ? { langs: [lang] } : {}),
       });
-      c.guest = { socket: s.id, engine };
+      c.guest = { socket: s.id, engine, token, seqs: new Map() };
       c.guestLangs.add(lang ?? HEARD);
       stateAll(c);
       s.emit('captions', engine.update(lang, true));
@@ -790,12 +817,14 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       }
       if (seq) {
         s.emit('captions:ack', seq);
-        if (seq <= (c.seqs.get(stream) ?? 0)) return; // (sent again after a break: it came already)
-        c.seqs.delete(stream);
-        c.seqs.set(stream, seq);
-        for (const oldest of c.seqs.keys()) {
-          if (c.seqs.size <= SEQS_MAX) break;
-          c.seqs.delete(oldest);
+        // (a guest's numbers apart: they never push the host's out of the map)
+        const seqs = guest && c.guest ? c.guest.seqs : c.seqs;
+        if (seq <= (seqs.get(stream) ?? 0)) return; // (sent again after a break: it came already)
+        seqs.delete(stream);
+        seqs.set(stream, seq);
+        for (const oldest of seqs.keys()) {
+          if (seqs.size <= SEQS_MAX) break;
+          seqs.delete(oldest);
         }
       }
       const bytes = chunk instanceof Buffer ? chunk : new Uint8Array(chunk);

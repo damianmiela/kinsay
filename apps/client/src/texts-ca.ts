@@ -57,6 +57,7 @@ export const ca: Texts = {
     groupApp: 'Aplicació',
     micIsOff: 'El micròfon està apagat',
     turnItOn: 'Engega’l',
+    guestCantRun: (n) => `Els subtítols de ${n} no poden funcionar ara.`,
     guestAllow: 'El seu ordinador també pot subtitular la trucada',
     guestAllowSmall: 'Del teu saldo: un idioma més mentre funcioni',
     guestRunsToo: 'L’ordinador del teu convidat també subtitula la trucada',

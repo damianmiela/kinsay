@@ -164,7 +164,8 @@ export interface ClientToServerEvents {
   /** The host: the guest's captions end (the host's own go on). */
   'session:stopGuest': Action;
   /** A page that came by the code: captions of its own sound, on the host's balance. */
-  'guest:start': Action<{ lang: Target | null }>;
+  /** `token`: the page's own random token (its reconnected page takes its place back). */
+  'guest:start': Action<{ lang: Target | null; token: string }>;
   'guest:lang': Action<{ lang: Target | null }>;
   'guest:stop': Action;
   /** The page's language (host or reader): null = what is heard only. */

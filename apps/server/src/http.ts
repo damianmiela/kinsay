@@ -552,20 +552,25 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
 
   app.post('/admin/api/settings', async (req, reply) => {
     const b = body(req);
+    // (every value checked first: a bad one saves none of them, audit 35)
+    const next: Partial<
+      Record<'pricePerHour' | 'monthlyLimit' | 'globalLimit' | 'streamShare', number>
+    > = {};
     for (const k of ['pricePerHour', 'monthlyLimit', 'globalLimit'] as const) {
       if (b[k] === undefined) continue;
       const v = Math.round(Number(b[k]));
       if (!Number.isSafeInteger(v) || v < 0 || v > 10_000 * EUR)
         return fail(reply, 400, 'bad-setting');
-      store.setSetting(k, v);
+      next[k] = v;
     }
     // (Translate's share of Soniox's streams: at once, from now on)
     if (b.streamShare !== undefined) {
       const v = Number(b.streamShare);
       if (!Number.isInteger(v) || v < 1 || v > 1000) return fail(reply, 400, 'bad-setting');
-      store.setSetting('streamShare', v);
-      o.realtime().setShare(v);
+      next.streamShare = v;
     }
+    for (const [k, v] of Object.entries(next)) store.setSetting(k as keyof typeof next, v);
+    if (next.streamShare !== undefined) o.realtime().setShare(next.streamShare);
     return { ok: true, settings: store.settings() };
   });
 

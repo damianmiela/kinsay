@@ -200,3 +200,11 @@ You and someone else on a video call, each with the Windows app (no new download
 - [ ] History: Day / Week / Month / Year: the most at once (Soniox's limit dashed) and, but for Day, what was charged next to Soniox's cost. Hovering a bar shows its numbers.
 - [ ] The table's new Peak column: each day's most at once.
 - [ ] Compare the live number with Soniox's Console (Usage → Activity) once: they should agree.
+
+## 20. After audit 35 (2026-11-14)
+
+- [ ] Both sides of a call: turn her Wi-Fi off for 20 seconds and on: her captions go on by themselves (no new Start).
+- [ ] You stop ("Stop theirs" or your Stop): her window stops capturing her computer's sound at once, and she can "Just read" your captions again (or Start again while yours run).
+- [ ] Close your own window/phone without Stop while she still captions: about 15 minutes later everything stops (her words alone never keep your session going).
+- [ ] When your balance can't cover it, her window says "Marta's captions can't run now" (nothing about your account).
+- [ ] On the wedding day: Translate's share at 5 or less (the wedding app's own five languages need five streams).

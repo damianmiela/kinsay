@@ -68,7 +68,7 @@ export function useSession(code?: string) {
 /** A socket action with a reply in at most 10 s (never a page stuck waiting). */
 export function ask(
   event: 'session:start' | 'session:lang' | 'guest:start' | 'guest:lang',
-  payload: { lang: string | null; other?: string | null },
+  payload: { lang: string | null; other?: string | null; token?: string },
 ): Promise<string | null>;
 export function ask(event: 'session:guestAllow', payload: { on: boolean }): Promise<string | null>;
 export function ask(

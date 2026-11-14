@@ -935,6 +935,8 @@ describe('the code and what readers see (mockups batch 3)', () => {
   });
 });
 
+const TOKEN = 'guest-page-token-0001';
+
 describe('both sides of a call: a guest on the host balance (mockups batch 4)', () => {
   const audio = (s: Socket, seq: number) =>
     s.emit('host:audio', new Uint8Array(3200).buffer, { age: 0, seq, stream: 'mic-' + s.id });
@@ -953,7 +955,7 @@ describe('both sides of a call: a guest on the host balance (mockups batch 4)', 
 
   it('only with the host switch on; then her own stream, her captions only to her', async () => {
     const { host, guest, speech } = await session();
-    expect(await ask(guest, 'guest:start', { lang: 'tl' })).toEqual({
+    expect(await ask(guest, 'guest:start', { lang: 'tl', token: TOKEN })).toEqual({
       ok: false,
       error: 'guest-off',
     });
@@ -962,7 +964,7 @@ describe('both sides of a call: a guest on the host balance (mockups batch 4)', 
     await allowed;
     const told = next<SessionView>(host, 'state:session', (v) => !!v.guestRunning);
     const mine = next<SessionView>(guest, 'state:session', (v) => v.role === 'guest' && v.running);
-    expect(await ask(guest, 'guest:start', { lang: 'tl' })).toEqual({ ok: true });
+    expect(await ask(guest, 'guest:start', { lang: 'tl', token: TOKEN })).toEqual({ ok: true });
     await Promise.all([told, mine]);
     // her computer's sound opens her own stream (Tagalog) and goes to it only; her reading
     // language (the host's English) left the host's streams
@@ -990,10 +992,12 @@ describe('both sides of a call: a guest on the host balance (mockups batch 4)', 
   it('one guest at a time; the host stops hers or the whole session; a new code starts off', async () => {
     const { host, guest, sock, code, speech } = await session();
     await ask(host, 'session:guestAllow', { on: true });
-    await ask(guest, 'guest:start', { lang: 'tl' });
+    await ask(guest, 'guest:start', { lang: 'tl', token: TOKEN });
     const other = sock({ code });
     await next(other, 'state:session');
-    expect(await ask(other, 'guest:start', { lang: 'de' })).toEqual({
+    expect(
+      await ask(other, 'guest:start', { lang: 'de', token: 'another-page-token-0002' }),
+    ).toEqual({
       ok: false,
       error: 'guest-taken',
     });
@@ -1009,11 +1013,11 @@ describe('both sides of a call: a guest on the host balance (mockups batch 4)', 
     expect((await ended).stoppedAt).toBeDefined();
     expect(speech.open().map((s) => s.target)).toEqual(['en']);
     // she starts again; the host's Stop ends both, and she can't start while it's stopped
-    await ask(guest, 'guest:start', { lang: 'tl' });
+    await ask(guest, 'guest:start', { lang: 'tl', token: TOKEN });
     const both = next<SessionView>(guest, 'state:session', (v) => !v.running && !v.hostRunning);
     await ask(host, 'session:stop');
     await both;
-    expect(await ask(guest, 'guest:start', { lang: 'tl' })).toEqual({
+    expect(await ask(guest, 'guest:start', { lang: 'tl', token: TOKEN })).toEqual({
       ok: false,
       error: 'host-not-running',
     });
@@ -1028,7 +1032,7 @@ describe('both sides of a call: a guest on the host balance (mockups batch 4)', 
   it('her audio is paid from the host balance, her language named as the guest’s', async () => {
     const { host, guest, get, p, t } = await session();
     await ask(host, 'session:guestAllow', { on: true });
-    await ask(guest, 'guest:start', { lang: 'tl' });
+    await ask(guest, 'guest:start', { lang: 'tl', token: TOKEN });
     for (let i = 2; i < 12; i++) audio(guest, i);
     await next(guest, 'captions:ack', (n: number) => n === 11);
     t.now += 60_000;
@@ -1041,10 +1045,38 @@ describe('both sides of a call: a guest on the host balance (mockups batch 4)', 
     expect(use.amount).toBeLessThan(0);
   });
 
+  it('audit 35: her reconnected page takes its place back; her words never keep the session from its quiet stop; stopped, she reads again', async () => {
+    const { host, guest, sock, code, server, t } = await session();
+    await ask(host, 'session:guestAllow', { on: true });
+    expect(await ask(guest, 'guest:start', { lang: 'tl' })).toEqual({
+      ok: false,
+      error: 'bad-token',
+    });
+    await ask(guest, 'guest:start', { lang: 'tl', token: TOKEN });
+    // a break: her new page (the old one not yet known dead) with the same token
+    const again = sock({ code });
+    await next(again, 'state:session');
+    expect(await ask(again, 'guest:start', { lang: 'tl', token: TOKEN })).toEqual({ ok: true });
+    // the old page holds nothing any more (a reader again: its place went with its token)
+    expect(await ask(guest, 'guest:stop')).toEqual({ ok: false, error: 'not-guest' });
+    // only the host's words count: 16 minutes of hers alone end the session
+    for (let i = 1; i <= 3; i++) {
+      again.emit('host:audio', new Uint8Array(3200).buffer, {
+        age: 0,
+        seq: i,
+        stream: 'mic-again1',
+      });
+    }
+    t.now += 16 * 60_000;
+    const ended = next<SessionView>(host, 'state:session', (v) => !v.running);
+    server.realtime.checkStops();
+    expect((await ended).stopped).toBe('quiet');
+  });
+
   it('her page closing ends her captions', async () => {
     const { host, guest, speech } = await session();
     await ask(host, 'session:guestAllow', { on: true });
-    await ask(guest, 'guest:start', { lang: 'tl' });
+    await ask(guest, 'guest:start', { lang: 'tl', token: TOKEN });
     audio(guest, 1);
     await next(guest, 'captions:ack');
     const gone = next<SessionView>(host, 'state:session', (v) => v.running && !v.guestRunning);
@@ -1206,6 +1238,16 @@ describe('Soniox right now (mockups batch 6)', () => {
     expect(year.json.costs).toHaveLength(1);
     expect(year.json.peaks).toEqual([{ start: '2027-01-15T00:00:00Z', max: 4 }]);
     expect(seen).toEqual([3600, 86400]);
+  });
+
+  it('audit 35: a bad setting saves none of the others sent with it', async () => {
+    const { post, get, admin } = await start();
+    const before = (await get('/admin/api/state', admin)).json.settings as { pricePerHour: number };
+    expect(
+      (await post('/admin/api/settings', { pricePerHour: 1, streamShare: 0 }, admin)).status,
+    ).toBe(400);
+    const after = (await get('/admin/api/state', admin)).json.settings as { pricePerHour: number };
+    expect(after.pricePerHour).toBe(before.pricePerHour);
   });
 
   it('no key: Translate’s own count all the same', async () => {
