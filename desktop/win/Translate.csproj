@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Translate's desktop app (2026-11-12, from the wedding app's small subtitles app): a window of
+  <!-- Kinsay's desktop app (2026-11-12, from the wedding app's small subtitles app): a window of
        Windows' own browser engine (WebView2) round translate.dendigital.de/window, and this computer's
        sound from Windows' audio loopback. .NET Framework 4.8 is part of Windows 10 and 11: nothing else
        to install. Build: dotnet build -c Release (desktop\win); pack: node desktop\pack-win.mjs -->
@@ -8,14 +8,16 @@
     <TargetFramework>net48</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>latest</LangVersion>
-    <AssemblyName>Translate</AssemblyName>
+    <AssemblyName>Kinsay</AssemblyName>
     <RootNamespace>TranslateApp</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Kinsay's logo (scripts/make-icons.mjs): the exe's icon, the taskbar's and the window's -->
+    <ApplicationIcon>kinsay.ico</ApplicationIcon>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Version>0.1.0</Version>
   </PropertyGroup>
-  <!-- One file to download (Damian, 2026-11-12): the libraries go inside Translate.exe as resources
+  <!-- One file to download (Damian, 2026-11-12): the libraries go inside Kinsay.exe as resources
        (Program.cs loads them from there; WebView2's native loader is unpacked to the app's own folder
        on first start). Not the WPF part of WebView2: the app is WinForms. -->
   <Target Name="EmbedLibraries" AfterTargets="ResolveAssemblyReferences">

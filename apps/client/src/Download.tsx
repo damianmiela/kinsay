@@ -1,4 +1,4 @@
-// /download: the desktop app for Windows (one file, Translate.exe, built by desktop/pack-win.mjs into
+// /download: the desktop app for Windows (one file, Kinsay.exe, built by desktop/pack-win.mjs into
 // public/download/). Open to anyone, like the sign-in page.
 import { Foot, Logo } from './bits';
 import { download as d } from './texts';
@@ -14,7 +14,7 @@ export function DownloadPage() {
       <div className="body">
         <h1 className="t">{d.title}</h1>
         <p className="s">{d.body}</p>
-        <a className="btn main" href="/download/Translate.exe" download>
+        <a className="btn main" href="/download/Kinsay.exe" download>
           {d.button}
         </a>
         <p className="small">{d.small}</p>

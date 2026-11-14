@@ -1,4 +1,4 @@
-// Translate's desktop app (2026-11-12, from the wedding app's small subtitles app): a Windows shell round
+// Kinsay's desktop app (2026-11-12, from the wedding app's small subtitles app): a Windows shell round
 // the subtitles window's page (`/window`). It adds only what a browser can't: a window that stays on top
 // of any call app, and this computer's sound (Windows' audio loopback) handed to the page as
 // `window.liveShell`. Signing in happens in the person's own browser (the page's part; Google allows no
@@ -24,7 +24,7 @@ namespace TranslateApp
 {
     static class Program
     {
-        public const string Title = "Translate subtitles";
+        public const string Title = "Kinsay subtitles";
 
         [STAThread]
         static void Main()
@@ -146,6 +146,7 @@ namespace TranslateApp
             this.page = page;
             origin = page.GetLeftPart(UriPartial.Authority);
             Text = Program.Title;
+            Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             FormBorderStyle = FormBorderStyle.None;
             TopMost = true;
             ShowInTaskbar = true;

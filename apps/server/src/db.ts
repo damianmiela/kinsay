@@ -37,7 +37,7 @@ export interface Settings {
   monthlyLimit: number;
   /** Everyone's use together per month (micro-euros; 0: none). */
   globalLimit: number;
-  /** Translate's share of Soniox's streams at once (the rest of the limit stays the wedding's). */
+  /** Kinsay's share of Soniox's streams at once (the rest of the limit stays the wedding's). */
   streamShare: number;
 }
 

@@ -1,4 +1,4 @@
-// /privacy: what Translate keeps and never keeps (Google asks for the page before everyone may sign
+// /privacy: what Kinsay keeps and never keeps (Google asks for the page before everyone may sign
 // in with Google). Open to anyone; who is responsible comes from the server's settings.
 import { useEffect, useState } from 'react';
 import { api } from './api';

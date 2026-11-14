@@ -1,4 +1,4 @@
-// The subtitles window (/window): Translate's captions as a see-through window over a call, in the
+// The subtitles window (/window): Kinsay's captions as a see-through window over a call, in the
 // desktop app (desktop/win: it hands the page this computer's sound and the window's own controls,
 // `window.liveShell`) or in a browser tab. Mockups batch 1 (the window, from the wedding app's) and
 // batch 2 part 7 (its sign-in: the person's own browser, the same digits on both). One language, as

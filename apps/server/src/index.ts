@@ -41,7 +41,7 @@ if (publicUrl && !/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(publicUrl))
   fail('PUBLIC_URL must look like https://translate.example.com');
 const mail =
   env.BREVO_API_KEY && env.MAIL_FROM
-    ? brevoMailer(env.BREVO_API_KEY, env.MAIL_FROM, env.MAIL_FROM_NAME || 'Translate')
+    ? brevoMailer(env.BREVO_API_KEY, env.MAIL_FROM, env.MAIL_FROM_NAME || 'Kinsay')
     : undefined;
 const google =
   env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && publicUrl

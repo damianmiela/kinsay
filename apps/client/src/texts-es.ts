@@ -4,7 +4,7 @@ import type { Texts } from './texts';
 
 export const es: Texts = {
   t: {
-    app: 'Translate',
+    app: 'Kinsay',
     signInTitle: 'Subtítulos en directo, en tu idioma',
     haveCode: 'Tengo un código',
     sendLink: 'Envíame un enlace de acceso',
@@ -24,7 +24,7 @@ export const es: Texts = {
     backHome: 'Volver',
     joinTitle: '¿Te unes a los subtítulos de alguien?',
     enterTheirCode: 'Escribe su código',
-    askInviteTitle: 'Translate es por invitación',
+    askInviteTitle: 'Kinsay es por invitación',
     askInviteBody: 'Pídela y te escribiremos cuando esté lista.',
     yourName: 'Tu nombre',
     yourEmail: 'Tu correo',
@@ -58,7 +58,7 @@ export const es: Texts = {
     turnItOn: 'Encenderlo',
     showSpeakers: 'Mostrar quién habla',
     showSpeakersSmall: 'un color por persona, una línea nueva cuando habla otra',
-    installApp: 'Instalar Translate',
+    installApp: 'Instalar Kinsay',
     installSmall: 'su icono en la pantalla de inicio, a pantalla completa',
     addHome: 'Añadir a pantalla de inicio',
     iosSteps: [
@@ -77,7 +77,7 @@ export const es: Texts = {
       'Abre el menú del navegador (⋮ o …)',
       'Elige *Instalar aplicación* o *Añadir a pantalla de inicio*',
     ],
-    thenOpen: 'Luego abre Translate desde su icono.',
+    thenOpen: 'Luego abre Kinsay desde su icono.',
     guestCantRun: (n) => `Los subtítulos de ${n} no pueden funcionar ahora.`,
     guestAllow: 'Su ordenador también puede subtitular la llamada',
     guestAllowSmall: 'De tu saldo: un idioma más mientras funcione',
@@ -121,7 +121,7 @@ export const es: Texts = {
     historyDevices: 'Historial y dispositivos',
     otherLangs: 'Otros idiomas',
     usedBefore: 'usado antes',
-    micNeeded: 'Translate necesita el micrófono',
+    micNeeded: 'Kinsay necesita el micrófono',
     allowMic: 'Permitir el micrófono',
     micBlocked: 'El micrófono está bloqueado',
     micGoesOn: 'Sigue solo en cuanto lo permitas.',
@@ -206,7 +206,7 @@ export const es: Texts = {
     codeHelp: 'Quien empezó los subtítulos lo ve en «Invitar».',
     join: 'Unirse',
     tooManyPages:
-      'Hay demasiadas páginas de Translate abiertas en esta conexión a internet. Cierra algunas: esta página lo vuelve a intentar sola.',
+      'Hay demasiadas páginas de Kinsay abiertas en esta conexión a internet. Cierra algunas: esta página lo vuelve a intentar sola.',
     tooManyLangs: 'Esta sesión ya lee tres idiomas. Elige uno de ellos.',
     serviceFull: 'El servicio de traducción está lleno ahora. Inténtalo en un minuto.',
     stop_credits: [
@@ -266,7 +266,7 @@ export const es: Texts = {
     title: 'Privacidad',
     updated: 'Última actualización: 12 de noviembre de 2026',
     intro: (who) =>
-      `Translate es una pequeña aplicación de subtítulos en directo, solo por invitación, gestionada por ${who}. Esta página dice qué guarda sobre ti, por qué y cómo borrarlo.`,
+      `Kinsay es una pequeña aplicación de subtítulos en directo, solo por invitación, gestionada por ${who}. Esta página dice qué guarda sobre ti, por qué y cómo borrarlo.`,
     sections: [
       {
         h: 'Lo que nunca se guarda',
@@ -308,7 +308,7 @@ export const es: Texts = {
     contactTitle: 'Contacto',
   },
   tw: {
-    title: 'Translate',
+    title: 'Kinsay',
     listenTo: 'Escuchar',
     system: 'El sonido del ordenador',
     systemHint: 'una llamada',
@@ -343,7 +343,7 @@ export const es: Texts = {
     closeQr: 'Cerrar el código QR',
     failed: 'No ha funcionado. Vuelve a intentarlo.',
     resume: 'Los subtítulos siguen, pero esta ventana no escucha.',
-    signInTitle: 'Entrar en Translate',
+    signInTitle: 'Entrar en Kinsay',
     signInBody: 'Se abre tu navegador. Entra allí y vuelve: esta ventana sigue sola.',
     signInButton: 'Entrar en el navegador',
     signInDigits: 'El navegador también muestra estos números:',
@@ -355,9 +355,9 @@ export const es: Texts = {
   },
   appSignIn: {
     title: '¿Conectar la aplicación de escritorio?',
-    body: 'Una aplicación de Translate pide entrar como',
+    body: 'Una aplicación de Kinsay pide entrar como',
     check:
-      'Di que sí solo si acabas de pulsar «Entrar en el navegador» en la ventana de Translate de este ordenador y muestra los mismos números.',
+      'Di que sí solo si acabas de pulsar «Entrar en el navegador» en la ventana de Kinsay de este ordenador y muestra los mismos números.',
     elsewhere:
       'Este acceso se empezó en otra conexión a internet, no aquí. Si alguien te ha enviado este enlace, pulsa No. Si es tu propia aplicación, vuelve a empezar el acceso desde su ventana en este ordenador.',
     yes: 'Sí, conectarla',
@@ -369,18 +369,18 @@ export const es: Texts = {
     first: 'Entra aquí primero: la aplicación de escritorio lo está esperando.',
   },
   download: {
-    title: 'Translate para Windows',
+    title: 'Kinsay para Windows',
     body: 'Subtítulos sobre cualquier llamada o vídeo, en una ventana que se queda delante. Oye el sonido del ordenador, así que también salen las palabras de la otra persona. Para Windows 10 y 11.',
-    button: 'Descargar Translate',
+    button: 'Descargar Kinsay',
     small: 'Un solo archivo, nada que instalar.',
     then: 'Después',
     steps: [
-      'Abre Translate.exe desde tus descargas.',
+      'Abre Kinsay.exe desde tus descargas.',
       'Si Windows dice «Windows protegió su PC», pulsa «Más información» y luego «Ejecutar de todas formas»: la aplicación es nueva y aún no está firmada.',
       'Pulsa «Entrar en el navegador» en su ventana y di que sí en tu navegador.',
     ],
-    elsewhere: '¿En un móvil o un Mac? Translate funciona aquí mismo, en el navegador.',
-    open: 'Abrir Translate',
+    elsewhere: '¿En un móvil o un Mac? Kinsay funciona aquí mismo, en el navegador.',
+    open: 'Abrir Kinsay',
     foot: 'Aplicación para Windows',
   },
 };

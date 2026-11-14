@@ -9,7 +9,7 @@ import { pl } from './texts-pl';
 import { ui, type UiLang } from './ui';
 
 const t_en = {
-  app: 'Translate',
+  app: 'Kinsay',
   // signing in
   signInTitle: 'Live captions, in your language',
   haveCode: 'I have a code',
@@ -29,7 +29,7 @@ const t_en = {
   backHome: 'Back',
   joinTitle: 'Joining someone’s captions?',
   enterTheirCode: 'Enter their code',
-  askInviteTitle: 'Translate is by invitation',
+  askInviteTitle: 'Kinsay is by invitation',
   askInviteBody: 'Ask for one and we’ll write to you when it’s ready.',
   yourName: 'Your name',
   yourEmail: 'Your email',
@@ -63,7 +63,7 @@ const t_en = {
   turnItOn: 'Turn it on',
   showSpeakers: 'Show who is speaking',
   showSpeakersSmall: 'a colour per person, a new line when someone else speaks',
-  installApp: 'Install Translate',
+  installApp: 'Install Kinsay',
   installSmall: 'its icon on the home screen, full screen',
   addHome: 'Add to Home Screen',
   iosSteps: [
@@ -75,7 +75,7 @@ const t_en = {
   iosOtherFirst: 'Tap *Share* in your browser (at the top or bottom)',
   macSteps: ['In Safari’s menu bar, choose *File*', 'Choose *Add to Dock*', 'Click *Add*'],
   menuSteps: ['Open your browser’s menu (⋮ or …)', 'Choose *Install app* or *Add to Home screen*'],
-  thenOpen: 'Then open Translate from its icon.',
+  thenOpen: 'Then open Kinsay from its icon.',
   guestCantRun: (n: string) => `${n}’s captions can’t run now.`,
   guestAllow: 'Their computer can caption the call too',
   guestAllowSmall: 'On your balance: one more language while it runs',
@@ -119,7 +119,7 @@ const t_en = {
   historyDevices: 'History and devices',
   otherLangs: 'Other languages',
   usedBefore: 'used before',
-  micNeeded: 'Translate needs the microphone',
+  micNeeded: 'Kinsay needs the microphone',
   allowMic: 'Allow the microphone',
   micBlocked: 'The microphone is blocked',
   micGoesOn: 'It goes on by itself once it’s allowed.',
@@ -206,7 +206,7 @@ const t_en = {
   codeHelp: 'The person who started the captions sees it under "Invite".',
   join: 'Join',
   tooManyPages:
-    'Too many Translate pages are open on this internet connection. Close some: this page tries again by itself.',
+    'Too many Kinsay pages are open on this internet connection. Close some: this page tries again by itself.',
   tooManyLangs: 'This session reads three languages already. Choose one of them.',
   serviceFull: 'The translation service is full right now. Try again in a minute.',
   // stops
@@ -273,7 +273,7 @@ const privacy_en = {
   title: 'Privacy',
   updated: 'Last updated: 12 November 2026',
   intro: (who: string) =>
-    `Translate is a small app for live captions, by invitation only, run by ${who}. This page says what it keeps about you, why, and how to have it deleted.`,
+    `Kinsay is a small app for live captions, by invitation only, run by ${who}. This page says what it keeps about you, why, and how to have it deleted.`,
   sections: [
     {
       h: 'What is never kept',
@@ -329,7 +329,7 @@ export function duration(seconds: number): string {
 
 /** The subtitles window (/window: the desktop app, or a browser tab; mockups batch 1 and part 7). */
 const tw_en = {
-  title: 'Translate',
+  title: 'Kinsay',
   listenTo: 'Listen to',
   system: 'This computer’s sound',
   systemHint: 'a call',
@@ -364,7 +364,7 @@ const tw_en = {
   failed: 'That didn’t work. Try again.',
   resume: 'The captions run, but this window doesn’t listen.',
   // signing in (part 7)
-  signInTitle: 'Sign in to Translate',
+  signInTitle: 'Sign in to Kinsay',
   signInBody:
     'Your browser opens. Sign in there, then come back: this window carries on by itself.',
   signInButton: 'Sign in in the browser',
@@ -379,9 +379,9 @@ const tw_en = {
 /** The browser's side of the desktop app's sign-in (/app-signin, part 7). */
 const appSignIn_en = {
   title: 'Sign in the desktop app?',
-  body: 'A Translate app asks to sign in as',
+  body: 'A Kinsay app asks to sign in as',
   check:
-    'Say yes only if you just pressed “Sign in in the browser” in Translate’s window on this computer, and it shows the same numbers.',
+    'Say yes only if you just pressed “Sign in in the browser” in Kinsay’s window on this computer, and it shows the same numbers.',
   elsewhere:
     'This sign-in was started on another internet connection, not here. If someone sent you this link, press No. If it’s your own app, start the sign-in again from its window on this computer.',
   yes: 'Yes, sign it in',
@@ -395,18 +395,18 @@ const appSignIn_en = {
 
 /** The download page for the desktop app (/download). */
 const download_en = {
-  title: 'Translate for Windows',
+  title: 'Kinsay for Windows',
   body: 'Captions over any call or video, in a window that stays on top. It hears this computer’s sound, so the other person’s words show too. For Windows 10 and 11.',
-  button: 'Download Translate',
+  button: 'Download Kinsay',
   small: 'One file, nothing to install.',
   then: 'Then',
   steps: [
-    'Open Translate.exe from your downloads.',
+    'Open Kinsay.exe from your downloads.',
     'If Windows says “Windows protected your PC”, press “More info”, then “Run anyway”: the app is new and not signed yet.',
     'Press “Sign in in the browser” in its window, and say yes in your browser.',
   ],
-  elsewhere: 'On a phone or a Mac? Translate works right here in the browser.',
-  open: 'Open Translate',
+  elsewhere: 'On a phone or a Mac? Kinsay works right here in the browser.',
+  open: 'Open Kinsay',
   foot: 'Windows app',
 } as const;
 

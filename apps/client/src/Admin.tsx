@@ -466,8 +466,7 @@ function CodeSheet({
     <Sheet label={`Sign in a device for ${code.name}`} onClose={onClose}>
       <h2 className="t">Sign in a device for {code.name}</h2>
       <p className="s">
-        On their phone: scan this, or open Translate, tap "I have a sign-in code" and type the
-        numbers.
+        On their phone: scan this, or open Kinsay, tap "I have a sign-in code" and type the numbers.
       </p>
       <Qr text={link} px={220} />
       <div className="digits">

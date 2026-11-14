@@ -394,7 +394,7 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
   });
 
   // Soniox right now (mockups batch 6): its count for the whole key (both apps) and its limit,
-  // Translate's own and its share, and the highest of today, this week and the last 12 hours
+  // Kinsay's own and its share, and the highest of today, this week and the last 12 hours
   app.get('/admin/api/soniox/now', async () => {
     const translate = o.realtime().streams();
     if (!o.usage) return { ok: true, translate, error: 'no key' };
@@ -563,7 +563,7 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
         return fail(reply, 400, 'bad-setting');
       next[k] = v;
     }
-    // (Translate's share of Soniox's streams: at once, from now on)
+    // (Kinsay's share of Soniox's streams: at once, from now on)
     if (b.streamShare !== undefined) {
       const v = Number(b.streamShare);
       if (!Number.isInteger(v) || v < 1 || v > 1000) return fail(reply, 400, 'bad-setting');

@@ -159,7 +159,7 @@ const codeBucket = wideBucket;
 export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   const now = o.now ?? Date.now;
   const warn = o.warn ?? (() => {});
-  // (Translate's share of Soniox's streams: the setting, else SONIOX_STREAMS; the admin changes it)
+  // (Kinsay's share of Soniox's streams: the setting, else SONIOX_STREAMS; the admin changes it)
   const pool = new StreamPool(o.store.settings().streamShare || o.streams);
   const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, Data>(
     http,
@@ -878,7 +878,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     checkStops,
     /** For the admin: sessions running now. */
     running: () => [...byPerson.values()].filter((c) => c.running).length,
-    /** For the admin: Translate's streams at Soniox now, and its share. */
+    /** For the admin: Kinsay's streams at Soniox now, and its share. */
     streams: () => ({ used: pool.used, share: pool.size }),
     /** The admin's new share: streams over it end in their own time, none opens past it. */
     setShare(n: number) {

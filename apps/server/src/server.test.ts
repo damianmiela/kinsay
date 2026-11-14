@@ -1174,7 +1174,7 @@ describe('use and cost (mockups batch 5)', () => {
 });
 
 describe('Soniox right now (mockups batch 6)', () => {
-  it('its count for the whole key next to Translate’s own and its share; today’s and the week’s highest', async () => {
+  it('its count for the whole key next to Kinsay’s own and its share; today’s and the week’s highest', async () => {
     const usage = sonioxFake({
       now: () => Promise.resolve({ current: 7, limit: 10 }),
       peaks: (from, to, period) =>
@@ -1265,7 +1265,7 @@ describe('Soniox right now (mockups batch 6)', () => {
     expect(after.pricePerHour).toBe(before.pricePerHour);
   });
 
-  it('no key: Translate’s own count all the same', async () => {
+  it('no key: Kinsay’s own count all the same', async () => {
     const { get, admin } = await start();
     const r = await get('/admin/api/soniox/now', admin);
     expect(r.json).toMatchObject({ ok: true, error: 'no key', translate: { used: 0, share: 5 } });

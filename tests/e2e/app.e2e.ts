@@ -116,14 +116,14 @@ test('the microphone: asked for with a picture the first time; blocked, the step
   };
   const first = await phone('prompt');
   await first.getByRole('button', { name: 'Start', exact: true }).click();
-  await expect(first.getByText('Translate needs the microphone')).toBeVisible();
+  await expect(first.getByText('Kinsay needs the microphone')).toBeVisible();
   await first.getByRole('button', { name: 'Allow the microphone' }).click();
   await expect(first.locator('.cap-line').first()).toContainText('Sentence');
   await first.getByRole('button', { name: 'Stop' }).click();
   // asked once: the next Start goes straight on
   await first.getByRole('button', { name: 'Start', exact: true }).click();
   await expect(first.getByRole('button', { name: 'Stop' })).toBeVisible();
-  await expect(first.getByText('Translate needs the microphone')).toHaveCount(0);
+  await expect(first.getByText('Kinsay needs the microphone')).toHaveCount(0);
   await first.getByRole('button', { name: 'Stop' }).click();
   await first.close();
 
@@ -371,9 +371,9 @@ test('the admin: sign in, invite, a sign-in code with its QR; an encoded address
   await page.getByRole('button', { name: 'Use and cost' }).click();
   await expect(page.getByRole('heading', { name: 'Use and cost' })).toBeVisible();
   await expect(page.getByText('No Soniox key on this server: our side only.')).toBeVisible();
-  // (the live card: Translate's own count all the same, and its share)
-  await expect(page.locator('.live-big')).toContainText('Translate’s own now');
-  await expect(page.getByLabel("Translate's share of Soniox's streams")).toHaveValue('5');
+  // (the live card: Kinsay's own count all the same, and its share)
+  await expect(page.locator('.live-big')).toContainText('Kinsay’s own now');
+  await expect(page.getByLabel("Kinsay's share of Soniox's streams")).toHaveValue('5');
   await expect(page.locator('.tbl.usage tbody tr')).toHaveCount(31); // (30 days and the sum)
   await page.getByRole('button', { name: '7 days' }).click();
   await expect(page.locator('.tbl.usage tbody tr')).toHaveCount(8);
@@ -628,7 +628,7 @@ test('installable as an app: its manifest and icons; on an iPhone, Safari’s st
   });
   await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: /Install Translate/ }).click();
+  await page.getByRole('button', { name: /Install Kinsay/ }).click();
   await expect(page.getByRole('heading', { name: 'Add to Home Screen' })).toBeVisible();
   await expect(page.locator('.install-steps li')).toHaveCount(3);
   await expect(page.locator('.install-steps .k').first()).toHaveText('Share');
@@ -643,14 +643,14 @@ test('the download page: the desktop app as one file, saved as a download', asyn
   const page = await ctx.newPage();
   await page.goto('/');
   await page.getByRole('link', { name: 'Windows app' }).click();
-  await expect(page.getByRole('heading', { name: 'Translate for Windows' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Kinsay for Windows' })).toBeVisible();
   expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
   const [file] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('link', { name: 'Download Translate' }).click(),
+    page.getByRole('link', { name: 'Download Kinsay' }).click(),
   ]);
-  expect(file.suggestedFilename()).toBe('Translate.exe');
-  const r = await ctx.request.get('/download/Translate.exe');
+  expect(file.suggestedFilename()).toBe('Kinsay.exe');
+  const r = await ctx.request.get('/download/Kinsay.exe');
   expect(r.headers()['content-disposition']).toBe('attachment');
   const body = await r.body();
   expect(body.subarray(0, 2).toString()).toBe('MZ'); // (a Windows program)

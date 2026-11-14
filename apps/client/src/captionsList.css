@@ -121,7 +121,7 @@ html:has(.cap-page) body {
   box-shadow: 0 6px 18px var(--shade-strong);
   cursor: pointer;
 }
-/* the language a line was heard in (Translate's "no translation" view) */
+/* the language a line was heard in (Kinsay's "no translation" view) */
 .cap-label {
   display: inline-block;
   margin-right: var(--s2);

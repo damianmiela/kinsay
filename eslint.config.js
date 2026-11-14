@@ -26,6 +26,7 @@ export default defineConfig([
       'packages/engine/**/*.ts',
       'tests/**/*.{ts,mjs}',
       'desktop/*.mjs',
+      'scripts/*.mjs',
       '*.js',
       '**/*.config.ts',
     ],

@@ -7,7 +7,7 @@ import { setUi, ui, UI_LANGS, UI_NAMES, type UiLang } from './ui';
 export function Logo() {
   return (
     <span className="logo">
-      <span className="mark" aria-hidden="true" />
+      <img className="mark" src="/icons/icon.svg" alt="" />
       {t.app}
     </span>
   );

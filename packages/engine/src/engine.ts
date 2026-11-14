@@ -156,7 +156,7 @@ export function sonioxConnect(apiKey: string, options: SonioxOptions): SpeechCon
 /** The streams the whole app may hold at once (Soniox counts them per organization). */
 export class StreamPool {
   used = 0;
-  /** `size` may change while streams run (Translate's share): streams over it end in their time. */
+  /** `size` may change while streams run (Kinsay's share): streams over it end in their time. */
   constructor(public size: number) {}
   get free(): number {
     return Math.max(0, this.size - this.used);
@@ -421,7 +421,7 @@ export interface EngineOptions {
   onText: () => void;
   /** The service's state changed (or `behind`). */
   onStatus: () => void;
-  /** Audio sent: `ms` to each of `streams` streams (Translate's credits). */
+  /** Audio sent: `ms` to each of `streams` streams (Kinsay's credits). */
   onSent?: (ms: number, streams: number) => void;
   /**
    * Each finished line: its text (HEARD or a language), its number, and when its audio was

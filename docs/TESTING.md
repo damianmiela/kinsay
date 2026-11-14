@@ -17,7 +17,7 @@ Open http://localhost:3300/admin on the computer, and http://<the computer's add
 - [ ] Their card: "Sign in a device" shows a QR code and six digits, valid 10 minutes.
 - [ ] In another browser (or a private window): "I have a sign-in code", the six digits: signed in, Home shows €1.00. The same digits a second time: refused.
 - [ ] Home: the language field opens a list with a search; "No translation" is always there; "tag" finds Tagalog (also called Filipino).
-- [ ] Start without a translation: what is heard, each line with the language it was heard in; "Translate" opens the list; choosing one turns it into face to face.
+- [ ] Start without a translation: what is heard, each line with the language it was heard in; "Kinsay" opens the list; choosing one turns it into face to face.
 - [ ] Face to face: the top half upside down with the translation, the bottom what is heard; "Turn off": the translation alone; the gear: face to face back, "Show what was heard", text size, Invite, Account.
 - [ ] /privacy opens without signing in, names who is responsible and their email; its link is at the foot of the sign-in and Account pages.
 - [ ] Face to face, talk until both halves are full: the top half follows its newest line exactly like the bottom one (turned round, the newest line by the far edge, never under the bar); scrolled back, "Latest" shows in that half and brings it back.
@@ -32,21 +32,21 @@ Open http://localhost:3300/admin on the computer, and http://<the computer's add
 In `.env`: `PUBLIC_URL=http://localhost:3300` (later the real address), `BREVO_API_KEY`, `MAIL_FROM` (a sender Brevo knows), and Google's `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Then `npm run build; npm start`.
 
 - [ ] The sign-in page shows the email field and "Continue with Google" (each only when its keys are set).
-- [ ] An invited person's email: "Check your email"; the email comes from the sender set, with a "Sign in to Translate" button.
+- [ ] An invited person's email: "Check your email"; the email comes from the sender set, with a "Sign in to Kinsay" button.
 - [ ] The link opens "Sign in on this device?": one tap signs in. The same link again: "doesn't work any more".
 - [ ] An email that isn't invited: the same "Check your email" answer, and no email arrives.
 - [ ] Google with an invited email: straight into Home. With another Google account: "no invitation yet" and the invitation form open.
 
 ## 3. The desktop app (2026-11-12)
 
-Open translate.dendigital.de/download (or "Windows app" at any page's foot), download `Translate.exe` (one file, made with `node desktop/pack-win.mjs`) and start it: Windows warns once ("More info", "Run anyway": not signed yet). It opens translate.dendigital.de's subtitles window. Signed in already on this computer's browser or not, both should work.
+Open translate.dendigital.de/download (or "Windows app" at any page's foot), download `Kinsay.exe` (one file, made with `node desktop/pack-win.mjs`) and start it: Windows warns once ("More info", "Run anyway": not signed yet). It opens translate.dendigital.de's subtitles window. Signed in already on this computer's browser or not, both should work.
 
-- [ ] The window: dark glass, "Sign in to Translate", "Sign in in the browser". Pressing it opens the computer's normal browser at a "Sign in the desktop app?" page; the window shows six numbers.
+- [ ] The window: dark glass, "Sign in to Kinsay", "Sign in in the browser". Pressing it opens the computer's normal browser at a "Sign in the desktop app?" page; the window shows six numbers.
 - [ ] Not signed in in that browser: the sign-in page with "the desktop app is waiting for it"; after signing in (email, Google or a code) it comes back to the question by itself.
 - [ ] The browser shows the same six numbers and the email. "Yes, sign it in": "Done." In a few seconds the window carries on by itself: Listen to, Translate into, Start. "No" in the browser: the window says it was refused.
 - [ ] Account in the browser: the devices list "Windows · Desktop app".
 - [ ] The browser link opened on another internet connection (e.g. a phone on mobile data): "started on another internet connection", no Yes button.
-- [ ] Signing the desktop app out from Account (or Block in the admin): the window goes back to "Sign in to Translate" by itself.
+- [ ] Signing the desktop app out from Account (or Block in the admin): the window goes back to "Sign in to Kinsay" by itself.
 - [ ] Listen to "This computer's sound", a language, Start; play a video or join a call: its words appear in the window (and nothing is asked first). Nothing playing for a while: "Waiting for sound…".
 - [ ] The window keeps the whole history, centred like subtitles, following the newest line; scrolled up, "Latest" brings it back.
 - [ ] Made small (a corner drag), the language list still opens over the whole window under the bar and scrolls there; the ⚙ menu too.
@@ -80,7 +80,7 @@ The texts are drafts: a native speaker of each language should read every page o
 
 ## 7. Pages per connection (2026-11-13)
 
-Nothing to see normally: one internet connection (a family's Wi-Fi) may have 50 Translate pages open at once. Beyond that a page says "Too many Translate pages are open on this internet connection" and tries again by itself every 30 seconds. (Hard to reach by hand; the server tests check it.)
+Nothing to see normally: one internet connection (a family's Wi-Fi) may have 50 Kinsay pages open at once. Beyond that a page says "Too many Kinsay pages are open on this internet connection" and tries again by itself every 30 seconds. (Hard to reach by hand; the server tests check it.)
 
 ## 8. Keep the screen on (2026-11-13)
 
@@ -107,7 +107,7 @@ On a phone:
 - [ ] Other languages: the search field with the keyboard and the whole list A to Z under letters; typing "hu" finds Magyar (Hungarian); the sheet keeps its height while typing; ‹ goes back.
 - [ ] The language button in the bar (while captions run) opens the same list; in face to face, each half's too.
 - [ ] Face to face with "No translation" in the top half: Start starts (it no longer asks again).
-- [ ] On a phone that has never used Translate (or a fresh private window): the first Start shows "Translate needs the microphone" with "Allow the microphone", and only then the browser's own question. The next Start goes straight on.
+- [ ] On a phone that has never used Kinsay (or a fresh private window): the first Start shows "Kinsay needs the microphone" with "Allow the microphone", and only then the browser's own question. The next Start goes straight on.
 - [ ] Block the microphone in the browser and tap Start: "The microphone is blocked" with this browser's steps (Chrome on Android, Safari on iPhone, Chrome on a computer…). Follow them: it carries on by itself (or with "Try again").
 
 ## 11. The redesign, step 3: two devices and Settings (2026-11-13)
@@ -193,9 +193,9 @@ You and someone else on a video call, each with the Windows app (no new download
 
 ## 19. Soniox right now, and the history (2026-11-13)
 
-- [ ] Admin → Use and cost: the live card on top: "N of 10 at Soniox now" (Soniox's own count for the whole key), the bar split into Translate and Wedding app, refreshed every 5 seconds; today's and this week's highest and the last 12 hours.
-- [ ] Start captions on your phone: within a few seconds Translate's part grows; start the wedding's captions too: the Wedding app part grows.
-- [ ] "Translate may hold at most N": set it lower (for example 5) and Save: Translate opens no more than that at once (a new language says the service is full), the rest stays the wedding's. Back to 10 after.
+- [ ] Admin → Use and cost: the live card on top: "N of 10 at Soniox now" (Soniox's own count for the whole key), the bar split into Kinsay and Wedding app, refreshed every 5 seconds; today's and this week's highest and the last 12 hours.
+- [ ] Start captions on your phone: within a few seconds Kinsay's part grows; start the wedding's captions too: the Wedding app part grows.
+- [ ] "Kinsay may hold at most N": set it lower (for example 5) and Save: Kinsay opens no more than that at once (a new language says the service is full), the rest stays the wedding's. Back to 10 after.
 - [ ] From 9 of 10 at once: the amber line.
 - [ ] History: Day / Week / Month / Year: the most at once (Soniox's limit dashed) and, but for Day, what was charged next to Soniox's cost. Hovering a bar shows its numbers.
 - [ ] The table's new Peak column: each day's most at once.
@@ -207,7 +207,7 @@ You and someone else on a video call, each with the Windows app (no new download
 - [ ] You stop ("Stop theirs" or your Stop): her window stops capturing her computer's sound at once, and she can "Just read" your captions again (or Start again while yours run).
 - [ ] Close your own window/phone without Stop while she still captions: about 15 minutes later everything stops (her words alone never keep your session going).
 - [ ] When your balance can't cover it, her window says "Marta's captions can't run now" (nothing about your account).
-- [ ] On the wedding day: Translate's share at 5 or less (the wedding app's own five languages need five streams).
+- [ ] On the wedding day: Kinsay's share at 5 or less (the wedding app's own five languages need five streams).
 
 ## 21. The Windows app's window size (2026-11-14)
 
@@ -217,12 +217,12 @@ Download the app again (/download): this changes the app itself.
 - [ ] Dragging a corner never makes it smaller than its content: the start panel and every button of the strip stay whole.
 - [ ] Moved or resized, it stays so until it closes; the next opening starts at the bottom again.
 
-## 22. Install Translate as an app (2026-11-14)
+## 22. Install Kinsay as an app (2026-11-14)
 
-- [ ] Android (Chrome): ⚙ → App → "Install Translate": Chrome asks "Install"; the icon is on the home screen; opened from it, Translate fills the screen (no address bar) and you are still signed in. Back in Settings of the installed app, the row is gone.
-- [ ] iPhone (Safari): ⚙ → "Install Translate" shows the three steps (Share at the bottom, "Add to Home Screen", Add); do them: the teal icon on the home screen, full screen when opened; the microphone is asked once more (by the app this time).
-- [ ] A computer (Chrome or Edge): the row opens the browser's own question; Translate then opens in its own window and sits in the Start menu.
-- [ ] The browser tab shows Translate's little icon.
+- [ ] Android (Chrome): ⚙ → App → "Install Kinsay": Chrome asks "Install"; the icon is on the home screen; opened from it, Kinsay fills the screen (no address bar) and you are still signed in. Back in Settings of the installed app, the row is gone.
+- [ ] iPhone (Safari): ⚙ → "Install Kinsay" shows the three steps (Share at the bottom, "Add to Home Screen", Add); do them: the teal icon on the home screen, full screen when opened; the microphone is asked once more (by the app this time).
+- [ ] A computer (Chrome or Edge): the row opens the browser's own question; Kinsay then opens in its own window and sits in the Start menu.
+- [ ] The browser tab shows Kinsay's little icon.
 
 ## 23. Who said what (2026-11-14)
 
@@ -242,6 +242,16 @@ Download the Windows app again (/download): this changes the app itself.
 - [ ] Switching it on and off quickly many times: after six in a minute it says to wait.
 - [ ] The Windows app on a second screen with another scaling (e.g. 100 % and 150 %): dragged across, it keeps its look and never gets smaller than its content.
 - [ ] Dragging its edge never takes it past the screen's edge.
-- [ ] A Mac with Safari: ⚙ → "Install Translate" shows File → Add to Dock → Add.
-- [ ] Chrome on an iPhone: ⚙ → "Install Translate" starts with Share in the browser.
-- [ ] A reader (opened by a code, not signed in): no "Install Translate" row.
+- [ ] A Mac with Safari: ⚙ → "Install Kinsay" shows File → Add to Dock → Add.
+- [ ] Chrome on an iPhone: ⚙ → "Install Kinsay" starts with Share in the browser.
+- [ ] A reader (opened by a code, not signed in): no "Install Kinsay" row.
+
+## 25. Kinsay: the new name and logo (2026-11-14)
+
+Download the Windows app again (/download): it is Kinsay.exe now.
+
+- [ ] Every page says Kinsay (the bar, the tab's title, sign-in, Settings, Privacy, the download page), in all five languages; "Translate into" stays (a button, not the name).
+- [ ] The tab shows the k in a bubble; the bar's logo is the same.
+- [ ] A sign-in mail says Kinsay in its subject and button (and its sender's name, if the VPS's MAIL_FROM_NAME says Kinsay).
+- [ ] Installed on a phone (remove the old Translate icon first): the Kinsay icon and name on the home screen.
+- [ ] Kinsay.exe: the file, the taskbar and the window show the logo; it opens still signed in (its data folder is the old one).

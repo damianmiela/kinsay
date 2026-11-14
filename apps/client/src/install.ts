@@ -1,4 +1,4 @@
-// Install Translate as an app (mockups batch 7, approved 2026-11-14): the site is installable (its
+// Install Kinsay as an app (mockups batch 7, approved 2026-11-14): the site is installable (its
 // manifest and icons; no service worker, Chrome no longer needs one). Android and computers: the
 // browser's own question, kept from `beforeinstallprompt` (it comes once, early: watched from the
 // start); iPhone and iPad: no website may ask, so Settings shows Safari's steps; elsewhere the

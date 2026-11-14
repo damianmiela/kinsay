@@ -1,5 +1,5 @@
 // The admin's "Soniox right now" and "History" (mockups batch 6, approved 2026-11-13): Soniox's
-// own count at once for the whole key (Translate and the wedding app), Translate's share of it,
+// own count at once for the whole key (Kinsay and the wedding app), Kinsay's share of it,
 // and the history of the most at once and of the costs. English, the admin only.
 import { useEffect, useState } from 'react';
 import { api } from './api';
@@ -99,8 +99,8 @@ export function SonioxLive() {
           <b>
             {org.current} of {limit} at Soniox.
           </b>{' '}
-          New streams may be refused (Translate’s and the wedding app’s): lower Translate’s share,
-          or ask Soniox for a higher limit in its Console.
+          New streams may be refused (Kinsay’s and the wedding app’s): lower Kinsay’s share, or ask
+          Soniox for a higher limit in its Console.
         </div>
       )}
       <div className="card live-card">
@@ -119,7 +119,7 @@ export function SonioxLive() {
                 <div className="live-legend">
                   <span>
                     <i className="dot t" />
-                    Translate <b>{mine}</b>
+                    Kinsay <b>{mine}</b>
                   </span>
                   <span>
                     <i className="dot w" />
@@ -133,12 +133,12 @@ export function SonioxLive() {
             ) : (
               <>
                 <div className="live-big">
-                  {mine} <span>Translate’s own now</span>
+                  {mine} <span>Kinsay’s own now</span>
                 </div>
                 <p className="small">
                   {now.error === 'no key'
                     ? 'No Soniox key on this server.'
-                    : `Soniox didn’t answer (${now.error ?? 'no answer'}): Translate’s own count only.`}
+                    : `Soniox didn’t answer (${now.error ?? 'no answer'}): Kinsay’s own count only.`}
                 </p>
               </>
             )}
@@ -163,12 +163,12 @@ export function SonioxLive() {
         </div>
         <div className="live-share">
           <label>
-            Translate may hold at most
+            Kinsay may hold at most
             <input
               className="input"
               inputMode="numeric"
               value={share || String(now.translate.share)}
-              aria-label="Translate's share of Soniox's streams"
+              aria-label="Kinsay's share of Soniox's streams"
               onChange={(e) => {
                 setShare(e.target.value.replace(/\D/g, ''));
                 setSaved(null);
