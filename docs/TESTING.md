@@ -216,3 +216,10 @@ Download the app again (/download): this changes the app itself.
 - [ ] It opens across 90 % of the screen's width, about 340 px high, centred at the bottom with a margin (on the screen the mouse is on), at 100 %, 125 % and 150 % display scaling alike.
 - [ ] Dragging a corner never makes it smaller than its content: the start panel and every button of the strip stay whole.
 - [ ] Moved or resized, it stays so until it closes; the next opening starts at the bottom again.
+
+## 22. Install Translate as an app (2026-11-14)
+
+- [ ] Android (Chrome): ⚙ → App → "Install Translate": Chrome asks "Install"; the icon is on the home screen; opened from it, Translate fills the screen (no address bar) and you are still signed in. Back in Settings of the installed app, the row is gone.
+- [ ] iPhone (Safari): ⚙ → "Install Translate" shows the three steps (Share at the bottom, "Add to Home Screen", Add); do them: the teal icon on the home screen, full screen when opened; the microphone is asked once more (by the app this time).
+- [ ] A computer (Chrome or Edge): the row opens the browser's own question; Translate then opens in its own window and sits in the Start menu.
+- [ ] The browser tab shows Translate's little icon.

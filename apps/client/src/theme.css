@@ -858,3 +858,16 @@ a.btn {
 .small.center {
   text-align: center;
 }
+
+/* ---------- install as an app (mockups batch 7) ---------- */
+.install-steps {
+  font-size: 17px;
+}
+.install-steps .k {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-weight: 700;
+}

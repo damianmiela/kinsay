@@ -592,6 +592,30 @@ test('the pages in the browser’s language (Polish here); the switch at the foo
   await expect(page.getByText('Live captions, in your language')).toBeVisible();
 });
 
+test('installable as an app: its manifest and icons; on an iPhone, Safari’s steps in Settings', async ({
+  browser,
+  baseURL,
+  request,
+}) => {
+  const m = await request.get('/manifest.webmanifest');
+  expect(m.status()).toBe(200);
+  const manifest = (await m.json()) as { display: string; icons: { src: string }[] };
+  expect(manifest.display).toBe('standalone');
+  for (const icon of manifest.icons) expect((await request.get(icon.src)).status()).toBe(200);
+  const admin = await adminApi(browser, baseURL!);
+  const { page } = await signedInPhone(browser, baseURL!, admin, {
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1',
+  });
+  await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: /Install Translate/ }).click();
+  await expect(page.getByRole('heading', { name: 'Add to Home Screen' })).toBeVisible();
+  await expect(page.locator('.install-steps li')).toHaveCount(3);
+  await expect(page.locator('.install-steps .k').first()).toHaveText('Share');
+  expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
+});
+
 test('the download page: the desktop app as one file, saved as a download', async ({
   browser,
   baseURL,

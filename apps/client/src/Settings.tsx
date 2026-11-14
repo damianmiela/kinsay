@@ -9,6 +9,7 @@ import { api } from './api';
 import { IconClose, IconQr, IconRight } from './Bar';
 import { Sheet, Toggle } from './bits';
 import { download, t, tw } from './texts';
+import { useInstall } from './install';
 import { setUi, ui, UI_LANGS, UI_NAMES } from './ui';
 
 const isWindows = typeof navigator !== 'undefined' && /Windows/.test(navigator.userAgent);
@@ -82,13 +83,48 @@ export function SettingsSheet({
   /** A reader: leave these captions (the last row). */
   leave?: { label: string; onClick: () => void };
 }) {
-  const [page, setPage] = useState<'main' | 'account' | 'lang'>('main');
+  const [page, setPage] = useState<'main' | 'account' | 'lang' | 'install'>('main');
+  const install = useInstall();
   const target = half ? '_blank' : undefined;
   if (page === 'account') {
     return (
       <Sheet label={t.groupAccount} onClose={onClose} half={half}>
         <Head title={t.groupAccount} onClose={onClose} onBack={() => setPage('main')} />
         <AccountPart />
+      </Sheet>
+    );
+  }
+  if (page === 'install' && install.way) {
+    // (no website may ask on an iPhone or an iPad: Safari's own steps; elsewhere the menu's)
+    const steps =
+      install.way === 'iphone'
+        ? t.iosSteps
+        : install.way === 'ipad'
+          ? [t.ipadFirst, ...t.iosSteps.slice(1)]
+          : t.menuSteps;
+    return (
+      <Sheet label={t.addHome} onClose={onClose} half={half}>
+        <Head
+          title={install.way === 'menu' ? t.installApp : t.addHome}
+          onClose={onClose}
+          onBack={() => setPage('main')}
+        />
+        <ol className="steps install-steps">
+          {steps.map((s) => (
+            <li key={s}>
+              {s.split('*').map((part, i) =>
+                i % 2 ? (
+                  <span key={i} className="k">
+                    {part}
+                  </span>
+                ) : (
+                  part
+                ),
+              )}
+            </li>
+          ))}
+        </ol>
+        <p className="small">{t.thenOpen}</p>
       </Sheet>
     );
   }
@@ -141,6 +177,18 @@ export function SettingsSheet({
         </Group>
       )}
       <Group title={t.groupApp}>
+        {install.way && (
+          <button
+            className="li link-row"
+            onClick={() => (install.way === 'prompt' ? void install.ask() : setPage('install'))}
+          >
+            <span className="what">
+              <b>{t.installApp}</b>
+              <small>{t.installSmall}</small>
+            </span>
+            <IconRight />
+          </button>
+        )}
         {appLang && (
           <button className="li link-row" onClick={() => setPage('lang')}>
             <span className="what">{t.pageLang}</span>
