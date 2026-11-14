@@ -132,7 +132,8 @@ namespace TranslateApp
     sealed class SubtitlesForm : Form
     {
         // (in the page's own pixels; Windows' pixels are these times the screen's scale)
-        const int MinW = 360, MinH = 110;
+        // (never smaller than its content: the strip's buttons, the start panel; in CSS pixels)
+        const int MinW = 520, MinH = 260;
         readonly Uri page;
         readonly string origin;
         readonly WebView2 web = new WebView2();
@@ -150,7 +151,6 @@ namespace TranslateApp
             ShowInTaskbar = true;
             StartPosition = FormStartPosition.Manual;
             BackColor = Color.FromArgb(18, 16, 22);
-            Bounds = SavedBounds();
             Opacity = 0.92;
             web.Dock = DockStyle.Fill;
             web.DefaultBackgroundColor = Color.FromArgb(18, 16, 22);
@@ -159,6 +159,7 @@ namespace TranslateApp
             Load += async (s, e) =>
             {
                 MinimumSize = new Size(Px(MinW), Px(MinH));
+                Bounds = OpeningBounds();
                 try { await Start(); }
                 catch (WebView2RuntimeNotFoundException)
                 {
@@ -173,13 +174,7 @@ namespace TranslateApp
                     Close();
                 }
             };
-            FormClosing += (s, e) =>
-            {
-                SaveBounds();
-                StopSound();
-            };
-            // (once a move or a resize by Windows ends, not on every step)
-            ResizeEnd += (s, e) => SaveBounds();
+            FormClosing += (s, e) => StopSound();
         }
 
         /// Locked: clicks go through (kept in the window's style, so WinForms never drops it).
@@ -298,7 +293,6 @@ namespace TranslateApp
                         ResizeBy(Px(dx), Px(dy), p[2] == "left");
                     break;
                 case "resized":
-                    SaveBounds();
                     break;
                 case "sound":
                     if (arg == "on") StartSound();
@@ -366,37 +360,17 @@ namespace TranslateApp
             UpdateStyles();
         }
 
-        string BoundsFile => Path.Combine(Program.Folder, "window.txt");
-
-        Rectangle SavedBounds()
+        /**
+         * Every opening (Damian, 2026-11-14): 90 % of the screen's width, about 340 px high, centred
+         * at the bottom with a margin, on the screen the mouse is on; from there it is moved and
+         * sized. Never smaller than its content, never bigger than the screen.
+         */
+        Rectangle OpeningBounds()
         {
-            try
-            {
-                var p = File.ReadAllText(BoundsFile).Split(',');
-                var b = new Rectangle(int.Parse(p[0]), int.Parse(p[1]), int.Parse(p[2]), int.Parse(p[3]));
-                // (a smaller screen since: never off it, never bigger than it)
-                var area = Screen.FromRectangle(b).WorkingArea;
-                int w = Math.Min(Math.Max(b.Width, MinW), area.Width), h = Math.Min(Math.Max(b.Height, MinH), area.Height);
-                int x = Math.Min(Math.Max(b.X, area.X), area.Right - w), y = Math.Min(Math.Max(b.Y, area.Y), area.Bottom - h);
-                return new Rectangle(x, y, w, h);
-            }
-            catch (Exception)
-            {
-                var area = Screen.PrimaryScreen.WorkingArea;
-                int w = Math.Min(760, area.Width - 40);
-                return new Rectangle(area.X + (area.Width - w) / 2, area.Bottom - 360, w, 300);
-            }
-        }
-
-        void SaveBounds()
-        {
-            if (WindowState != FormWindowState.Normal) return;
-            try
-            {
-                Directory.CreateDirectory(Program.Folder);
-                File.WriteAllText(BoundsFile, Bounds.X + "," + Bounds.Y + "," + Bounds.Width + "," + Bounds.Height);
-            }
-            catch (Exception) { /* (not remembered) */ }
+            var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+            int w = Math.Min(area.Width, Math.Max(Px(MinW), (int)(area.Width * 0.9)));
+            int h = Math.Min(area.Height, Math.Max(Px(MinH), Px(340)));
+            return new Rectangle(area.X + (area.Width - w) / 2, Math.Max(area.Y, area.Bottom - h - Px(24)), w, h);
         }
 
         static string Js(string s) => "'" + s.Replace("\\", "\\\\").Replace("'", "\\'") + "'";

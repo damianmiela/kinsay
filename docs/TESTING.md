@@ -208,3 +208,11 @@ You and someone else on a video call, each with the Windows app (no new download
 - [ ] Close your own window/phone without Stop while she still captions: about 15 minutes later everything stops (her words alone never keep your session going).
 - [ ] When your balance can't cover it, her window says "Marta's captions can't run now" (nothing about your account).
 - [ ] On the wedding day: Translate's share at 5 or less (the wedding app's own five languages need five streams).
+
+## 21. The Windows app's window size (2026-11-14)
+
+Download the app again (/download): this changes the app itself.
+
+- [ ] It opens across 90 % of the screen's width, about 340 px high, centred at the bottom with a margin (on the screen the mouse is on), at 100 %, 125 % and 150 % display scaling alike.
+- [ ] Dragging a corner never makes it smaller than its content: the start panel and every button of the strip stay whole.
+- [ ] Moved or resized, it stays so until it closes; the next opening starts at the bottom again.
