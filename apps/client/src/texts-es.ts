@@ -332,8 +332,7 @@ export const es: Texts = {
     unlock: 'Desbloquear',
     showQr: 'Mostrar el código QR',
     readAlong: 'Leer en un móvil',
-    readAlongBody: (code) =>
-      `Escanéalo o escribe el código ${code} en translate.dendigital.de/join.`,
+    readAlongBody: (code) => `Escanéalo o escribe el código ${code} en kinsay.dendigital.de/join.`,
     account: 'Cuenta y saldo',
     closeWindow: 'Cerrar la ventana',
     closeAsk: '¿Cerrar la ventana y parar los subtítulos?',

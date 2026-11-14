@@ -109,7 +109,7 @@ namespace TranslateApp
         }
 
         /// The page: TRANSLATE_PAGE (a local test server), else config.json next to the app, else
-        /// translate.dendigital.de.
+        /// kinsay.dendigital.de.
         static Uri PageAddress()
         {
             var env = Environment.GetEnvironmentVariable("TRANSLATE_PAGE");
@@ -121,7 +121,7 @@ namespace TranslateApp
                 if (m.Success) return new Uri(m.Groups[1].Value);
             }
             catch (Exception) { /* (none) */ }
-            return new Uri("https://translate.dendigital.de/window");
+            return new Uri("https://kinsay.dendigital.de/window");
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindow(string cls, string title);

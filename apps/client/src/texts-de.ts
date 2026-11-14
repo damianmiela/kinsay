@@ -343,7 +343,7 @@ export const de: Texts = {
     showQr: 'QR-Code zeigen',
     readAlong: 'Auf einem Handy mitlesen',
     readAlongBody: (code) =>
-      `Scann ihn oder gib den Code ${code} auf translate.dendigital.de/join ein.`,
+      `Scann ihn oder gib den Code ${code} auf kinsay.dendigital.de/join ein.`,
     account: 'Konto und Guthaben',
     closeWindow: 'Fenster schließen',
     closeAsk: 'Fenster schließen und die Untertitel stoppen?',

@@ -328,7 +328,7 @@ export const pl: Texts = {
     unlock: 'Odblokuj',
     showQr: 'Pokaż kod QR',
     readAlong: 'Czytaj na telefonie',
-    readAlongBody: (code) => `Zeskanuj go albo wpisz kod ${code} na translate.dendigital.de/join.`,
+    readAlongBody: (code) => `Zeskanuj go albo wpisz kod ${code} na kinsay.dendigital.de/join.`,
     account: 'Konto i środki',
     closeWindow: 'Zamknij okno',
     closeAsk: 'Zamknąć okno i zatrzymać napisy?',

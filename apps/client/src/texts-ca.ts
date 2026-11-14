@@ -336,7 +336,7 @@ export const ca: Texts = {
     unlock: 'Desbloqueja',
     showQr: 'Mostra el codi QR',
     readAlong: 'Llegeix-ho en un mòbil',
-    readAlongBody: (code) => `Escaneja’l o escriu el codi ${code} a translate.dendigital.de/join.`,
+    readAlongBody: (code) => `Escaneja’l o escriu el codi ${code} a kinsay.dendigital.de/join.`,
     account: 'Compte i saldo',
     closeWindow: 'Tanca la finestra',
     closeAsk: 'Vols tancar la finestra i aturar els subtítols?',

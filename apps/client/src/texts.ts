@@ -353,7 +353,7 @@ const tw_en = {
   showQr: 'Show the QR code',
   readAlong: 'Read along on a phone',
   readAlongBody: (code: string) =>
-    `Scan it, or type the code ${code} at translate.dendigital.de/join.`,
+    `Scan it, or type the code ${code} at kinsay.dendigital.de/join.`,
   account: 'Account and credits',
   closeWindow: 'Close the window',
   closeAsk: 'Close the window and stop the captions?',
