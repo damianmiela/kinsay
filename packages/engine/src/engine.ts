@@ -193,6 +193,8 @@ const LINE_MAX = 160;
 const CLAUSE_MIN = 50;
 /** A preview word is shown to readers once it has stayed the same this long. */
 export const SETTLE_MS = 1_200;
+/** With speakers (no end of speech from the service): a line with nothing new this long is done. */
+export const SPEAKER_QUIET_MS = 2_500;
 
 /** Where a too-long text is cut: after the last clause break, else at the last space. */
 export function cutAt(text: string): number {
@@ -222,6 +224,8 @@ export class LineBuilder {
   onLine?: (line: string, n: number) => void;
   /** Who says the line coming in (speakers on), and who said each kept line. */
   speaker: string | undefined;
+  /** Who the preview's first words are from (speakers on). */
+  previewSpeaker: string | undefined;
   private speakerOf = new Map<number, string>();
 
   constructor(
@@ -323,6 +327,7 @@ export class LineBuilder {
     this.current = '';
     this.preview = '';
     this.speaker = undefined;
+    this.previewSpeaker = undefined;
     this.speakerOf.clear();
   }
 
@@ -330,7 +335,13 @@ export class LineBuilder {
   view(n = LINES_SENT, preview = this.fullPreview): CaptionText {
     const lines = this.lines.slice(-n);
     const first = this.count - lines.length;
-    const live = `${this.current}${preview ? this.preview : this.settledPreview()}`.trim();
+    // (another person's first words, not final yet, never join this person's line: audit 36)
+    const other =
+      this.previewSpeaker !== undefined &&
+      this.previewSpeaker !== this.speaker &&
+      !!this.current.trim();
+    const guess = other ? '' : preview ? this.preview : this.settledPreview();
+    const live = `${this.current}${guess}`.trim();
     const text: CaptionText = { lines, first, live };
     if (this.speakerOf.size) {
       const speakers: Record<number, string> = {};
@@ -340,7 +351,8 @@ export class LineBuilder {
       }
       text.speakers = speakers;
     }
-    if (live && this.speaker !== undefined) text.liveSpeaker = this.speaker;
+    const liveSpeaker = this.current.trim() ? this.speaker : (this.previewSpeaker ?? this.speaker);
+    if (live && liveSpeaker !== undefined) text.liveSpeaker = liveSpeaker;
     return text;
   }
 }
@@ -362,6 +374,8 @@ export function applyTokens(
   };
   let ownPreview = '';
   let heardPreview = '';
+  let ownPreviewSpeaker: string | undefined;
+  let heardPreviewSpeaker: string | undefined;
   let end = false;
   for (const t of tokens) {
     if (!t.text) continue;
@@ -372,12 +386,18 @@ export function applyTokens(
     const final = t.is_final !== false;
     if (t.translation_status !== 'original') {
       if (final) addRun(ownRuns, t.text, t.speaker);
-      else ownPreview += t.text;
+      else {
+        if (!ownPreview.trim()) ownPreviewSpeaker = t.speaker;
+        ownPreview += t.text;
+      }
     }
     if (t.translation_status !== 'translation') {
       if (t.language && t.text.trim()) spoken = t.language;
       if (final) addRun(heardRuns, t.text, t.speaker);
-      else heardPreview += t.text;
+      else {
+        if (!heardPreview.trim()) heardPreviewSpeaker = t.speaker;
+        heardPreview += t.text;
+      }
     }
   }
   const apply = (b: LineBuilder, runs: { text: string; speaker?: string }[]) => {
@@ -386,9 +406,11 @@ export function applyTokens(
   };
   apply(own, ownRuns);
   own.preview = ownPreview;
+  own.previewSpeaker = ownPreviewSpeaker;
   if (heard && heard !== own) {
     apply(heard, heardRuns);
     heard.preview = heardPreview;
+    heard.previewSpeaker = heardPreviewSpeaker;
   }
   return spoken;
 }
@@ -468,6 +490,7 @@ export class Engine {
   private drained: (() => void) | undefined;
   /** Streams asked for who said what. */
   private speakersOn = false;
+  private quietTimer: NodeJS.Timeout | undefined;
   private readonly onText: () => void;
   private readonly onStatus: () => void;
   private readonly onSent: (ms: number, streams: number) => void;
@@ -735,6 +758,7 @@ export class Engine {
           }
           this.onText();
           this.settleSoon();
+          this.quietSoon();
           if (!current || target === HEARD) return;
           const words = (own: boolean) =>
             tokens.some(
@@ -904,6 +928,30 @@ export class Engine {
     if (on === this.speakersOn) return;
     this.speakersOn = on;
     if (this.streams.size) this.endStreams();
+    // (off: the lines from now on have no speaker; the old ones keep their colours, audit 36)
+    for (const t of [...this.texts.values(), this.heard]) {
+      t.speaker = undefined;
+      t.previewSpeaker = undefined;
+    }
+  }
+
+  /**
+   * With speakers, the service sends no end of speech (endpoint detection off): a line still coming
+   * in with nothing new for SPEAKER_QUIET_MS (and no words being guessed) is finished, so a short
+   * last remark is a line too (read aloud says it, audit 36).
+   */
+  private quietSoon() {
+    clearTimeout(this.quietTimer);
+    if (!this.speakersOn || this.closed) return;
+    this.quietTimer = setTimeout(() => {
+      let changed = false;
+      for (const t of [...this.texts.values(), this.heard]) {
+        if (!t.current.trim() || t.preview.trim()) continue;
+        t.finish();
+        changed = true;
+      }
+      if (changed) this.onText();
+    }, SPEAKER_QUIET_MS);
   }
 
   /** Every text empty (the wedding host's "clear"). */
@@ -939,6 +987,7 @@ export class Engine {
     clearTimeout(this.idleTimer);
     clearTimeout(this.settleTimer);
     clearTimeout(this.pumpTimer);
+    clearTimeout(this.quietTimer);
     // (the map emptied first, as in endStreams(): a connection still opening reports its end at
     // once, and that is no failure of the service)
     const streams = [...this.streams.values()];

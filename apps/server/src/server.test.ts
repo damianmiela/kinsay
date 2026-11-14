@@ -379,6 +379,21 @@ describe('audit 30', () => {
   });
 });
 
+describe('audit 36', () => {
+  it('the who-said-what switch is limited per session (each switch starts its streams again)', async () => {
+    const { person, sock } = await start();
+    const host = sock({ cookie: (await person('Marta')).cookie });
+    await next<SessionView>(host, 'state:session');
+    const results = [];
+    for (let i = 0; i < 7; i++)
+      results.push(await ask(host, 'session:speakers', { on: i % 2 === 0 }));
+    expect(results.slice(0, 6).every((r) => r.ok)).toBe(true);
+    expect(results[6]).toEqual({ ok: false, error: 'too-many' });
+    // (asking for what is already on costs nothing)
+    expect(await ask(host, 'session:speakers', { on: false })).toEqual({ ok: true });
+  });
+});
+
 describe('audit 31', () => {
   /** Wrong admin logins, each claiming another address: how many got past the brake. */
   const tries = async (url: string) => {

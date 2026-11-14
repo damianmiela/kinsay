@@ -7,6 +7,10 @@ const ua = {
   mac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.1 Safari/605.1.15',
   android:
     'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/131.0.0.0 Mobile Safari/537.36',
+  macChrome:
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36',
+  iphoneChrome:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 CriOS/131.0.6778.73 Mobile/15E148 Safari/604.1',
   firefox: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
 };
 
@@ -14,7 +18,9 @@ describe('installing as an app', () => {
   it('how each device installs, and never once installed', () => {
     expect(installWay(ua.iphone, true, false, false)).toBe('iphone');
     expect(installWay(ua.mac, true, false, false)).toBe('ipad'); // (an iPad says it is a Mac)
-    expect(installWay(ua.mac, false, false, false)).toBe('menu'); // (Safari's Add to Dock)
+    expect(installWay(ua.mac, false, false, false)).toBe('mac'); // (Safari's Add to Dock)
+    expect(installWay(ua.macChrome, false, false, false)).toBe('menu');
+    expect(installWay(ua.iphoneChrome, true, false, false)).toBe('ios-other');
     expect(installWay(ua.android, true, false, true)).toBe('prompt');
     expect(installWay(ua.android, true, false, false)).toBe('menu');
     expect(installWay(ua.firefox, false, false, false)).toBeNull();

@@ -16,6 +16,7 @@ import {
   RELEASE_MS,
   SERVICE_FULL,
   SETTLE_MS,
+  SPEAKER_QUIET_MS,
   sonioxConnect,
   STALL_GAP_MS,
   STALL_MS,
@@ -382,6 +383,34 @@ describe('who said what (speakers)', () => {
     const own = new LineBuilder();
     applyTokens([tok(' Hello there.', 'translation'), tok('<end>', 'none')], own);
     expect(own.view()).toEqual({ lines: ['Hello there.'], first: 0, live: '' });
+  });
+
+  it('audit 36: off again, new lines have no colour (the old keep theirs); a quiet spell ends a line; another person’s guess never joins a line', () => {
+    vi.useFakeTimers();
+    const fake = fakeService();
+    const e = new Engine(fake.connect, { onText: () => {}, onStatus: () => {}, speakers: true });
+    e.audio(chunk());
+    const events = fake.streams.get(HEARD)!.events;
+    events.tokens([spk(' Yes, thanks.', '1', 'none')]);
+    expect(e.heard.view().lines).toEqual([]);
+    // (no end of speech with speakers: the quiet spell finishes the short remark)
+    vi.advanceTimersByTime(SPEAKER_QUIET_MS + 1);
+    expect(e.heard.view().lines).toEqual(['Yes, thanks.']);
+    // person 1 still talking, person 2's first words a guess: not on person 1's line
+    events.tokens([
+      spk(' And then', '1', 'none'),
+      { text: ' Hold', translation_status: 'none', is_final: false, speaker: '2' },
+    ]);
+    expect(e.heard.view().live).toBe('And then');
+    expect(e.heard.view().liveSpeaker).toBe('1');
+    // off: the next lines without a colour
+    e.setSpeakers(false);
+    e.audio(chunk());
+    fake.streams.get(HEARD)!.events.tokens([tok(' Plain words.', 'none'), tok('<end>', 'none')]);
+    const v = e.heard.view();
+    expect(v.lines.at(-1)).toBe('Plain words.');
+    expect(v.speakers?.[v.first + v.lines.length - 1]).toBeUndefined();
+    expect(v.speakers?.[0]).toBe('1');
   });
 
   it('on and off: the streams are asked again, with the speakers or without', () => {

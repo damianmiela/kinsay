@@ -44,6 +44,8 @@ export const FLUSH_MS = 10_000;
 export const MIC_QUIET_MS = 2_000;
 /** A session's guest may start this often a minute (reconnects included). */
 const GUEST_STARTS_PER_MIN = 10;
+/** Who-said-what switches per session a minute: each starts its streams again (audit 36). */
+const SPEAKER_SWITCHES_PER_MIN = 6;
 /** The listening page sent nothing for this long: nobody listens (checked with the stops). */
 const MIC_GONE_MS = 10_000;
 /** Language switches a page may make per minute (each opens and closes a paid stream: audit 30). */
@@ -174,6 +176,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   const langSwitches = new RateLimiter(LANG_SWITCHES_PER_MIN, 60_000);
   // (a guest's starts per session: reconnecting pages can't churn the host's streams, audit 35, L4)
   const guestStarts = new RateLimiter(GUEST_STARTS_PER_MIN, 60_000);
+  const speakerSwitches = new RateLimiter(SPEAKER_SWITCHES_PER_MIN, 60_000);
 
   function newCode(): string {
     for (;;) {
@@ -696,6 +699,11 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
 
     s.on('session:speakers', (p, cb) => {
       if (!host()) return reply(cb, { ok: false, error: 'not-host' });
+      const on = typeof p === 'object' && p !== null && (p as { on?: unknown }).on === true;
+      if (on === c.speakers) return reply(cb, { ok: true });
+      if (!speakerSwitches.take(String(c.personId), now())) {
+        return reply(cb, { ok: false, error: 'too-many' });
+      }
       c.speakers = typeof p === 'object' && p !== null && (p as { on?: unknown }).on === true;
       c.engine.setSpeakers(c.speakers);
       stateAll(c);

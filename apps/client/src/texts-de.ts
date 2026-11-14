@@ -68,6 +68,12 @@ export const de: Texts = {
       'Tippe auf *Hinzufügen*',
     ],
     ipadFirst: 'Tippe oben in Safari auf *Teilen*',
+    iosOtherFirst: 'Tippe im Browser auf *Teilen* (oben oder unten)',
+    macSteps: [
+      'Wähle in Safaris Menüleiste *Ablage*',
+      'Wähle *Zum Dock hinzufügen*',
+      'Klicke auf *Hinzufügen*',
+    ],
     menuSteps: [
       'Öffne das Menü des Browsers (⋮ oder …)',
       'Wähle *App installieren* oder *Zum Startbildschirm hinzufügen*',

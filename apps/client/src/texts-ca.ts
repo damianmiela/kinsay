@@ -68,6 +68,12 @@ export const ca: Texts = {
       'Toca *Afegeix*',
     ],
     ipadFirst: 'Toca *Comparteix* a dalt de Safari',
+    iosOtherFirst: 'Toca *Comparteix* al navegador (a dalt o a baix)',
+    macSteps: [
+      'A la barra de menús de Safari, tria *Arxiu*',
+      'Tria *Afegeix al Dock*',
+      'Fes clic a *Afegeix*',
+    ],
     menuSteps: [
       'Obre el menú del navegador (⋮ o …)',
       'Tria *Instal·la l’aplicació* o *Afegeix a la pantalla d’inici*',

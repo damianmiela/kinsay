@@ -72,6 +72,8 @@ const t_en = {
     'Tap *Add*',
   ],
   ipadFirst: 'Tap *Share* at the top of Safari',
+  iosOtherFirst: 'Tap *Share* in your browser (at the top or bottom)',
+  macSteps: ['In Safari’s menu bar, choose *File*', 'Choose *Add to Dock*', 'Click *Add*'],
   menuSteps: ['Open your browser’s menu (⋮ or …)', 'Choose *Install app* or *Add to Home screen*'],
   thenOpen: 'Then open Translate from its icon.',
   guestCantRun: (n: string) => `${n}’s captions can’t run now.`,

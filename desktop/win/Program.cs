@@ -158,8 +158,13 @@ namespace TranslateApp
             lockTimer.Tick += (s, e) => LetClicksThrough(!OverLockBadge());
             Load += async (s, e) =>
             {
-                MinimumSize = new Size(Px(MinW), Px(MinH));
-                Bounds = OpeningBounds();
+                // (the screen the mouse is on decides the scale; the window's own after that: audit 36)
+                dpi = MonitorDpi(Cursor.Position);
+                var opening = OpeningBounds();
+                FitMinimum(Screen.FromPoint(Cursor.Position).WorkingArea);
+                Bounds = opening;
+                dpi = (int)GetDpiForWindow(Handle);
+                FitMinimum(Screen.FromControl(this).WorkingArea);
                 try { await Start(); }
                 catch (WebView2RuntimeNotFoundException)
                 {
@@ -188,7 +193,40 @@ namespace TranslateApp
             }
         }
 
-        int Px(double cssPx) => (int)Math.Round(cssPx * DeviceDpi / 96.0);
+        /// The window's scale (dots per inch), followed across screens (WM_DPICHANGED).
+        int dpi = 96;
+        int Px(double cssPx) => (int)Math.Round(cssPx * dpi / 96.0);
+
+        /// Never smaller than the content, never bigger than the screen it is on.
+        void FitMinimum(Rectangle area) =>
+            MinimumSize = new Size(Math.Min(Px(MinW), area.Width), Math.Min(Px(MinH), area.Height));
+
+        static int MonitorDpi(Point p)
+        {
+            try
+            {
+                if (GetDpiForMonitor(MonitorFromPoint(p, 2), 0, out uint x, out _) == 0) return (int)x;
+            }
+            catch (EntryPointNotFoundException) { }
+            return 96;
+        }
+
+        /// Moved to a screen with another scale: Windows' suggested size, the minimum scaled with it.
+        protected override void WndProc(ref Message m)
+        {
+            base.WndProc(ref m);
+            if (m.Msg != 0x02E0) return; // WM_DPICHANGED
+            dpi = (int)((long)m.WParam & 0xFFFF);
+            var r = Marshal.PtrToStructure<RECT>(m.LParam);
+            var suggested = Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom);
+            FitMinimum(Screen.FromRectangle(suggested).WorkingArea);
+            Bounds = suggested;
+        }
+
+        [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
+        [DllImport("user32.dll")] static extern uint GetDpiForWindow(IntPtr h);
+        [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(Point p, uint flags);
+        [DllImport("shcore.dll")] static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint x, out uint y);
 
         async System.Threading.Tasks.Task Start()
         {
@@ -341,8 +379,12 @@ namespace TranslateApp
         void ResizeBy(int dx, int dy, bool left)
         {
             var b = Bounds;
+            var area = Screen.FromControl(this).WorkingArea;
             int w = Math.Max(MinimumSize.Width, b.Width + (left ? -dx : dx));
             int h = Math.Max(MinimumSize.Height, b.Height + dy);
+            // (never past the screen's edges: audit 36)
+            w = Math.Min(w, left ? b.Right - area.Left : area.Right - b.X);
+            h = Math.Min(h, area.Bottom - b.Y);
             Bounds = new Rectangle(left ? b.Right - w : b.X, b.Y, w, h);
         }
 

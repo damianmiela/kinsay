@@ -101,11 +101,16 @@ export function SettingsSheet({
         ? t.iosSteps
         : install.way === 'ipad'
           ? [t.ipadFirst, ...t.iosSteps.slice(1)]
-          : t.menuSteps;
+          : install.way === 'ios-other'
+            ? [t.iosOtherFirst, ...t.iosSteps.slice(1)]
+            : install.way === 'mac'
+              ? t.macSteps
+              : t.menuSteps;
+    const computer = install.way === 'menu' || install.way === 'mac';
     return (
-      <Sheet label={t.addHome} onClose={onClose} half={half}>
+      <Sheet label={computer ? t.installApp : t.addHome} onClose={onClose} half={half}>
         <Head
-          title={install.way === 'menu' ? t.installApp : t.addHome}
+          title={computer ? t.installApp : t.addHome}
           onClose={onClose}
           onBack={() => setPage('main')}
         />
@@ -177,7 +182,8 @@ export function SettingsSheet({
         </Group>
       )}
       <Group title={t.groupApp}>
-        {install.way && (
+        {/* (a reader has no account here: the app would open on the sign-in, audit 36) */}
+        {install.way && account && (
           <button
             className="li link-row"
             onClick={() => (install.way === 'prompt' ? void install.ask() : setPage('install'))}

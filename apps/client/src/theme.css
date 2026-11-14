@@ -48,6 +48,19 @@
   --bar-top: #a9dde3;
   --stop: #c63b33;
   --amber: #ffd59e;
+  /* who said what: a colour per person (on the page; on the dark window) */
+  --spk-0: #0b6e79;
+  --spk-1: #b5651d;
+  --spk-2: #7a4fb5;
+  --spk-3: #b03a5b;
+  --spk-4: #2f6bd8;
+  --spk-5: #3d8b3d;
+  --spk-dark-0: #5fd0da;
+  --spk-dark-1: #f0b26b;
+  --spk-dark-2: #c3a2ef;
+  --spk-dark-3: #f08aa6;
+  --spk-dark-4: #8fb6ff;
+  --spk-dark-5: #8fd98f;
 }
 
 * {

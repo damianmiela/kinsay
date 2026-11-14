@@ -28,8 +28,11 @@ export function watchInstall() {
   });
 }
 
-/** How this device installs: the browser's question, Safari's steps, the menu, or not at all. */
-export type InstallWay = 'prompt' | 'iphone' | 'ipad' | 'menu' | null;
+/**
+ * How this device installs: the browser's question, Safari's steps (`ios-other`: another browser
+ * on an iPhone or iPad, its own Share; `mac`: Safari's Add to Dock), the menu, or not at all.
+ */
+export type InstallWay = 'prompt' | 'iphone' | 'ipad' | 'ios-other' | 'mac' | 'menu' | null;
 
 export function installWay(
   ua: string,
@@ -38,9 +41,17 @@ export function installWay(
   canPrompt: boolean,
 ): InstallWay {
   if (installed) return null;
+  const ios = /iPhone|iPod|iPad/.test(ua) || (/Macintosh/.test(ua) && touch);
+  if (ios && /CriOS|FxiOS|EdgiOS/.test(ua)) return 'ios-other';
   if (/iPhone|iPod/.test(ua)) return 'iphone';
-  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && touch)) return 'ipad';
+  if (ios) return 'ipad';
   if (canPrompt) return 'prompt';
+  if (
+    /Macintosh/.test(ua) &&
+    /Version\/.*Safari\//.test(ua) &&
+    !/Chrome|Chromium|Edg|Firefox/.test(ua)
+  )
+    return 'mac';
   // (Firefox on a computer can't install a site; on Android it can, from its menu)
   if (/Firefox\//.test(ua) && !/Android/.test(ua)) return null;
   return 'menu';

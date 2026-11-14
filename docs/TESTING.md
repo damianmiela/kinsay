@@ -232,3 +232,16 @@ Download the app again (/download): this changes the app itself.
 - [ ] The Windows app shows the colours too (its lines left-aligned while they're on).
 - [ ] Two people talking over each other in one language: how often are the colours right? (The real test: tell me what you see.)
 - [ ] Off again: back to lines by pauses, no colours.
+
+## 24. Audit 36's fixes (2026-11-14)
+
+Download the Windows app again (/download): this changes the app itself.
+
+- [ ] Who said what on, someone says one short thing ("Yes, thanks.") and stops: after about 2.5 s it is a finished line, and read aloud says it.
+- [ ] Switched off again: the next lines have no colour; the earlier ones keep theirs.
+- [ ] Switching it on and off quickly many times: after six in a minute it says to wait.
+- [ ] The Windows app on a second screen with another scaling (e.g. 100 % and 150 %): dragged across, it keeps its look and never gets smaller than its content.
+- [ ] Dragging its edge never takes it past the screen's edge.
+- [ ] A Mac with Safari: ⚙ → "Install Translate" shows File → Add to Dock → Add.
+- [ ] Chrome on an iPhone: ⚙ → "Install Translate" starts with Share in the browser.
+- [ ] A reader (opened by a code, not signed in): no "Install Translate" row.

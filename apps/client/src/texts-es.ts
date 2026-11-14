@@ -67,6 +67,12 @@ export const es: Texts = {
       'Toca *Añadir*',
     ],
     ipadFirst: 'Toca *Compartir* arriba en Safari',
+    iosOtherFirst: 'Toca *Compartir* en el navegador (arriba o abajo)',
+    macSteps: [
+      'En la barra de menús de Safari, elige *Archivo*',
+      'Elige *Añadir al Dock*',
+      'Haz clic en *Añadir*',
+    ],
     menuSteps: [
       'Abre el menú del navegador (⋮ o …)',
       'Elige *Instalar aplicación* o *Añadir a pantalla de inicio*',

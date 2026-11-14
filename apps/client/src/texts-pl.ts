@@ -65,6 +65,12 @@ export const pl: Texts = {
       'Dotknij *Dodaj*',
     ],
     ipadFirst: 'Dotknij *Udostępnij* na górze Safari',
+    iosOtherFirst: 'Dotknij *Udostępnij* w przeglądarce (na górze lub na dole)',
+    macSteps: [
+      'Na pasku menu Safari wybierz *Plik*',
+      'Wybierz *Dodaj do Docka*',
+      'Kliknij *Dodaj*',
+    ],
     menuSteps: [
       'Otwórz menu przeglądarki (⋮ lub …)',
       'Wybierz *Zainstaluj aplikację* lub *Dodaj do ekranu głównego*',
