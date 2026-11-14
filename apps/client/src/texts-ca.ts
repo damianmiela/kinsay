@@ -57,6 +57,8 @@ export const ca: Texts = {
     groupApp: 'Aplicació',
     micIsOff: 'El micròfon està apagat',
     turnItOn: 'Engega’l',
+    showSpeakers: 'Mostra qui parla',
+    showSpeakersSmall: 'un color per persona, una línia nova quan parla una altra',
     installApp: 'Instal·la Translate',
     installSmall: 'la seva icona a la pantalla d’inici, a pantalla completa',
     addHome: 'Afegeix a la pantalla d’inici',

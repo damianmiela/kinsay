@@ -13,7 +13,7 @@ const env = process.env;
 const work = mkdtempSync(join(tmpdir(), 'translate-test-'));
 const SECOND = 16_000 * 2;
 
-const fakeSpeech: SpeechConnect = (target, events) => {
+const fakeSpeech: SpeechConnect = (target, events, options) => {
   let bytes = 0;
   let n = 0;
   let open = true;
@@ -24,16 +24,25 @@ const fakeSpeech: SpeechConnect = (target, events) => {
       while (bytes >= SECOND) {
         bytes -= SECOND;
         n++;
+        // (asked for speakers: two people taking turns, sentence by sentence)
+        const speaker = options?.speakers ? { speaker: String(((n - 1) % 2) + 1) } : {};
         const heard = {
           text: ` Sentence ${n}.`,
           language: 'en',
           translation_status: target === HEARD || target === 'en' ? 'none' : 'original',
+          ...speaker,
         };
         events.tokens([
           heard,
           ...(target === HEARD || target === 'en'
             ? []
-            : [{ text: ` [${target}] Sentence ${n}.`, translation_status: 'translation' }]),
+            : [
+                {
+                  text: ` [${target}] Sentence ${n}.`,
+                  translation_status: 'translation',
+                  ...speaker,
+                },
+              ]),
           { text: '<end>' },
         ]);
       }

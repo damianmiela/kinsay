@@ -61,6 +61,8 @@ const t_en = {
   groupApp: 'App',
   micIsOff: 'The microphone is off',
   turnItOn: 'Turn it on',
+  showSpeakers: 'Show who is speaking',
+  showSpeakersSmall: 'a colour per person, a new line when someone else speaks',
   installApp: 'Install Translate',
   installSmall: 'its icon on the home screen, full screen',
   addHome: 'Add to Home Screen',

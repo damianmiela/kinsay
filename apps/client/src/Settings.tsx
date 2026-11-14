@@ -313,16 +313,22 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 /** A setting that is on or off. */
 export function SwitchRow({
   label,
+  hint,
   on,
   onChange,
 }: {
   label: string;
+  /** A short line under it. */
+  hint?: string;
   on: boolean;
   onChange: (on: boolean) => void;
 }) {
   return (
     <div className="li">
-      <span className="what">{label}</span>
+      <span className="what">
+        {label}
+        {hint && <small>{hint}</small>}
+      </span>
       <Toggle on={on} onChange={onChange} label={label} />
     </div>
   );

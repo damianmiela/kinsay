@@ -1256,3 +1256,35 @@ describe('Soniox right now (mockups batch 6)', () => {
     expect(r.json).toMatchObject({ ok: true, error: 'no key', translate: { used: 0, share: 5 } });
   });
 });
+
+describe('who said what (mockups batch 8)', () => {
+  it('the host’s switch: the streams asked again with speakers, every page told; a reader may not', async () => {
+    const asked: (boolean | undefined)[] = [];
+    const speech = fakeSpeech();
+    const connect: SpeechConnect = (target, events, options) => {
+      asked.push(options?.speakers);
+      return speech.connect(target, events);
+    };
+    const { person, sock } = await start({ ...speech, connect });
+    const p = await person('Marta');
+    const host = sock({ cookie: p.cookie });
+    const v = await next<SessionView>(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'en' });
+    const audio = (seq: number) =>
+      host.emit('host:audio', new Uint8Array(3200).buffer, { age: 0, seq, stream: 'mic-aaaaaaaa' });
+    audio(1);
+    await next(host, 'captions:ack');
+    const reader = sock({ code: v.code });
+    await next(reader, 'state:session');
+    expect(await ask(reader, 'session:speakers', { on: true })).toEqual({
+      ok: false,
+      error: 'not-host',
+    });
+    const told = next<SessionView>(reader, 'state:session', (x) => !!x.speakers);
+    expect(await ask(host, 'session:speakers', { on: true })).toEqual({ ok: true });
+    await told;
+    audio(2);
+    await next(host, 'captions:ack');
+    expect(asked).toEqual([false, true]);
+  });
+});

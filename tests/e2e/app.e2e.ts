@@ -592,6 +592,25 @@ test('the pages in the browser’s language (Polish here); the switch at the foo
   await expect(page.getByText('Live captions, in your language')).toBeVisible();
 });
 
+test('who said what: the host’s switch, a colour per person on each line, readers alike', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  const { page } = await signedInPhone(browser, baseURL!, admin);
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(page.locator('.cap-line').first()).toContainText('Sentence');
+  await expect(page.locator('.cap-line.spk')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('switch', { name: 'Show who is speaking' }).click();
+  await page.keyboard.press('Escape');
+  // (the test's service: two people taking turns, sentence by sentence)
+  await expect(page.locator('.cap-line.spk0').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.cap-line.spk1').first()).toBeVisible({ timeout: 10_000 });
+  // no names: colours only (Damian, batch 8)
+  await expect(page.getByText(/Person \d/)).toHaveCount(0);
+});
+
 test('installable as an app: its manifest and icons; on an iPhone, Safari’s steps in Settings', async ({
   browser,
   baseURL,

@@ -56,6 +56,8 @@ export const es: Texts = {
     groupApp: 'Aplicación',
     micIsOff: 'El micrófono está apagado',
     turnItOn: 'Encenderlo',
+    showSpeakers: 'Mostrar quién habla',
+    showSpeakersSmall: 'un color por persona, una línea nueva cuando habla otra',
     installApp: 'Instalar Translate',
     installSmall: 'su icono en la pantalla de inicio, a pantalla completa',
     addHome: 'Añadir a pantalla de inicio',

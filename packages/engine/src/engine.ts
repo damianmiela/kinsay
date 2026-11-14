@@ -18,6 +18,8 @@ export interface Token {
   is_final?: boolean;
   translation_status?: string;
   language?: string;
+  /** Who said it ("1", "2"…): only with speakers on (Soniox's diarization). */
+  speaker?: string;
 }
 
 /** One live stream to the speech service, translating into one language (or none: HEARD). */
@@ -37,7 +39,16 @@ export interface SpeechEvents {
   /** The stream is over: normally (no error) or with the service's error message. */
   closed(error?: string): void;
 }
-export type SpeechConnect = (target: Target, events: SpeechEvents) => SpeechStream;
+/** How one stream is asked for. */
+export interface StreamOptions {
+  /** Who said what (Soniox's diarization; its endpoint detection off then: it lowers accuracy). */
+  speakers?: boolean;
+}
+export type SpeechConnect = (
+  target: Target,
+  events: SpeechEvents,
+  options?: StreamOptions,
+) => SpeechStream;
 
 const SONIOX_URL = 'wss://stt-rt.soniox.com/transcribe-websocket';
 /** What the speech service is told is being said (Soniox's `context.general`). */
@@ -55,7 +66,7 @@ export interface SonioxOptions {
 /** The real service; tests pass a fake SpeechConnect. */
 export function sonioxConnect(apiKey: string, options: SonioxOptions): SpeechConnect {
   const url = options.url ?? SONIOX_URL;
-  return (target, events) => {
+  return (target, events, stream = {}) => {
     // the key goes with the connection, never in the first message (Soniox refuses that from
     // 15 January 2027)
     const ws = new WebSocket(url, { headers: { Authorization: `Bearer ${apiKey}` } });
@@ -77,7 +88,9 @@ export function sonioxConnect(apiKey: string, options: SonioxOptions): SpeechCon
           sample_rate: 16000,
           num_channels: 1,
           enable_language_identification: true,
-          enable_endpoint_detection: true,
+          // (with speakers, no endpoint detection: tested 2026-11-14, it merged two people)
+          enable_endpoint_detection: !stream.speakers,
+          ...(stream.speakers ? { enable_speaker_diarization: true } : {}),
           ...(options.hints?.length ? { language_hints: options.hints } : {}),
           context: { general: options.topic, ...(terms.length ? { terms } : {}) },
           ...(target === HEARD
@@ -207,6 +220,9 @@ export class LineBuilder {
   private rawPreview = '';
   /** Called with each finished line and its number. */
   onLine?: (line: string, n: number) => void;
+  /** Who says the line coming in (speakers on), and who said each kept line. */
+  speaker: string | undefined;
+  private speakerOf = new Map<number, string>();
 
   constructor(
     private readonly now: () => number = Date.now,
@@ -250,7 +266,12 @@ export class LineBuilder {
     return this.words.some((w) => w.since > until);
   }
 
-  add(final: string, endOfSpeech = false) {
+  /** `speaker`: who said `final` (speakers on): another person starts a new line. */
+  add(final: string, endOfSpeech = false, speaker?: string) {
+    if (speaker !== undefined && speaker !== this.speaker) {
+      if (this.current.trim()) this.finish();
+      this.speaker = speaker;
+    }
     this.current += final;
     const done = final.match(/\S+/g)?.length ?? 0;
     this.words = this.words.slice(done);
@@ -287,6 +308,10 @@ export class LineBuilder {
   private store(text: string) {
     if (!text) return;
     this.lines.push(text);
+    if (this.speaker !== undefined) {
+      this.speakerOf.set(this.count, this.speaker);
+      this.speakerOf.delete(this.count - this.kept);
+    }
     this.count++;
     if (this.lines.length > this.kept) this.lines.splice(0, this.lines.length - this.kept);
     this.onLine?.(text, this.count - 1);
@@ -297,16 +322,26 @@ export class LineBuilder {
     this.count = 0;
     this.current = '';
     this.preview = '';
+    this.speaker = undefined;
+    this.speakerOf.clear();
   }
 
   /** The last `n` finished lines and the line coming in (readers get only settled preview words). */
   view(n = LINES_SENT, preview = this.fullPreview): CaptionText {
     const lines = this.lines.slice(-n);
-    return {
-      lines,
-      first: this.count - lines.length,
-      live: `${this.current}${preview ? this.preview : this.settledPreview()}`.trim(),
-    };
+    const first = this.count - lines.length;
+    const live = `${this.current}${preview ? this.preview : this.settledPreview()}`.trim();
+    const text: CaptionText = { lines, first, live };
+    if (this.speakerOf.size) {
+      const speakers: Record<number, string> = {};
+      for (let i = first; i < this.count; i++) {
+        const s = this.speakerOf.get(i);
+        if (s !== undefined) speakers[i] = s;
+      }
+      text.speakers = speakers;
+    }
+    if (live && this.speaker !== undefined) text.liveSpeaker = this.speaker;
+    return text;
   }
 }
 
@@ -317,9 +352,15 @@ export function applyTokens(
   heard?: LineBuilder,
 ): string | undefined {
   let spoken: string | undefined;
-  let ownFinal = '';
+  // final words in runs by speaker (one run without speakers: as before)
+  const ownRuns: { text: string; speaker?: string }[] = [];
+  const heardRuns: { text: string; speaker?: string }[] = [];
+  const addRun = (runs: { text: string; speaker?: string }[], text: string, speaker?: string) => {
+    const last = runs.at(-1);
+    if (last && last.speaker === speaker) last.text += text;
+    else runs.push({ text, speaker });
+  };
   let ownPreview = '';
-  let heardFinal = '';
   let heardPreview = '';
   let end = false;
   for (const t of tokens) {
@@ -330,19 +371,23 @@ export function applyTokens(
     }
     const final = t.is_final !== false;
     if (t.translation_status !== 'original') {
-      if (final) ownFinal += t.text;
+      if (final) addRun(ownRuns, t.text, t.speaker);
       else ownPreview += t.text;
     }
     if (t.translation_status !== 'translation') {
       if (t.language && t.text.trim()) spoken = t.language;
-      if (final) heardFinal += t.text;
+      if (final) addRun(heardRuns, t.text, t.speaker);
       else heardPreview += t.text;
     }
   }
-  if (ownFinal || end) own.add(ownFinal, end);
+  const apply = (b: LineBuilder, runs: { text: string; speaker?: string }[]) => {
+    runs.forEach((r, i) => b.add(r.text, end && i === runs.length - 1, r.speaker));
+    if (!runs.length && end) b.add('', true);
+  };
+  apply(own, ownRuns);
   own.preview = ownPreview;
   if (heard && heard !== own) {
-    if (heardFinal || end) heard.add(heardFinal, end);
+    apply(heard, heardRuns);
     heard.preview = heardPreview;
   }
   return spoken;
@@ -376,6 +421,8 @@ export interface EngineOptions {
   fullError?: string;
   /** The texts' `view()` gives the whole preview by default (the wedding's host). */
   fullPreview?: boolean;
+  /** Who said what at the start (see setSpeakers()). */
+  speakers?: boolean;
 }
 
 /**
@@ -419,6 +466,8 @@ export class Engine {
   private audioAt = 0;
   /** drain(): what to do once the kept audio is sent. */
   private drained: (() => void) | undefined;
+  /** Streams asked for who said what. */
+  private speakersOn = false;
   private readonly onText: () => void;
   private readonly onStatus: () => void;
   private readonly onSent: (ms: number, streams: number) => void;
@@ -443,6 +492,7 @@ export class Engine {
     this.backlogMax = options.backlogMaxMs ?? BACKLOG_MAX_MS;
     this.fullError = options.fullError ?? SERVICE_FULL;
     this.service = connect ? 'idle' : 'off';
+    this.speakersOn = !!options.speakers;
     this.heard = this.builder(HEARD);
     if (options.langs?.length) {
       this.wanted = [...options.langs];
@@ -654,92 +704,96 @@ export class Engine {
     let heardSince = 0;
     let finalizedAt = 0;
     let lastHeardAt = 0;
-    const stream: SpeechStream = connect(target, {
-      tokens: this.guarded((tokens: Token[]) => {
-        if (generation !== this.generation || this.dropped.has(stream)) return;
-        const own = this.text(target);
-        const heard = heardToo ? this.heard : undefined;
-        const current = this.streams.get(target) === stream;
-        const previews = [own.preview, heard?.preview ?? ''] as const;
-        // (the language first: a line finished by these very tokens is labelled with it)
-        const spokenNow = tokens.findLast(
-          (t) =>
-            t.translation_status !== 'translation' &&
-            !!t.language &&
-            !!t.text.trim() &&
-            !isMarker(t.text),
-        )?.language;
-        if (current && heardToo && spokenNow) this.speaking = spokenNow;
-        const spoken = applyTokens(tokens, own, heard);
-        if (this.failures) {
-          this.failures = 0;
-          this.warn('captions: the speech service works again');
-        }
-        if (!current) {
-          own.preview = previews[0];
-          if (heard && heard !== own) heard.preview = previews[1];
-        } else if (spoken && heardToo) {
-          this.speaking = spoken;
-        }
-        this.onText();
-        this.settleSoon();
-        if (!current || target === HEARD) return;
-        const words = (own: boolean) =>
-          tokens.some(
+    const stream: SpeechStream = connect(
+      target,
+      {
+        tokens: this.guarded((tokens: Token[]) => {
+          if (generation !== this.generation || this.dropped.has(stream)) return;
+          const own = this.text(target);
+          const heard = heardToo ? this.heard : undefined;
+          const current = this.streams.get(target) === stream;
+          const previews = [own.preview, heard?.preview ?? ''] as const;
+          // (the language first: a line finished by these very tokens is labelled with it)
+          const spokenNow = tokens.findLast(
             (t) =>
-              t.is_final !== false &&
+              t.translation_status !== 'translation' &&
+              !!t.language &&
               !!t.text.trim() &&
-              !isMarker(t.text) &&
-              t.translation_status !== (own ? 'original' : 'translation'),
-          );
-        const now = this.now();
-        if (words(true)) {
-          heardSince = 0;
-          finalizedAt = 0;
-        } else if (words(false)) {
-          if (now - lastHeardAt > STALL_PAUSE_MS) {
-            heardSince = now;
-            finalizedAt = 0;
+              !isMarker(t.text),
+          )?.language;
+          if (current && heardToo && spokenNow) this.speaking = spokenNow;
+          const spoken = applyTokens(tokens, own, heard);
+          if (this.failures) {
+            this.failures = 0;
+            this.warn('captions: the speech service works again');
           }
-          lastHeardAt = now;
-          if (!finalizedAt && now - heardSince >= STALL_MS) {
-            finalizedAt = now;
-            stream.finalize?.();
-          } else if (
-            finalizedAt &&
-            now - finalizedAt >= FINALIZE_WAIT_MS &&
-            now - this.stallRestartAt >= STALL_GAP_MS
-          ) {
-            this.stallRestartAt = now;
-            this.warn(
-              `captions: words heard but nothing in ${target} for ${Math.round((now - heardSince) / 1000)} s: the streams start again`,
+          if (!current) {
+            own.preview = previews[0];
+            if (heard && heard !== own) heard.preview = previews[1];
+          } else if (spoken && heardToo) {
+            this.speaking = spoken;
+          }
+          this.onText();
+          this.settleSoon();
+          if (!current || target === HEARD) return;
+          const words = (own: boolean) =>
+            tokens.some(
+              (t) =>
+                t.is_final !== false &&
+                !!t.text.trim() &&
+                !isMarker(t.text) &&
+                t.translation_status !== (own ? 'original' : 'translation'),
             );
-            this.endStreams();
-          }
-        }
-      }),
-      closed: this.guarded((error?: string) => {
-        release();
-        if (generation !== this.generation) return;
-        if (this.streams.get(target) !== stream) {
-          if (!error && !this.streams.size) {
-            for (const t of heardToo ? [this.text(target), this.heard] : [this.text(target)]) {
-              t.finish();
-              t.preview = '';
+          const now = this.now();
+          if (words(true)) {
+            heardSince = 0;
+            finalizedAt = 0;
+          } else if (words(false)) {
+            if (now - lastHeardAt > STALL_PAUSE_MS) {
+              heardSince = now;
+              finalizedAt = 0;
             }
-            this.speaking = undefined;
-            this.onText();
+            lastHeardAt = now;
+            if (!finalizedAt && now - heardSince >= STALL_MS) {
+              finalizedAt = now;
+              stream.finalize?.();
+            } else if (
+              finalizedAt &&
+              now - finalizedAt >= FINALIZE_WAIT_MS &&
+              now - this.stallRestartAt >= STALL_GAP_MS
+            ) {
+              this.stallRestartAt = now;
+              this.warn(
+                `captions: words heard but nothing in ${target} for ${Math.round((now - heardSince) / 1000)} s: the streams start again`,
+              );
+              this.endStreams();
+            }
           }
-          return;
-        }
-        this.streams.delete(target);
-        if (error) this.failed(error);
-        else if (this.now() - openedAt < CLOSED_AT_ONCE_MS) {
-          this.failed('the speech service closed the connection at once');
-        } else if (this.streams.size) this.endStreams();
-        else if (this.service === 'live') this.setService('idle');
-      }),
-    });
+        }),
+        closed: this.guarded((error?: string) => {
+          release();
+          if (generation !== this.generation) return;
+          if (this.streams.get(target) !== stream) {
+            if (!error && !this.streams.size) {
+              for (const t of heardToo ? [this.text(target), this.heard] : [this.text(target)]) {
+                t.finish();
+                t.preview = '';
+              }
+              this.speaking = undefined;
+              this.onText();
+            }
+            return;
+          }
+          this.streams.delete(target);
+          if (error) this.failed(error);
+          else if (this.now() - openedAt < CLOSED_AT_ONCE_MS) {
+            this.failed('the speech service closed the connection at once');
+          } else if (this.streams.size) this.endStreams();
+          else if (this.service === 'live') this.setService('idle');
+        }),
+      },
+      { speakers: this.speakersOn },
+    );
     if (!released) this.held.set(stream, release);
     this.streams.set(target, stream);
     return true;
@@ -840,6 +894,16 @@ export class Engine {
   /** One language's lines from now on only (a page switched to it: its history starts again). */
   clearText(target: Target): void {
     this.text(target).clear();
+  }
+
+  /**
+   * Who said what on or off: its streams start again with the next audio (a second's pause,
+   * nothing lost: the audio waits), every line from then on with its speaker.
+   */
+  setSpeakers(on: boolean): void {
+    if (on === this.speakersOn) return;
+    this.speakersOn = on;
+    if (this.streams.size) this.endStreams();
   }
 
   /** Every text empty (the wedding host's "clear"). */

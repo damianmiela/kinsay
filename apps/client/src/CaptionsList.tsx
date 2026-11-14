@@ -218,6 +218,7 @@ export function CaptionsList({
                   old={i < recent}
                   saying={saying === text.first + i}
                   label={labels?.[text.first + i]}
+                  speaker={text.speakers?.[text.first + i]}
                 />
               ))}
               {/* the same component as a finished line: finishing it never redraws its words */}
@@ -228,6 +229,7 @@ export function CaptionsList({
                   text={text.live}
                   old={false}
                   live
+                  speaker={text.liveSpeaker}
                 />
               )}
             </div>
@@ -264,8 +266,11 @@ const Line = memo(function Line({
   live = false,
   saying = false,
   label,
+  speaker,
 }: {
   saying?: boolean;
+  /** Who said it (speakers on): a colour per person, on the line's edge (mockups batch 8). */
+  speaker?: string;
   label?: string;
   /** Its number (CaptionText.first counts on). */
   n: number;
@@ -276,7 +281,7 @@ const Line = memo(function Line({
   return (
     <p
       data-n={n}
-      className={`cap-line${old ? ' old' : ''}${live ? ' live' : ''}${saying ? ' saying' : ''}`}
+      className={`cap-line${old ? ' old' : ''}${live ? ' live' : ''}${saying ? ' saying' : ''}${speaker !== undefined ? ` spk spk${((Number(speaker) || 1) - 1) % 6}` : ''}`}
     >
       {label && <span className="cap-label">{label}</span>}
       <Words text={text} />

@@ -71,3 +71,23 @@ describe('the admin’s history', () => {
     ]);
   });
 });
+
+describe('who said what, kept with the lines', () => {
+  it('the speakers of the lines added up, the old ones going with their lines', () => {
+    const a = { lines: ['One', 'Two'], first: 0, live: '', speakers: { 0: '1', 1: '2' } };
+    const b = {
+      lines: ['Two', 'Three'],
+      first: 1,
+      live: 'Fo',
+      speakers: { 1: '2', 2: '1' },
+      liveSpeaker: '2',
+    };
+    expect(mergeText(a, b)).toEqual({
+      lines: ['One', 'Two', 'Three'],
+      first: 0,
+      live: 'Fo',
+      speakers: { 0: '1', 1: '2', 2: '1' },
+      liveSpeaker: '2',
+    });
+  });
+});

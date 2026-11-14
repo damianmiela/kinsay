@@ -110,6 +110,8 @@ interface Channel {
   kept: Map<Target, number>;
   /** The host's switch: a page with the code may caption its own side (off; a new code: off). */
   guestAllowed: boolean;
+  /** The host's switch: who said what (a colour per person; its streams with speakers). */
+  speakers: boolean;
   /** A guest's captions (one at a time): its own engine and streams, on this balance. */
   guest?: {
     socket: string;
@@ -212,6 +214,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       keepUntil: 0,
       kept: new Map(),
       guestAllowed: false,
+      speakers: false,
       guestLangs: new Set(),
       engine: undefined as unknown as Engine,
     };
@@ -301,6 +304,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     const read = readNow(c);
     if (read.length >= CHANNEL_LANGS_MAX) v.full = read;
     if (c.guestAllowed) v.guestAllowed = true;
+    if (c.speakers) v.speakers = true;
     if (s.data.role === 'host') {
       if (c.guest) v.guestRunning = true;
       v.code = c.code;
@@ -686,6 +690,14 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       if (!host()) return reply(cb, { ok: false, error: 'not-host' });
       c.guestAllowed = typeof p === 'object' && p !== null && (p as { on?: unknown }).on === true;
       if (!c.guestAllowed) stopGuest(c, 'ended');
+      stateAll(c);
+      reply(cb, { ok: true });
+    });
+
+    s.on('session:speakers', (p, cb) => {
+      if (!host()) return reply(cb, { ok: false, error: 'not-host' });
+      c.speakers = typeof p === 'object' && p !== null && (p as { on?: unknown }).on === true;
+      c.engine.setSpeakers(c.speakers);
       stateAll(c);
       reply(cb, { ok: true });
     });

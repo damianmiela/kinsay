@@ -214,6 +214,14 @@ export function HostPage() {
           {(view.running || here) && !face && lang && (
             <SwitchRow label={t.showHeard} on={showHeard} onChange={setShowHeard} />
           )}
+          {!face && (
+            <SwitchRow
+              label={t.showSpeakers}
+              hint={t.showSpeakersSmall}
+              on={!!view.speakers}
+              onChange={(on) => void ask('session:speakers', { on })}
+            />
+          )}
           {view.running && elsewhere && !face && canSpeak && (
             <SwitchRow
               label={t.readAloudHere}

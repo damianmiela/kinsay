@@ -70,7 +70,10 @@ export function ask(
   event: 'session:start' | 'session:lang' | 'guest:start' | 'guest:lang',
   payload: { lang: string | null; other?: string | null; token?: string },
 ): Promise<string | null>;
-export function ask(event: 'session:guestAllow', payload: { on: boolean }): Promise<string | null>;
+export function ask(
+  event: 'session:guestAllow' | 'session:speakers',
+  payload: { on: boolean },
+): Promise<string | null>;
 export function ask(
   event:
     'session:stop' | 'session:keepGoing' | 'session:useMic' | 'session:stopGuest' | 'guest:stop',

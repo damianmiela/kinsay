@@ -19,7 +19,17 @@ export function mergeText(prev: CaptionText | undefined, next: CaptionText): Cap
     first += lines.length - PAGE_LINES;
     lines = lines.slice(-PAGE_LINES);
   }
-  return { lines, first, live: next.live };
+  const merged: CaptionText = { lines, first, live: next.live };
+  // (who said each line, kept with the lines: speakers on)
+  if (prev.speakers || next.speakers) {
+    const speakers: Record<number, string> = {};
+    for (const [n, s] of Object.entries({ ...prev.speakers, ...next.speakers })) {
+      if (Number(n) >= first) speakers[Number(n)] = s;
+    }
+    merged.speakers = speakers;
+  }
+  if (next.liveSpeaker !== undefined) merged.liveSpeaker = next.liveSpeaker;
+  return merged;
 }
 
 export function mergeUpdate(prev: CaptionsUpdate, next: CaptionsUpdate): CaptionsUpdate {

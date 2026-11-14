@@ -125,6 +125,8 @@ export interface SessionView {
   guestRunning?: boolean;
   /** A guest only: the host's own captions run (a guest may start only then). */
   hostRunning?: boolean;
+  /** Who said what is shown (a colour per person, mockups batch 8): the host's switch. */
+  speakers?: boolean;
 }
 
 /** A device as people name it: "your phone", "your tablet", "your computer". */
@@ -163,6 +165,8 @@ export interface ClientToServerEvents {
   'session:guestAllow': Action<{ on: boolean }>;
   /** The host: the guest's captions end (the host's own go on). */
   'session:stopGuest': Action;
+  /** The host: who said what on or off (the session's streams start again). */
+  'session:speakers': Action<{ on: boolean }>;
   /** A page that came by the code: captions of its own sound, on the host's balance. */
   /** `token`: the page's own random token (its reconnected page takes its place back). */
   'guest:start': Action<{ lang: Target | null; token: string }>;

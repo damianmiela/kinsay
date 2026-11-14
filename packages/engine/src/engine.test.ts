@@ -357,6 +357,50 @@ describe('what the wedding needs too', () => {
   });
 });
 
+describe('who said what (speakers)', () => {
+  const spk = (text: string, speaker: string, status = 'translation'): Token => ({
+    text,
+    translation_status: status,
+    is_final: true,
+    speaker,
+  });
+
+  it('another person starts a new line; each line keeps its speaker, the line coming in too', () => {
+    const own = new LineBuilder();
+    applyTokens([spk(' Hello', '1'), spk(' there.', '1'), spk(' Hi!', '2'), spk(' How', '2')], own);
+    const v = own.view();
+    expect(v.lines).toEqual(['Hello there.']);
+    expect(v.speakers).toEqual({ 0: '1' });
+    expect(v.live).toBe('Hi! How');
+    expect(v.liveSpeaker).toBe('2');
+    applyTokens([spk(' Me', '1'), { text: '<end>' }], own);
+    expect(own.view().lines).toEqual(['Hello there.', 'Hi! How', 'Me']);
+    expect(own.view().speakers).toEqual({ 0: '1', 1: '2', 2: '1' });
+  });
+
+  it('without speakers nothing changes (no marks in the view)', () => {
+    const own = new LineBuilder();
+    applyTokens([tok(' Hello there.', 'translation'), tok('<end>', 'none')], own);
+    expect(own.view()).toEqual({ lines: ['Hello there.'], first: 0, live: '' });
+  });
+
+  it('on and off: the streams are asked again, with the speakers or without', () => {
+    vi.useFakeTimers();
+    const asked: (boolean | undefined)[] = [];
+    const fake = fakeService();
+    const connect: SpeechConnect = (target, events, options) => {
+      asked.push(options?.speakers);
+      return fake.connect(target, events);
+    };
+    const e = new Engine(connect, { onText: () => {}, onStatus: () => {} });
+    e.audio(chunk());
+    e.setSpeakers(true);
+    expect(fake.streams.get(HEARD)!.ended).toBe(true);
+    e.audio(chunk());
+    expect(asked).toEqual([false, true]);
+  });
+});
+
 describe('the shared pool of streams', () => {
   it('opens nothing without room, says so after a while, opens when room comes back', () => {
     vi.useFakeTimers();

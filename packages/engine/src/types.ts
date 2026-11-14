@@ -13,6 +13,10 @@ export interface CaptionText {
   /** The number of `lines[0]` since the last clear (a page adds lines up by number). */
   first: number;
   live: string;
+  /** Who said each line ("1", "2"…), by its number: only while speakers are shown. */
+  speakers?: Record<number, string>;
+  /** Who is saying the line coming in. */
+  liveSpeaker?: string;
 }
 
 /** What a page gets: its texts' last lines. */

@@ -223,3 +223,12 @@ Download the app again (/download): this changes the app itself.
 - [ ] iPhone (Safari): ⚙ → "Install Translate" shows the three steps (Share at the bottom, "Add to Home Screen", Add); do them: the teal icon on the home screen, full screen when opened; the microphone is asked once more (by the app this time).
 - [ ] A computer (Chrome or Edge): the row opens the browser's own question; Translate then opens in its own window and sits in the Start menu.
 - [ ] The browser tab shows Translate's little icon.
+
+## 23. Who said what (2026-11-14)
+
+- [ ] ⚙ → Captions → "Show who is speaking" (Just me; not in face to face). Captions run on after a second's pause.
+- [ ] Three people talking in turns at a table: each person's lines get their own colour on the line's edge (no names); a change of person starts a new line.
+- [ ] A reader (your code) sees the same colours, in their own language.
+- [ ] The Windows app shows the colours too (its lines left-aligned while they're on).
+- [ ] Two people talking over each other in one language: how often are the colours right? (The real test: tell me what you see.)
+- [ ] Off again: back to lines by pauses, no colours.

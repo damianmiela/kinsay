@@ -144,3 +144,55 @@ html:has(.cap-page) body {
   border-radius: 2px;
   background: var(--accent);
 }
+/* who said what (mockups batch 8): a colour per person on the line's edge, in place of the mark */
+.cap-line.spk::before {
+  content: '';
+  top: 0.25em;
+  bottom: 0.25em;
+  width: 5px;
+  border-radius: 3px;
+  background: var(--spk);
+}
+.cap-line.spk.old::before {
+  opacity: 0.75;
+}
+.cap-line.spk0 {
+  --spk: #0b6e79;
+}
+.cap-line.spk1 {
+  --spk: #b5651d;
+}
+.cap-line.spk2 {
+  --spk: #7a4fb5;
+}
+.cap-line.spk3 {
+  --spk: #b03a5b;
+}
+.cap-line.spk4 {
+  --spk: #2f6bd8;
+}
+.cap-line.spk5 {
+  --spk: #3d8b3d;
+}
+/* (the dark window: lighter colours; its lines left-aligned so the edges line up) */
+.lw .cap-line.spk {
+  text-align: left;
+}
+.lw .cap-line.spk0 {
+  --spk: #5fd0da;
+}
+.lw .cap-line.spk1 {
+  --spk: #f0b26b;
+}
+.lw .cap-line.spk2 {
+  --spk: #c3a2ef;
+}
+.lw .cap-line.spk3 {
+  --spk: #f08aa6;
+}
+.lw .cap-line.spk4 {
+  --spk: #8fb6ff;
+}
+.lw .cap-line.spk5 {
+  --spk: #8fd98f;
+}
