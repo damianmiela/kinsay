@@ -320,3 +320,9 @@ The app updates itself (a new build).
 - [ ] Admin → People → someone → "Edit name and email": change both, Save: the list shows them; their next sign-in mail goes to the new address.
 - [ ] An email someone else has, or one that isn't an address: it says so, nothing changes. The email emptied: saved as none.
 - [ ] "Remove": it asks first (with their balance); after yes they are gone from the list, their devices are signed out, their captions stop.
+
+## 33. Audit 39's fixes (2026-11-15)
+
+- [ ] Someone's email changed in the admin: a sign-in link mailed to the old address before no longer signs in.
+- [ ] Locked, captions stopped by the server: the window unlocks; starting again from the phone doesn't lock it again.
+- [ ] A host renamed in the admin while readers watch: their pages show the new name.

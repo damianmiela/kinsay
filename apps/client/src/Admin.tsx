@@ -276,7 +276,10 @@ function Admin() {
                   <tr
                     key={p.id}
                     className={`${p.blocked ? 'dim' : ''}${open === p.id ? ' open' : ''}`}
-                    onClick={() => setOpen(open === p.id ? null : p.id)}
+                    onClick={() => {
+                      setOpen(open === p.id ? null : p.id);
+                      setEditing(null);
+                    }}
                   >
                     <td>
                       <b>{p.name}</b>{' '}

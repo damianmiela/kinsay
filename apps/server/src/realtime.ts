@@ -394,6 +394,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   /** Audio went to the speech service: its cost counts now, written every FLUSH_MS. Never throws. */
   /** `time`: false for the microphone side (the session's time is counted once, audit 37). */
   function sent(c: Channel, ms: number, streams: number, time = true) {
+    // (a late callback after a stop or a drop: nothing more to count, audit 39)
+    if (!c.running) return;
     try {
       const price = o.store.settings().pricePerHour;
       c.cost += (ms * streams * price) / 3_600_000;
@@ -499,7 +501,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
 
   /** A channel goes for good: its pages are closed, its code no longer lets anyone in. */
   function drop(c: Channel) {
-    stop(c, 'blocked', false);
+    // (what was used since the last write is written: a failed write is caught, audit 39)
+    stop(c, 'blocked');
     asked.delete(c);
     for (const s of [...c.sockets]) s.disconnect(true);
     setSide(c, false);
@@ -517,6 +520,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     if (!c) return;
     const p = o.store.person(personId);
     if (!p || p.blocked) return drop(c);
+    // (a corrected name: readers see it at once, audit 39)
+    c.hostName = p.name.split(/\s+/)[0] ?? p.name;
     c.balanceAt = o.store.balance(personId); // (a grant or a correction: the new balance)
     const why = cannotRun(personId);
     if (c.running && why) stop(c, why);

@@ -390,12 +390,21 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [drawer, asking]);
-  // the captions ended while it was locked (a stop of the server's): unlocked, so Start is there
-  // and can be clicked (a locked window lets every click through, audit 38)
-  const ended = !!view && (view.role === 'host' || view.role === 'guest') && !view.running;
-  const locked = lockAsked && !ended;
   // (a page that came by the code, the host letting it caption its own side: it chose to only read)
   const [justRead, setJustRead] = useState(false);
+  // the start panel came while it was locked (captions ended: a stop of the server's, a guest's
+  // ended by the host): unlocked for good, so Start is there and can be clicked (a locked window
+  // lets every click through); a later start elsewhere never locks it again (audits 38, 39)
+  const ended =
+    !!view &&
+    (((view.role === 'host' || view.role === 'guest') && !view.running) ||
+      (view.role === 'reader' && !!view.guestAllowed && !justRead));
+  const [wasEnded, setWasEnded] = useState(ended);
+  if (ended !== wasEnded) {
+    setWasEnded(ended);
+    if (ended) setLocked(false);
+  }
+  const locked = lockAsked && !ended;
   // a guest's captions carry on after a break in her internet (audit 35, M2): she was a guest, her
   // page dropped (not the server ending hers): back with the same token, she starts again by itself
   const wasGuest = useRef(false);

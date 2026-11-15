@@ -93,6 +93,13 @@ async function start(speech = fakeSpeech(), price = 0.36 * EUR, extra: Partial<C
   return { server, url, post, get, admin, person, sock, speech, t };
 }
 
+interface DatabaseLike {
+  prepare(sql: string): {
+    run(...a: unknown[]): unknown;
+    get(...a: unknown[]): unknown;
+    all(...a: unknown[]): unknown;
+  };
+}
 const next = <T>(s: Socket, ev: string, ok: (v: T) => boolean = () => true) =>
   new Promise<T>((res) => {
     const on = (v: T) => {
@@ -428,6 +435,49 @@ describe('the admin corrects and removes people', () => {
     // her device no longer signs in; a second removal finds nobody
     expect((await get('/api/me', a.cookie)).status).toBe(401);
     expect((await post('/admin/api/person/delete', { id: a.id }, admin)).status).toBe(404);
+  });
+});
+
+describe('audit 39', () => {
+  it('a new email: the old address’s mailed link stops, a waiting request for the new one is answered', async () => {
+    const { server, post, admin, person } = await start();
+    const a = await person('Marta');
+    const db = (server as unknown as { store: { db: DatabaseLike } }).store.db;
+    db.prepare(
+      `insert into codes (person_id, digits_hash, link_hash, expires) values (?, 'none.x', 'h1', ?)`,
+    ).run(a.id, Date.now() + 600_000);
+    db.prepare(
+      `insert into requests (email, name, kind, at) values ('new@example.com', 'Marta', 'invite', 'now')`,
+    ).run();
+    expect(
+      (await post('/admin/api/person', { id: a.id, email: 'new@example.com' }, admin)).status,
+    ).toBe(200);
+    expect(
+      db
+        .prepare(`select count(*) n from codes where person_id = ? and digits_hash like 'none.%'`)
+        .get(a.id),
+    ).toEqual({ n: 0 });
+    expect(
+      db.prepare(`select count(*) n from requests where email = 'new@example.com'`).get(),
+    ).toEqual({ n: 0 });
+  });
+
+  it('removed: of the ledger only the use stays, without a note', async () => {
+    const { server, post, admin, person } = await start();
+    const a = await person('Marta');
+    await post(
+      '/admin/api/grant',
+      { personId: a.id, amount: 2, kind: 'correction', note: 'for Marta’s trip' },
+      admin,
+    );
+    const db = (server as unknown as { store: { db: DatabaseLike } }).store.db;
+    db.prepare(
+      `insert into ledger (person_id, at, kind, amount, note) values (?, 'now', 'use', -5, 'x')`,
+    ).run(a.id);
+    expect((await post('/admin/api/person/delete', { id: a.id }, admin)).status).toBe(200);
+    expect(
+      db.prepare(`select kind, note, person_id from ledger where person_id is null`).all(),
+    ).toEqual([{ kind: 'use', note: null, person_id: null }]);
   });
 });
 

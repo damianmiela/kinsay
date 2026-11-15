@@ -202,11 +202,37 @@ export class Store {
     // (null: no email, the admin signs their devices in; unique, checked by the caller)
     if (change.email !== undefined) {
       this.db.prepare('update people set email = ? where id = ?').run(change.email, id);
+      // a sign-in link mailed to the old address no longer works; a waiting invitation request for
+      // the new one is answered (as an invitation answers it), audit 39
+      this.db
+        .prepare(`delete from codes where person_id = ? and digits_hash like 'none.%'`)
+        .run(id);
+      if (change.email) {
+        this.db
+          .prepare(
+            `delete from requests where kind = 'invite' and state = 'waiting' and email = ? collate nocase`,
+          )
+          .run(change.email);
+      }
     }
   }
 
+  /**
+   * Someone removed (by the admin, or their own "delete my account"): their devices, codes and
+   * requests go with them; of the ledger only what their sessions used stays, without a name or a
+   * note (the monthly totals read it), audit 39.
+   */
   deletePerson(id: number) {
-    this.db.prepare('delete from people where id = ?').run(id);
+    this.db.exec('begin');
+    try {
+      this.db.prepare(`delete from ledger where person_id = ? and kind != 'use'`).run(id);
+      this.db.prepare('update ledger set note = null where person_id = ?').run(id);
+      this.db.prepare('delete from people where id = ?').run(id);
+      this.db.exec('commit');
+    } catch (e) {
+      this.db.exec('rollback');
+      throw e;
+    }
   }
 
   // ---------- devices (a signed-in browser or app) ----------

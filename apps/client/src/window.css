@@ -786,7 +786,8 @@ html:has(.lw) body {
 /* (locked: the pills show why the words stopped, clear of the unlock badge at the top right) */
 .lw.locked .lw-notices {
   top: 10px;
-  max-width: calc(100% - 330px);
+  max-width: max(calc(100% - 330px), 60%);
+  margin-right: 80px;
 }
 /* (news that can wait, "Kinsay was updated": only while the bar shows, never over a call) */
 .lw-notice.quiet {
