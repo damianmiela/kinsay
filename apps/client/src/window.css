@@ -1,7 +1,11 @@
-/* The subtitles window (/window; mockups batch 1, from the wedding app's): dark glass, white text,
-   only the captions until the mouse is over it. In the desktop app the page fills a see-through
-   window (its background transparent, the app's own opacity on top); in a browser tab it fills the
-   tab. Its own class names (lw-…). Every text 16 px or more, as on every page here. */
+/* The subtitles window (/window). The look: mockups kinsay-3 (2026-11-15, Damian: "rough, not very
+   professional; I don't like how settings show up"). One idea: the words never leave. Captions in a
+   centred column on deep ink glass; the bar floats in over the top edge while the mouse is on the
+   window; settings, the languages and invite open in one drawer on the right, beside the captions;
+   messages are pills at the top centre. In the desktop app the page fills a see-through window (its
+   background transparent, the app's own opacity on top); in a browser tab it fills the tab. Its own
+   class names (lw-…) and its own dark colours (the rest of the site is light). Every text 16 px or
+   more, as on every page here. */
 html:has(.lw),
 html:has(.lw) body {
   background: transparent;
@@ -9,364 +13,290 @@ html:has(.lw) body {
   overflow: hidden;
 }
 .lw {
-  --lw-ink: #ffffff;
-  --lw-soft: rgba(255, 255, 255, 0.74);
-  --lw-faint: rgba(255, 255, 255, 0.52);
-  --lw-line: rgba(255, 255, 255, 0.16);
-  --lw-hi: rgba(255, 255, 255, 0.12);
-  --lw-live: #f3dc9a;
-  --lw-warn: #ffd08a;
-  --lw-bad: #ff9aa6;
+  --lw-glass-rgb: 12, 21, 25;
+  --lw-panel: #131f25;
+  --lw-card: #1b2a31;
+  --lw-raise: rgba(255, 255, 255, 0.07);
+  --lw-raise-hi: rgba(255, 255, 255, 0.13);
+  --lw-line: rgba(255, 255, 255, 0.1);
+  --lw-ink: #f3f7f8;
+  --lw-soft: rgba(243, 247, 248, 0.72);
+  --lw-faint: rgba(243, 247, 248, 0.52);
+  /* Kinsay's teal: what starts things; its light tone on dark: chosen, live, focus */
+  --lw-go: #0b6e79;
+  --lw-hi: #7fd6de;
+  --lw-tint: rgba(127, 214, 222, 0.12);
+  --lw-stop: #e5584b;
+  --lw-warn: #f0b26b;
+  --lw-bad: #ff8a7e;
+  --lw-drawer: min(520px, 100%);
   position: relative;
   box-sizing: border-box;
-  /* a column the window's height: the bar, the captions filling the rest, the notes */
-  display: flex;
-  flex-direction: column;
   height: 100vh;
   border-radius: 14px;
   border: 1px solid var(--lw-line);
-  background: rgba(18, 16, 22, var(--lw-glass, 0.72));
+  background: rgba(var(--lw-glass-rgb), var(--lw-glass, 0.86));
   color: var(--lw-ink);
-  font-family: var(--f-body);
+  color-scheme: dark;
+  font: 16px/1.35 var(--f-body);
   overflow: hidden;
   user-select: none;
-}
-.lw.in-app {
-  min-height: 100vh;
 }
 .lw *,
 .lw *::before,
 .lw *::after {
   box-sizing: border-box;
 }
-/* the controls: shown while the mouse is over the window (and on a touch screen, always) */
-.lw-ctl {
+.lw-i {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- buttons ---------- */
+.lw-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid var(--lw-line);
+  background: var(--lw-raise);
+  color: var(--lw-ink);
+  font: 700 16px var(--f-body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lw-btn:hover {
+  background: var(--lw-raise-hi);
+}
+.lw-btn:focus-visible,
+.lw-opt:focus-visible,
+.lw-seg button:focus-visible,
+.lw-pick:focus-visible,
+.lw-lg:focus-visible,
+.lw-link:focus-visible,
+.lw-lock:focus-visible {
+  outline: 2px solid var(--lw-hi);
+  outline-offset: 1px;
+}
+.lw-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.lw-btn.ic {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+.lw-btn.on {
+  border-color: rgba(127, 214, 222, 0.55);
+  background: var(--lw-raise-hi);
+  color: var(--lw-hi);
+}
+.lw-btn.stop {
+  border-color: transparent;
+  background: var(--lw-stop);
+}
+.lw-btn.stop:hover {
+  background: #ee6a5e;
+}
+.lw-btn.go {
+  border-color: rgba(127, 214, 222, 0.35);
+  background: var(--lw-go);
+}
+.lw-btn.go:hover {
+  background: #0d808d;
+}
+.lw-btn.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--lw-soft);
+}
+.lw-btn.ghost:hover {
+  background: var(--lw-raise);
+  color: var(--lw-ink);
+}
+.lw-btn.big {
+  height: 50px;
+  padding: 0 26px;
+  border-radius: 12px;
+  font-size: 18px;
+}
+.lw-btn.sm {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+}
+.lw-btn .thin,
+.lw-opt .thin {
+  font-weight: 400;
+}
+
+/* ---------- the bar: over the top edge while the mouse is on the window ---------- */
+.lw-bar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 3;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--lw-line);
-  background: var(--lw-hi);
+  gap: 8px;
+  height: 56px;
+  padding: 0 10px 0 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 12, 15, 0.97) 0%,
+    rgba(6, 12, 15, 0.88) 58%,
+    rgba(6, 12, 15, 0) 100%
+  );
   opacity: 0;
   transition: opacity 0.2s;
 }
-.lw:hover .lw-ctl,
-.lw:focus-within .lw-ctl {
+.lw:hover .lw-bar,
+.lw:focus-within .lw-bar,
+.lw.show-bar .lw-bar {
   opacity: 1;
 }
 @media (hover: none) {
-  .lw-ctl {
+  .lw-bar {
     opacity: 1;
   }
 }
-.lw-grip {
-  width: 22px;
-  height: 22px;
-  margin-right: 4px;
-  opacity: 0.6;
-  background: radial-gradient(circle, #fff 1.4px, transparent 1.6px) 0 0 / 7px 7px;
+/* (the window moves by its name and by the empty middle of the bar) */
+.lw-brand,
+.lw-state,
+.lw-gap {
   -webkit-app-region: drag;
   app-region: drag;
+}
+.lw-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-right: 6px;
+  font-weight: 700;
+  font-size: 17px;
   cursor: move;
 }
-.lw-ctl button,
-.lw-menu .r,
-.lw-small {
-  all: unset;
-  display: inline-flex;
+.lw-brand img {
+  width: 26px;
+  height: 26px;
+}
+.lw-state {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 0 10px;
-  border-radius: 9px;
-  font: 600 16px var(--f-body);
-  color: var(--lw-ink);
-  cursor: pointer;
-}
-.lw-ctl button:hover,
-.lw-ctl button.on,
-.lw-ctl button:focus-visible,
-.lw-menu .r:hover,
-.lw-small {
-  background: rgba(255, 255, 255, 0.14);
-}
-.lw-ctl button:focus-visible,
-.lw-panel button:focus-visible {
-  outline: 2px solid var(--lw-live);
-}
-.lw-ctl .stop {
-  background: rgba(255, 120, 120, 0.22);
+  gap: 14px;
+  align-self: stretch;
+  color: var(--lw-soft);
 }
 .lw-gap {
   flex: 1;
   align-self: stretch;
-  -webkit-app-region: drag;
-  app-region: drag;
 }
-.lw-dot {
+.lw-on,
+.lw-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--lw-hi);
+  font-weight: 700;
+}
+.lw-on::before,
+.lw-live::before {
+  content: '';
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--lw-faint);
+  background: var(--lw-hi);
+  box-shadow: 0 0 0 4px rgba(127, 214, 222, 0.2);
 }
-.lw-dot.on {
-  background: var(--lw-live);
-  box-shadow: 0 0 0 3px rgba(243, 220, 154, 0.25);
-}
-.lw-note {
-  padding: 14px 20px;
-  font-size: 18px;
-  line-height: 1.45;
-  color: var(--lw-soft);
-}
-.lw-note b {
-  color: var(--lw-ink);
-}
-.lw-note.warn b {
-  color: var(--lw-warn);
-}
-.lw-note.bad b {
-  color: var(--lw-bad);
-}
-/* the start panel and the languages */
-.lw-panel {
-  display: grid;
-  gap: 14px;
-  padding: 16px 20px 18px;
-  /* (scrolls inside the window when it can't fit: the language list open, a low window) */
-  max-height: calc(100vh - 48px);
-  overflow-y: auto;
-}
-.lw-panel h3 {
-  margin: 0;
-  font: 700 22px var(--f-body);
-}
-.lw-row {
-  display: grid;
-  gap: 8px;
-}
-.lw-row .k {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--lw-faint);
-}
-.lw-seg {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.lw-seg button {
-  all: unset;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 13px;
-  border-radius: 10px;
-  border: 1px solid var(--lw-line);
-  font-size: 16px;
-  cursor: pointer;
-}
-.lw-seg button.sel {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.45);
-}
-.lw-seg small {
-  color: var(--lw-faint);
-  font-size: 16px;
-}
-.lw-go {
-  all: unset;
-  justify-self: start;
-  padding: 11px 26px;
-  border-radius: 12px;
-  background: var(--foil);
-  color: var(--on-foil);
-  font: 800 17px var(--f-body);
-  cursor: pointer;
-}
-.lw-go:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-/* the menu, the QR code, the lock */
-.lw-menu {
+/* a small "Live" that stays while the bar hides (the bar's own says it while it shows) */
+.lw-live {
   position: absolute;
-  top: 48px;
-  right: 10px;
+  top: 16px;
+  left: 16px;
   z-index: 2;
-  display: grid;
-  gap: 6px;
-  width: 280px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid var(--lw-line);
-  background: rgba(30, 27, 36, 0.97);
-  font-size: 16px;
+  pointer-events: none;
 }
-.lw-menu .r {
-  justify-content: space-between;
-}
-.lw-menu input[type='range'] {
-  width: 120px;
-  accent-color: var(--lw-live);
-}
-.lw-menu b {
-  color: var(--lw-live);
-}
-.lw-qr {
-  all: unset;
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: rgba(18, 16, 22, 0.97);
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 16px;
-  align-items: center;
-  padding: 14px 20px;
-  font-size: 16px;
-  line-height: 1.45;
-  color: var(--lw-soft);
-  cursor: pointer;
-}
-.lw-qr b {
-  color: var(--lw-ink);
-}
-.lw-qr svg {
-  padding: 6px;
-  border-radius: 8px;
-  background: #fff;
-}
-.lw-lock {
-  all: unset;
-  position: absolute;
-  right: 8px;
-  top: 6px;
-  display: flex;
-  gap: 6px;
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 16px;
-  color: var(--lw-faint);
-  cursor: pointer;
-}
-.lw-lock span {
-  display: none;
-}
-.lw-lock:hover {
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--lw-ink);
-}
-.lw-lock:hover span {
-  display: inline;
-}
-.lw-corner {
-  position: absolute;
-  bottom: 3px;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.5);
+.lw:hover .lw-live,
+.lw:focus-within .lw-live,
+.lw.show-bar .lw-live {
   opacity: 0;
-  transition: opacity 0.2s;
 }
-.lw:hover .lw-corner {
-  opacity: 1;
-}
-.lw-corner.br {
-  right: 3px;
-  border-left: 0;
-  border-top: 0;
-  border-radius: 0 0 6px 0;
-  cursor: nwse-resize;
-}
-.lw-corner.bl {
-  left: 3px;
-  border-right: 0;
-  border-top: 0;
-  border-radius: 0 0 0 6px;
-  cursor: nesw-resize;
-}
-@media (prefers-reduced-motion: reduce) {
-  .lw-ctl,
-  .lw-corner {
-    transition: none;
+@media (hover: none) {
+  .lw-live {
+    display: none;
   }
 }
-.lw-go-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+/* both sides of a call: the key, in the line edges' colours (you "1", the call "2") */
+.lw-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
-.lw-go-row .picker {
-  flex: 1;
+.lw-key::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--spk-dark-0);
 }
-.lw-go-row .lw-go {
-  flex: none;
-  padding: 0 26px;
-  line-height: 46px;
+.lw-key.call::before {
+  background: var(--spk-dark-1);
 }
-.lw-panel .picker-field {
-  height: 46px;
-}
-.lw-panel .picker-list {
-  max-height: 150px;
-}
-/* the panel's language picker, in the window's dark glass */
-.lw-panel .picker {
-  --surface: #2a2631;
-  --bg: #221f29;
-  --text: var(--lw-ink);
-  --text-soft: var(--lw-soft);
-  --text-faint: var(--lw-faint);
-  --line: var(--lw-line);
-  --accent-tint: rgba(255, 255, 255, 0.16);
-  max-width: 420px;
-}
-.lw-panel p {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.45;
-  color: var(--lw-soft);
-}
-.lw-panel .input {
-  max-width: 220px;
-  border-color: var(--lw-line);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--lw-ink);
-}
-.lw-digits {
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--lw-live);
-}
-.lw-panel .lw-link {
-  all: unset;
-  color: var(--lw-ink);
-  text-decoration: underline;
-  cursor: pointer;
-}
-.lw-qr .qr-bg {
-  fill: #ffffff;
-}
-.lw-qr .qr-ink {
-  fill: #111111;
+.lw-sep {
+  width: 1px;
+  height: 22px;
+  margin: 0 2px;
+  background: var(--lw-line);
 }
 
-/* the captions: the website's list (CaptionsList) in the glass, centred like subtitles */
-.lw-ctl,
-.lw-note,
-.lw-panel {
-  flex: none;
-}
+/* ---------- the captions: the website's list, a centred column, the newest at the bottom ---------- */
 .lw-caps {
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
+  /* older lines soften away under the top edge (never while reading back: "Latest" shows then) */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 30%);
+}
+.lw-caps:has(.cap-latest) {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.lw.has-drawer .lw-caps,
+.lw.has-drawer .lw-start {
+  right: var(--lw-drawer);
 }
 .lw .cap-scroll {
-  padding: 10px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  padding: 58px 28px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+/* (a few lines sit at the bottom, like subtitles; a long history scrolls as ever) */
+.lw .cap-scroll > :first-child {
+  margin-top: auto;
+}
+/* (never squeezed to fit: a long history overflows and scrolls) */
+.lw .cap-scroll > * {
+  flex: none;
+}
+.lw .cap-lines,
+.lw .cap-note,
+.lw .cap-empty {
+  width: min(100%, calc(800px * var(--lw-size, 1)));
+  margin-inline: auto;
 }
 .lw .cap-note,
 .lw .cap-empty {
@@ -374,15 +304,16 @@ html:has(.lw) body {
   text-align: center;
 }
 .lw .cap-empty {
-  margin-top: 12px;
+  margin-bottom: 12px;
 }
 .lw .cap-lines {
-  gap: 8px;
+  gap: 9px;
 }
 .lw .cap-line {
   padding-left: 0;
   text-align: center;
-  font-size: calc(22px * var(--lw-size, 1));
+  font-size: calc(24px * var(--lw-size, 1));
+  line-height: 1.32;
   color: var(--lw-ink);
 }
 .lw .cap-line::before {
@@ -391,159 +322,409 @@ html:has(.lw) body {
 .lw .cap-line.old {
   color: var(--lw-soft);
 }
+/* who said what and both sides: the colour edge, the lines left-aligned so the edges line up */
+.lw .cap-line.spk {
+  padding-left: 18px;
+  text-align: left;
+}
+.lw .cap-line.spk::before {
+  display: block;
+}
 .lw .cap-label {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--lw-raise-hi);
   color: var(--lw-ink);
 }
-/* the language list opens over the whole window under the bar, scrolling there: never cut off by a
-   small window (Damian) */
-.lw .picker.open .picker-drop {
-  position: fixed;
-  inset: 48px 0 0;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  border: 0;
-  border-radius: 0 0 14px 14px;
-  background: #221f29;
-}
-.lw .picker.open .picker-list {
-  flex: 1;
-  max-height: none;
-}
-.lw-menu {
-  max-height: calc(100vh - 58px);
-  overflow-y: auto;
-}
-.lw .picker-list button[aria-selected='true'] {
-  color: var(--lw-live);
+.lw .cap-latest {
+  background: var(--lw-go);
+  color: #fff;
 }
 
-/* ---------- mockups batch 3: the window's strip as the phone's bar, its menu in groups ---------- */
-.lw-ctl .lang {
-  border: 1px solid var(--lw-line);
-}
-.lw-sep {
-  width: 1px;
-  height: 22px;
-  margin: 0 4px;
-  background: var(--lw-line);
-}
-/* a small "Live" that stays while the strip hides (under the strip while it shows) */
-.lw-live {
+/* ---------- before Start: one centred row ---------- */
+.lw-start {
   position: absolute;
-  top: 12px;
-  left: 14px;
-  z-index: 0;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: rgba(11, 110, 121, 0.85);
-  color: #fff;
-  font: 700 16px var(--f-body);
-  pointer-events: none;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 58px 24px 16px;
+  overflow-y: auto;
 }
-.lw-ctl {
-  position: relative;
-  z-index: 1;
+.lw-start > :first-child {
+  margin-top: auto;
 }
-.lw-menu h6 {
-  margin: 8px 10px 2px;
-  color: var(--lw-faint);
-  font: 700 16px var(--f-body);
+.lw-start > :last-child {
+  margin-bottom: auto;
 }
-.lw-menu .r.sel {
-  background: rgba(255, 255, 255, 0.2);
-}
-.lw-menu .r span {
-  margin-left: auto;
-}
-/* ✕ while the captions run: what it ends, in the strip's place */
-.lw-ask {
+.lw-frow {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 14px;
+}
+.lw-field > span {
+  display: block;
+  margin: 0 0 6px 2px;
+  color: var(--lw-soft);
+}
+.lw-seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--lw-line);
+  background: var(--lw-raise);
+}
+.lw-seg button {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--lw-line);
-  background: var(--lw-hi);
-  color: var(--lw-ink);
-  font: 600 16px var(--f-body);
-}
-.lw-ask b {
-  flex: 1 1 200px;
-}
-.lw-ask button {
-  all: unset;
-  min-height: 34px;
-  padding: 0 12px;
+  height: 40px;
+  padding: 0 13px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.14);
+  font-weight: 700;
+  color: var(--lw-soft);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lw-seg button:hover {
+  color: var(--lw-ink);
+}
+.lw-seg button.sel {
+  background: var(--lw-tint);
+  box-shadow: inset 0 0 0 1px rgba(127, 214, 222, 0.6);
+  color: var(--lw-hi);
+}
+.lw-pick {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 50px;
+  min-width: 210px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--lw-line);
+  background: var(--lw-raise);
   font-weight: 700;
   cursor: pointer;
 }
-.lw-ask button.stop {
-  background: rgba(255, 120, 120, 0.35);
+.lw-pick:hover {
+  background: var(--lw-raise-hi);
 }
-/* (the strip showing: its own Stop says it; the mark comes back when the mouse goes) */
-.lw:hover .lw-live,
-.lw:focus-within .lw-live {
-  opacity: 0;
+.lw-pick span {
+  flex: 1;
 }
-@media (hover: none) {
-  .lw-live {
-    display: none;
-  }
+.lw-hint,
+.lw-who {
+  margin: 0;
+  color: var(--lw-soft);
+  text-align: center;
+}
+.lw-hint b,
+.lw-who b {
+  color: var(--lw-ink);
+}
+.lw-link {
+  all: unset;
+  color: var(--lw-hi);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
-/* ---------- mockups batch 4: both sides of a call ---------- */
-.lw-qr {
-  cursor: default;
-}
-.lw-qr-x {
-  all: unset;
+/* ---------- the drawer: settings, the languages, invite ---------- */
+.lw-drawer {
   position: absolute;
-  top: 8px;
-  right: 10px;
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
+  inset: 0 0 0 auto;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  width: var(--lw-drawer);
+  border-left: 1px solid var(--lw-line);
+  background: var(--lw-panel);
+  box-shadow: -24px 0 48px rgba(0, 0, 0, 0.35);
+}
+.lw-dhead {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 10px 0 18px;
+  border-bottom: 1px solid var(--lw-line);
+}
+.lw-dhead h3 {
+  flex: 1;
+  margin: 0;
+  font: 700 18px var(--f-body);
+}
+.lw-dbody {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 18px 6px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.lw-set {
+  margin-bottom: 12px;
+}
+.lw-set .lw-seg {
+  width: 100%;
+}
+.lw-set .lw-seg button {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lw-sethint {
+  margin: 6px 2px 0;
+  color: var(--lw-soft);
+}
+.lw-sethint b {
   color: var(--lw-ink);
-  cursor: pointer;
 }
-.lw-qr-x:hover,
-.lw-qr-x:focus-visible {
-  background: rgba(255, 255, 255, 0.14);
+.lw-two {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
 }
-.lw-guest {
+.lw-two .lw-range {
+  flex: 1;
+  min-width: 140px;
+  margin-bottom: 0;
+}
+.lw-dbody h4 {
+  margin: 0 0 7px;
+  font: 400 16px var(--f-body);
+  color: var(--lw-faint);
+}
+.lw-opt {
   all: unset;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 10px;
-  padding: 8px 12px;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--lw-ink);
-  font-size: 16px;
+  gap: 11px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--lw-line);
+  background: var(--lw-raise);
   cursor: pointer;
 }
-.lw-guest:focus-visible {
-  outline: 2px solid var(--lw-live);
+.lw-opt:hover {
+  background: var(--lw-raise-hi);
 }
-.lw-guest small {
+.lw-opt > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.lw-opt b,
+.lw-opt small {
   display: block;
-  color: var(--lw-soft);
+}
+.lw-opt small {
   font-size: 16px;
+  line-height: 1.2;
+  color: var(--lw-soft);
+}
+.lw-opt > .lw-i:first-child {
+  color: var(--lw-soft);
+}
+.lw-opt.sel {
+  border-color: var(--lw-hi);
+  background: var(--lw-tint);
+}
+.lw-opt.sel .lw-i {
+  color: var(--lw-hi);
+}
+.lw-range {
+  display: block;
+  margin-bottom: 14px;
+}
+.lw-range span {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.lw-range i {
+  font-style: normal;
+  color: var(--lw-soft);
+}
+.lw-range input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--lw-hi);
+  cursor: pointer;
+}
+.lw-dfoot {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--lw-line);
+}
+.lw-dfoot .lw-btn {
+  padding: 0 10px;
+  color: var(--lw-ink);
+}
+.lw-dfoot .lw-btn .lw-i,
+.lw-dfoot .thin {
+  color: var(--lw-soft);
+}
+.lw-foot {
+  padding: 0 10px;
+  color: var(--lw-soft);
+}
+.lw .ui-lang {
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.lw-dfoot option {
+  background: var(--lw-panel);
+  color: var(--lw-ink);
+}
+/* the languages */
+.lw-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  height: 40px;
+  margin: 12px 18px 8px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(127, 214, 222, 0.5);
+  background: var(--lw-raise);
+  color: var(--lw-faint);
+}
+.lw-search input {
+  all: unset;
+  flex: 1;
+  min-width: 0;
+  color: var(--lw-ink);
+  font: 16px var(--f-body);
+  user-select: text;
+}
+.lw-search input::placeholder {
+  color: var(--lw-faint);
+}
+.lw-langs {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  align-content: start;
+  padding: 0 18px 12px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.lw-lg {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.lw-lg:hover {
+  background: var(--lw-raise);
+}
+.lw-lg small {
+  font-size: 16px;
+  color: var(--lw-faint);
+}
+.lw-lg .lw-i {
+  margin-left: auto;
+}
+.lw-lg[aria-selected='true'] {
+  background: var(--lw-tint);
+  color: var(--lw-hi);
+  font-weight: 700;
+}
+.lw-lg.wide,
+.lw-lhead {
+  grid-column: 1 / -1;
+}
+.lw-lhead {
+  margin: 6px 0 0 10px;
+  color: var(--lw-faint);
+}
+/* invite */
+.lw-invite {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 18px 12px;
+  overflow-y: auto;
+}
+.lw-inv {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.lw-inv p {
+  margin: 0;
+  color: var(--lw-soft);
+}
+.lw-qrbox {
+  flex: none;
+  align-self: flex-start;
+  padding: 8px;
+  border-radius: 12px;
+  background: #fff;
+  line-height: 0;
+}
+.lw-qrbox .qr-bg {
+  fill: #ffffff;
+}
+.lw-qrbox .qr-ink {
+  fill: #0c1519;
+}
+.lw-code {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+.lw-code b {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--lw-raise-hi);
+  font-size: 20px;
+  user-select: text;
 }
 .lw-tog {
   position: relative;
   flex: none;
-  width: 46px;
+  width: 44px;
   height: 26px;
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--lw-raise-hi);
 }
 .lw-tog::after {
   content: '';
@@ -556,61 +737,275 @@ html:has(.lw) body {
   background: #fff;
 }
 .lw-tog.on {
-  background: #5fd0da;
+  background: var(--lw-hi);
 }
 .lw-tog.on::after {
   left: auto;
   right: 3px;
 }
-.lw-who {
-  margin: 0;
-  color: var(--lw-soft);
-  font-size: 16px;
-}
-.lw-who b {
-  color: var(--lw-ink);
-}
-.lw-menu span.r {
-  color: var(--lw-soft);
-  cursor: default;
-}
 
-/* both sides of a call (batch 9): the key, in the line edges' colours (you "1", the call "2") */
-.lw-sides {
+/* ---------- messages: pills at the top centre, seen without the mouse ---------- */
+.lw-notices {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 5;
   display: flex;
-  gap: 16px;
-  margin: 0 0 6px;
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.75);
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  transform: translateX(-50%);
+  transition: top 0.2s;
+  pointer-events: none;
 }
-.lw-sides span::before {
-  content: '';
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  margin-right: 7px;
-  border-radius: 3px;
-  vertical-align: -1px;
-  background: var(--spk-dark-0);
+.lw:hover .lw-notices,
+.lw:focus-within .lw-notices,
+.lw.show-bar .lw-notices {
+  top: 58px;
 }
-.lw-sides .call::before {
-  background: var(--spk-dark-1);
+.lw.has-drawer .lw-notices {
+  left: calc((100% - var(--lw-drawer)) / 2);
+  max-width: calc(100% - var(--lw-drawer) - 24px);
 }
-
-/* the app updated itself (2026-11-15): one quiet line in the strip, its Restart */
-.lw-upd {
-  display: inline-flex;
+.lw-notice {
+  display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.8);
+  min-height: 38px;
+  padding: 5px 14px;
+  border-radius: 19px;
+  border: 1px solid var(--lw-line);
+  background: var(--lw-card);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  color: var(--lw-soft);
+  line-height: 1.25;
+  pointer-events: auto;
+}
+.lw-notice:has(.lw-btn) {
+  padding-right: 5px;
+}
+.lw-notice b,
+.lw-notice .plain {
+  color: var(--lw-ink);
+}
+.lw-notice .plain {
+  font-weight: 400;
+}
+.lw-notice .lw-i {
+  color: var(--lw-hi);
+}
+.lw-notice.warn {
+  border-color: rgba(240, 178, 107, 0.6);
+}
+.lw-notice.warn .lw-i {
+  color: var(--lw-warn);
+}
+.lw-notice.bad {
+  border-color: rgba(229, 88, 75, 0.75);
+}
+.lw-notice.bad .lw-i {
+  color: var(--lw-bad);
+}
+.lw-notice .lw-btn.sm {
+  flex: none;
+  background: var(--lw-go);
+}
+/* ---------- centre cards: signing in, an error; questions over the window ---------- */
+.lw-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 58px 20px 16px;
+  text-align: center;
+  overflow-y: auto;
+}
+.lw-card > :first-child {
+  margin-top: auto;
+}
+.lw-card > :last-child {
+  margin-bottom: auto;
+}
+.lw-logo {
+  width: 40px;
+  height: 40px;
+}
+.lw-card h3 {
+  margin: 0;
+  font: 700 24px var(--f-body);
+}
+.lw-card p {
+  max-width: 52ch;
+  margin: 0;
+  font-size: 17px;
+  color: var(--lw-soft);
+}
+.lw-card .lw-bad {
+  color: var(--lw-bad);
+  font-weight: 700;
+}
+.lw-digits {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--lw-hi);
+}
+.lw-card p.lw-digits {
+  font-size: 32px;
+  color: var(--lw-hi);
+}
+.lw-codeform {
+  display: flex;
+  gap: 8px;
+}
+.lw-input {
+  all: unset;
+  box-sizing: border-box;
+  width: 150px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--lw-line);
+  background: var(--lw-raise);
+  color: var(--lw-ink);
+  font: 700 17px var(--f-body);
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+  user-select: text;
+}
+.lw-input::placeholder {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--lw-faint);
+}
+.lw-input:focus {
+  border-color: var(--lw-hi);
+}
+.lw-ask {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(6, 12, 15, 0.72);
+}
+.lw-ask > div {
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--lw-line);
+  background: var(--lw-card);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+.lw-ask b {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 19px;
+}
+.lw-ask .lw-btn {
+  height: 40px;
+  margin: 3px 4px;
 }
 
-/* who said what and both sides: the window hides the lines' own mark, never the colour edge */
-.lw .cap-line.spk {
-  padding-left: 16px;
-  text-align: left;
+/* ---------- locked, and the corners that resize ---------- */
+/* (the app counts the top right 150 x 44 px as the badge: it stays inside that) */
+.lw-lock {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 140px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 16px;
+  border: 1px solid var(--lw-line);
+  background: rgba(6, 12, 15, 0.75);
+  color: var(--lw-soft);
+  font: 16px var(--f-body);
+  cursor: pointer;
 }
-.lw .cap-line.spk::before {
-  display: block;
+.lw-lock span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lw-lock:hover {
+  color: var(--lw-ink);
+  border-color: rgba(127, 214, 222, 0.55);
+}
+.lw-corner {
+  position: absolute;
+  bottom: 3px;
+  z-index: 7;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.lw:hover .lw-corner {
+  opacity: 1;
+}
+.lw-corner.br {
+  right: 3px;
+  border-left: 0;
+  border-top: 0;
+  border-radius: 0 0 8px 0;
+  cursor: nwse-resize;
+}
+.lw-corner.bl {
+  left: 3px;
+  border-right: 0;
+  border-top: 0;
+  border-radius: 0 0 0 8px;
+  cursor: nesw-resize;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lw-bar,
+  .lw-notices,
+  .lw-corner {
+    transition: none;
+  }
+}
+
+/* ---------- a small window: the name and Lock fold away ---------- */
+@media (max-width: 700px) {
+  .lw-brand span,
+  .lw-bar .lockb,
+  .lw-key {
+    display: none;
+  }
+  .lw-bar {
+    gap: 6px;
+    padding: 0 8px 0 10px;
+  }
+  .lw .cap-scroll {
+    padding-inline: 16px;
+  }
+}
+/* (no room for a drawer beside the captions: it covers the window, its messages wait) */
+@media (max-width: 760px) {
+  .lw {
+    --lw-drawer: 100%;
+  }
+  .lw.has-drawer .lw-notices {
+    display: none;
+  }
+  /* (under the drawer, at their own width: never squeezed to nothing) */
+  .lw.has-drawer .lw-caps,
+  .lw.has-drawer .lw-start {
+    right: 0;
+  }
 }

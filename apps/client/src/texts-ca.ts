@@ -323,6 +323,8 @@ export const ca: Texts = {
     restartNow: 'Reinicia ara',
     both: 'Tots dos',
     bothHint: 'la trucada i tu, el doble de cost',
+    lockHint: 'els clics passen a la trucada',
+    readAlongType: 'Escaneja’l o escriu aquest codi a kinsay.dendigital.de/join',
     listenTo: 'Escolta',
     system: 'El so de l’ordinador',
     systemHint: 'una trucada',

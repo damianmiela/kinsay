@@ -340,6 +340,8 @@ const tw_en = {
   restartNow: 'Restart now',
   both: 'Both',
   bothHint: 'the call and you, twice the cost',
+  lockHint: 'clicks go through to the call',
+  readAlongType: 'Scan it, or type this code at kinsay.dendigital.de/join',
   listenTo: 'Listen to',
   system: 'This computer’s sound',
   systemHint: 'a call',

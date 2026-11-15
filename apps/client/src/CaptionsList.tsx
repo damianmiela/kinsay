@@ -153,7 +153,14 @@ export function CaptionsList({
   useEffect(() => {
     const b = box.current;
     if (!b) return;
+    let width = b.clientWidth;
     const watch = new ResizeObserver((entries) => {
+      // (a new width wraps the lines anew: the height kept for the old width no longer holds, or
+      // the lines would stand apart in a box that got wider, 2026-11-15)
+      if (b.clientWidth !== width) {
+        width = b.clientWidth;
+        if (lines.current) lines.current.style.minHeight = '';
+      }
       if (following.current) catchUp(entries.some((entry) => entry.target === b));
     });
     watch.observe(b);

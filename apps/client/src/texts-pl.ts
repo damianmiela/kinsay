@@ -316,6 +316,8 @@ export const pl: Texts = {
     restartNow: 'Uruchom ponownie teraz',
     both: 'Oba',
     bothHint: 'rozmowa i Ty, podwójny koszt',
+    lockHint: 'kliknięcia trafiają do rozmowy',
+    readAlongType: 'Zeskanuj go albo wpisz ten kod na kinsay.dendigital.de/join',
     listenTo: 'Słuchaj',
     system: 'Dźwięku z komputera',
     systemHint: 'rozmowa',

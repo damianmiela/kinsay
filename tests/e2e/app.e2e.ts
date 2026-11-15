@@ -476,7 +476,7 @@ test('both sides of a call: the host allows it, the guest’s window captions he
   await expect(host.getByRole('button', { name: 'Stop' })).toBeVisible();
   // the host's Stop: she can't start again until he does ("Waiting"/"stopped at")
   await host.getByRole('button', { name: 'Stop' }).click();
-  await expect(win.locator('.lw-note')).toContainText(/stopped at/);
+  await expect(win.locator('.lw-notice')).toContainText(/stopped at/);
   await expect(win.getByRole('button', { name: 'Start' })).toBeDisabled();
   await ctx.close();
 });
@@ -528,23 +528,35 @@ test('the subtitles window: signed in through the person’s own browser, then i
   await expect(win.locator('.lw .cap-latest')).toBeVisible();
   await win.locator('.lw .cap-latest').click();
   await expect(win.locator('.lw .cap-latest')).toBeHidden();
-  // the language list opens inside the window, never past its edge (300 px high)
+  // the languages open in the drawer, inside the window (300 px high), the captions still there
   await win.getByRole('button', { name: 'Translate into' }).click();
-  const drop = (await win.locator('.picker-drop').boundingBox())!;
+  const drop = (await win.locator('.lw-drawer').boundingBox())!;
   expect(drop.y + drop.height).toBeLessThanOrEqual(300);
-  await expect(win.locator('.picker-list button').nth(3)).toBeInViewport();
+  await expect(win.locator('.lw-langs button').nth(3)).toBeInViewport();
+  await expect(win.locator('.lw .cap-line').last()).toBeVisible();
   await win.keyboard.press('Escape');
-  // the strip is the phone's bar: Stop, the language, Settings; a "Live" that stays
-  const strip = win.locator('.lw-ctl > button');
+  await expect(win.locator('.lw-drawer')).toHaveCount(0);
+  // the bar: Stop, the language, Settings; a "Live" that stays
+  const strip = win.locator('.lw-bar > button');
   await expect(strip.nth(0)).toHaveClass(/stop/);
   await expect(strip.nth(1)).toHaveClass(/lang/);
   await expect(win.locator('.lw-live')).toBeVisible();
-  // its Settings in groups: Invite first, then the microphone (the chosen one marked)
+  // its Settings in the same drawer: what it listens to (the chosen one marked), the window's own
+  // controls, Invite and the account along the bottom; nothing past the window's edge
   await win.getByRole('button', { name: 'Settings' }).click();
-  await expect(win.locator('.lw-menu .r').first()).toHaveText('Invite someone');
-  await expect(win.locator('.lw-menu h6').first()).toHaveText('Microphone');
-  await expect(win.locator('.lw-menu .r.sel')).toContainText('Microphone');
-  await win.getByRole('button', { name: 'Settings' }).click();
+  await expect(win.locator('.lw-drawer h4').first()).toHaveText('Listen to');
+  await expect(win.locator('.lw-drawer .lw-seg button.sel')).toContainText('Microphone');
+  await expect(win.locator('.lw-dfoot .lw-btn').first()).toHaveText('Invite someone');
+  await expect(win.locator('.lw-dfoot')).toBeInViewport({ ratio: 1 });
+  await win.getByRole('button', { name: 'Close', exact: true }).click();
+  // (a drawer never leaves the lines standing apart: each is still one line high, 2026-11-15)
+  expect(
+    await win
+      .locator('.lw .cap-line')
+      .last()
+      .evaluate((el) => el.getBoundingClientRect().height),
+  ).toBeLessThan(80);
+  await expect(win.locator('.lw-drawer')).toHaveCount(0);
   await win.getByRole('button', { name: /Stop/ }).click();
   await expect(win.getByRole('button', { name: 'Start' })).toBeVisible();
   await expect(win.locator('.lw-live')).toHaveCount(0);

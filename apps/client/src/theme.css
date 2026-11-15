@@ -465,52 +465,6 @@ p.s {
   border-bottom: 3px solid var(--text-soft);
   transform: rotate(45deg) translateY(-3px);
 }
-.picker.open .picker-field {
-  border-color: var(--accent);
-  border-radius: var(--r-sm) var(--r-sm) 0 0;
-}
-.picker-drop {
-  padding: 8px 12px 4px;
-  border: 2px solid var(--accent);
-  border-top: 0;
-  border-radius: 0 0 var(--r-sm) var(--r-sm);
-  background: var(--surface);
-}
-.picker-drop .input {
-  height: 46px;
-  font-size: 17px;
-}
-.picker-list {
-  max-height: 260px;
-  overflow-y: auto;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.picker-list button {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 11px 2px;
-  border: 0;
-  border-top: 1px solid var(--line);
-  background: none;
-  font-size: 17px;
-  text-align: left;
-  cursor: pointer;
-}
-.picker-list li:first-child button {
-  border-top: 0;
-}
-.picker-list button small {
-  color: var(--text-faint);
-  font-size: 16px;
-}
-.picker-list button[aria-selected='true'] {
-  color: var(--accent-strong);
-  font-weight: 700;
-}
 /* a list row that opens something (the gear's Invite, Account) */
 .link-row {
   width: 100%;
@@ -581,11 +535,6 @@ a.btn {
 }
 .li .ui-lang {
   margin-left: auto;
-}
-.lw .ui-lang {
-  background: #2a2631;
-  color: var(--lw-ink);
-  border-color: var(--lw-line);
 }
 /* the download page's steps */
 .steps {

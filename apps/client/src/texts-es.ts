@@ -319,6 +319,8 @@ export const es: Texts = {
     restartNow: 'Reiniciar ahora',
     both: 'Ambos',
     bothHint: 'la llamada y tú, el doble de coste',
+    lockHint: 'los clics pasan a la llamada',
+    readAlongType: 'Escanéalo o escribe este código en kinsay.dendigital.de/join',
     listenTo: 'Escuchar',
     system: 'El sonido del ordenador',
     systemHint: 'una llamada',

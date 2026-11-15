@@ -328,6 +328,8 @@ export const de: Texts = {
     restartNow: 'Jetzt neu starten',
     both: 'Beides',
     bothHint: 'der Anruf und du, doppelte Kosten',
+    lockHint: 'Klicks gehen an den Anruf',
+    readAlongType: 'Scann ihn oder gib diesen Code auf kinsay.dendigital.de/join ein',
     listenTo: 'Hören auf',
     system: 'Den Ton des Computers',
     systemHint: 'ein Anruf',

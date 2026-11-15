@@ -1,6 +1,6 @@
 // The translation language (mockups batch 3). A field that opens a sheet with no keyboard: no
 // translation, the five, at most two used before, then "Other languages" (a search and the whole
-// list A to Z). The desktop window keeps its own list under the field until its redesign (step 5).
+// list A to Z). The desktop window has its own list, in its drawer (Window.tsx's Langs).
 import { useState } from 'react';
 import { HalfMark, IconClose, IconRight } from './Bar';
 import { Sheet } from './bits';
@@ -147,7 +147,6 @@ export function LangPicker({
   title = t.translateIntoSet,
   startOpen = false,
   mark,
-  inline = false,
 }: {
   value: string | null;
   onChange: (lang: string | null) => void;
@@ -156,11 +155,8 @@ export function LangPicker({
   startOpen?: boolean;
   /** Face to face: which half of the phone this language is for. */
   mark?: 'top' | 'bottom';
-  /** The desktop window: the old list under the field (until its redesign). */
-  inline?: boolean;
 }) {
   const [open, setOpen] = useState(startOpen);
-  const [query, setQuery] = useState('');
   const shown = value ? langName(value).own : t.noTranslation;
   const field = (
     <button
@@ -175,79 +171,19 @@ export function LangPicker({
       </span>
     </button>
   );
-  if (!inline) {
-    return (
-      <div className="picker">
-        {field}
-        {open && (
-          <LangSheet
-            title={title}
-            value={value}
-            onPick={(l) => {
-              setOpen(false);
-              onChange(l);
-            }}
-            onClose={() => setOpen(false)}
-          />
-        )}
-      </div>
-    );
-  }
-  const pick = (lang: string | null) => {
-    if (lang) rememberLang(lang);
-    setOpen(false);
-    setQuery('');
-    onChange(lang);
-  };
-  const list = langList(query);
   return (
-    <div className={`picker${open ? ' open' : ''}`}>
+    <div className="picker">
       {field}
       {open && (
-        <div className="picker-drop">
-          <input
-            className="input"
-            autoFocus
-            value={query}
-            placeholder={t.searchLang}
-            aria-label={t.searchLang}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <ul className="picker-list" role="listbox">
-            {!query && (
-              <li>
-                <button role="option" aria-selected={value === null} onClick={() => pick(null)}>
-                  <span>
-                    {t.noTranslation}
-                    <br />
-                    <small>{t.noTranslationHint}</small>
-                  </span>
-                  {value === null && '✓'}
-                </button>
-              </li>
-            )}
-            {list.map((code) => {
-              const n = langName(code);
-              return (
-                <li key={code}>
-                  <button role="option" aria-selected={value === code} onClick={() => pick(code)}>
-                    <span>
-                      {n.own}
-                      {n.here !== n.own && (
-                        <>
-                          <br />
-                          <small>{n.here}</small>
-                        </>
-                      )}
-                    </span>
-                    {value === code && '✓'}
-                  </button>
-                </li>
-              );
-            })}
-            {!list.length && <li className="small">{t.noLangFound}</li>}
-          </ul>
-        </div>
+        <LangSheet
+          title={title}
+          value={value}
+          onPick={(l) => {
+            setOpen(false);
+            onChange(l);
+          }}
+          onClose={() => setOpen(false)}
+        />
       )}
     </div>
   );

@@ -178,10 +178,10 @@ namespace TranslateApp
             onTopTimer.Tick += (s, e) => KeepOnTop();
             onTopTimer.Start();
             StartPosition = FormStartPosition.Manual;
-            BackColor = Color.FromArgb(18, 16, 22);
+            BackColor = Color.FromArgb(12, 21, 25);
             Opacity = 0.92;
             web.Dock = DockStyle.Fill;
-            web.DefaultBackgroundColor = Color.FromArgb(18, 16, 22);
+            web.DefaultBackgroundColor = Color.FromArgb(12, 21, 25);
             Controls.Add(web);
             lockTimer.Tick += (s, e) => LetClicksThrough(!OverLockBadge());
             Load += async (s, e) =>

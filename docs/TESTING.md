@@ -288,3 +288,17 @@ The app updates itself to this build (or download it once more if it doesn't yet
 - [ ] A call app's on-top mini window, or the taskbar clicked: Kinsay comes back in front within 2 s, and typing in the other app keeps working.
 - [ ] Both, a short "Yes" or "Okay" from you while the call talks: it stays.
 - [ ] Two Kinsay windows (or the window and a browser tab) with different Listen to choices: the switch doesn't flicker.
+
+## 30. The subtitles window's new look (2026-11-15)
+
+The app updates itself (a new build for its backing colour); the look itself comes with the page.
+
+- [ ] Mouse away: only the captions, in the middle of the window, and a small "Live". Mouse on it: the bar comes in over the top (Kinsay, Live, Stop, the language, Settings, Lock, Close); the window drags by its name or the bar's empty middle.
+- [ ] Settings opens on the right, beside the running captions: text size and see-through change them as you drag; nothing scrolls at the normal height. ✕, Escape or a click on the captions closes it.
+- [ ] The language: the same drawer, a search, your languages first; picking one closes it and the captions change.
+- [ ] Invite (from Settings): the QR code and the code in boxes.
+- [ ] Before Start: one row in the middle (Listen to, Translate into, Start) and a line that explains the choice.
+- [ ] A message (play nothing for 8 s: "Waiting for sound…") shows as a pill at the top, under the bar while the mouse is on the window.
+- [ ] Lock: the badge top right unlocks; ✕ while captions run asks in a card in the middle.
+- [ ] The window made as small as it goes: the name and Lock fold away, a drawer covers the window; made wide again, the lines look as before.
+- [ ] All five languages: nothing cut off in the bar, the start row or Settings (tell me where it is).
