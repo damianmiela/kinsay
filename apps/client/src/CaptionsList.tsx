@@ -210,17 +210,20 @@ export function CaptionsList({
           <CaptionsFrame>
             <div className="cap-lines" ref={lines}>
               {/* keyed by line number: the line coming in keeps its words when it is finished */}
-              {text.lines.map((line, i) => (
-                <Line
-                  key={text.first + i}
-                  n={text.first + i}
-                  text={line}
-                  old={i < recent}
-                  saying={saying === text.first + i}
-                  label={labels?.[text.first + i]}
-                  speaker={text.speakers?.[text.first + i]}
-                />
-              ))}
+              {/* (an empty line: one taken back, an echo of the call: its place stays, unseen) */}
+              {text.lines.map((line, i) =>
+                !line ? null : (
+                  <Line
+                    key={text.first + i}
+                    n={text.first + i}
+                    text={line}
+                    old={i < recent}
+                    saying={saying === text.first + i}
+                    label={labels?.[text.first + i]}
+                    speaker={text.speakers?.[text.first + i]}
+                  />
+                ),
+              )}
               {/* the same component as a finished line: finishing it never redraws its words */}
               {text.live && (
                 <Line

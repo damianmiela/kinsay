@@ -381,7 +381,7 @@ describe('audit 30', () => {
 
 describe('both sides of a call (batch 9)', () => {
   it('the microphone in its own streams; the two sides merged, each line with its side', async () => {
-    const { person, sock, speech, t } = await start();
+    const { person, sock, speech } = await start();
     const host = sock({ cookie: (await person('Marta')).cookie });
     await next<SessionView>(host, 'state:session');
     await ask(host, 'session:start', { lang: 'en' });
@@ -407,7 +407,6 @@ describe('both sides of a call (batch 9)', () => {
       { text: ' Long, but fine.', translation_status: 'none' },
       { text: '<end>' },
     ]);
-    t.now += 3_000; // (yours waits a moment for an echo of the call's)
     const u = await next<CaptionsUpdate>(
       host,
       'captions',

@@ -1,36 +1,37 @@
-import { describe, expect, it, vi } from 'vitest';
-import { HOLD_MS, sameWords, Sides } from './sides';
+import { describe, expect, it } from 'vitest';
+import { sameWords, Sides } from './sides';
 
 describe('both sides of a call', () => {
-  it('lines in the order said, each with its side; an echo of the call never shows', () => {
-    vi.useFakeTimers();
+  it('every line at once, in order, with its side; an echo of the call never stays', () => {
     let t = 0;
     const sides = new Sides(
       () => t,
       () => {},
     );
+    const lines = () => sides.view('pl', undefined, undefined, 10).lines;
     sides.line('call', 'pl', 'Jak minęła podróż?');
-    // (the microphone heard the speakers: the same words, a moment later)
+    // (the microphone heard the speakers after the call's line: never added)
     t += 500;
     sides.line('you', 'pl', 'jak minęła podróż');
-    t += 1_000;
     sides.line('you', 'pl', 'Długo, ale dzieci spały.');
-    expect(sides.view('pl', undefined, undefined, 10).lines).toEqual(['Jak minęła podróż?']);
-    t += HOLD_MS;
-    vi.advanceTimersByTime(HOLD_MS);
     const v = sides.view('pl', undefined, { lines: [], first: 0, live: 'Tak' }, 10);
     expect(v.lines).toEqual(['Jak minęła podróż?', 'Długo, ale dzieci spały.']);
     expect(v.speakers).toEqual({ 0: '2', 1: '1' });
-    expect(v.live).toBe('Tak');
     expect(v.liveSpeaker).toBe('1');
-    // (yours first, the call's same words after: still the echo, dropped while it waits)
+    // (yours first, shown at once; the call's same words after: yours is wiped, its place empty)
     sides.line('you', 'pl', 'Zostaniecie na weekend?');
+    expect(lines()).toHaveLength(3);
     sides.line('call', 'pl', 'Zostaniecie na cały weekend?');
-    t += HOLD_MS;
-    vi.advanceTimersByTime(HOLD_MS);
-    expect(sides.view('pl', undefined, undefined, 10).lines).toHaveLength(3);
-    sides.close();
-    vi.useRealTimers();
+    expect(lines()).toEqual([
+      'Jak minęła podróż?',
+      'Długo, ale dzieci spały.',
+      '',
+      'Zostaniecie na cały weekend?',
+    ]);
+    // (long after: the same words are no echo)
+    t += 60_000;
+    sides.line('you', 'pl', 'Zostaniecie na cały weekend?');
+    expect(lines().at(-1)).toBe('Zostaniecie na cały weekend?');
   });
 
   it('same words: a word or two apart, never empty', () => {

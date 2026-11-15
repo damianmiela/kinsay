@@ -311,7 +311,6 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       });
       c.side = { engine, sides, seqs: new Map() };
     } else if (!on && c.side) {
-      c.side.sides.close();
       c.side.engine.discard();
       c.side.engine.close();
       c.side = undefined;
