@@ -274,3 +274,11 @@ Download Kinsay.exe once more (the first version that can update itself).
 - [ ] Start it, then deploy a newer build (`node desktop/pack-win.mjs`, commit, deploy). Within 6 hours, or at the next start, the strip says "Kinsay was updated" with Restart.
 - [ ] Restart while captions run asks first; after it, the app opens again, still signed in.
 - [ ] Never restarted: closing and starting it again runs the new version; no Kinsay.exe.old stays next to it.
+
+## 28. Both sides without a headset: Windows' echo canceller (2026-11-15)
+
+The app updates itself to this build (or download it once more if it doesn't yet).
+
+- [ ] A call on speakers, Listen to → Both: talk while the other person talks. Their words show in amber only, not again in cyan (at most now and then).
+- [ ] Your own words still come through clearly in cyan, also while the call talks.
+- [ ] The same in a browser tab (no app): it still works, with the browser's weaker echo cancelling.

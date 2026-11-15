@@ -111,7 +111,7 @@ namespace TranslateApp
             try
             {
                 Directory.CreateDirectory(Folder);
-                File.AppendAllText(Path.Combine(Folder, "errors.txt"), DateTime.Now.ToString("s") + " update: " + e.Message + "\r\n");
+                File.AppendAllText(Path.Combine(Folder, "errors.txt"), DateTime.Now.ToString("s") + " " + e.Message + "\r\n");
             }
             catch (Exception) { /* (not noted) */ }
         }
@@ -160,6 +160,8 @@ namespace TranslateApp
         readonly System.Windows.Forms.Timer lockTimer = new System.Windows.Forms.Timer { Interval = 150 };
         bool locked, through;
         Loopback sound;
+        /// Both sides of a call: the microphone, the call taken out of it by Windows (EchoMic).
+        EchoMic voice;
 
         public SubtitlesForm(Uri page)
         {
@@ -200,7 +202,11 @@ namespace TranslateApp
                     Close();
                 }
             };
-            FormClosing += (s, e) => StopSound();
+            FormClosing += (s, e) =>
+            {
+                StopSound();
+                StopMic();
+            };
         }
 
         /// Locked: clicks go through (kept in the window's style, so WinForms never drops it).
@@ -341,7 +347,7 @@ namespace TranslateApp
                         return;
                     }
                 }
-                catch (Exception e) { Program.Note(e); }
+                catch (Exception e) { Program.Note(new Exception("update: " + e.Message, e)); }
                 await System.Threading.Tasks.Task.Delay(TimeSpan.FromHours(6));
             }
         }
@@ -378,6 +384,10 @@ namespace TranslateApp
                 case "sound":
                     if (arg == "on") StartSound();
                     else StopSound();
+                    break;
+                case "mic":
+                    if (arg == "on") StartMic();
+                    else StopMic();
                     break;
                 case "close":
                     Close();
@@ -428,6 +438,32 @@ namespace TranslateApp
             sound = null;
         }
 
+        /// The microphone without the call's sound: "mic:ok" or "mic:error" (the page then uses the
+        /// browser's own microphone), "mic:ended" if it stops later.
+        void StartMic()
+        {
+            StopMic();
+            voice = EchoMic.Open(chunk => Post("mic:" + Convert.ToBase64String(chunk)), MicLost);
+            web.CoreWebView2?.PostWebMessageAsString(voice != null ? "mic:ok" : "mic:error");
+        }
+
+        void MicLost(EchoMic from)
+        {
+            if (!IsHandleCreated || IsDisposed) return;
+            BeginInvoke(new Action(() =>
+            {
+                if (voice != from) return;
+                StopMic();
+                web.CoreWebView2?.PostWebMessageAsString("mic:ended");
+            }));
+        }
+
+        void StopMic()
+        {
+            voice?.Dispose();
+            voice = null;
+        }
+
         void ResizeBy(int dx, int dy, bool left)
         {
             var b = Bounds;
@@ -474,14 +510,18 @@ namespace TranslateApp
         const string Bridge = @"(() => {
   if (location.origin !== ORIGIN || location.pathname !== '/window' || !window.chrome || !chrome.webview) return;
   const post = (m) => chrome.webview.postMessage(m);
-  let take = null, ended = null, asked = null;
+  // (two kinds of sound: this computer's, and the microphone without the call)
+  const kinds = { sound: { take: null, ended: null, asked: null }, mic: { take: null, ended: null, asked: null } };
   chrome.webview.addEventListener('message', (e) => {
     const m = e.data;
     if (typeof m !== 'string') return;
-    if (m === 'sound:ok' || m === 'sound:error') {
-      const a = asked;
-      asked = null;
-      if (a) m === 'sound:ok' ? a.ok() : a.no(new Error('no sound device'));
+    const kind = m.startsWith('mic:') ? 'mic' : m.startsWith('sound:') ? 'sound' : null;
+    const k = kind ? kinds[kind] : null;
+    const what = kind ? m.slice(kind.length + 1) : '';
+    if (k && (what === 'ok' || what === 'error')) {
+      const a = k.asked;
+      k.asked = null;
+      if (a) what === 'ok' ? a.ok() : a.no(new Error('no sound device'));
       return;
     }
     if (m === 'update:ready') {
@@ -489,14 +529,15 @@ namespace TranslateApp
       if (onUpdated) onUpdated();
       return;
     }
-    if (m === 'sound:ended') {
-      const end = ended;
-      take = ended = null;
+    if (k && what === 'ended') {
+      const end = k.ended;
+      k.take = k.ended = null;
       if (end) end();
       return;
     }
-    if (!m.startsWith('sound:') || !take) return;
-    const bin = atob(m.slice(6));
+    if (!k || !k.take) return;
+    const take = k.take;
+    const bin = atob(what);
     const f = new Float32Array(bin.length >> 1);
     for (let i = 0; i < f.length; i++) {
       let v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8);
@@ -516,12 +557,15 @@ namespace TranslateApp
     resized: () => post('resized'),
     close: () => post('close'),
     startSound: (t, e) => new Promise((ok, no) => {
-      take = t;
-      ended = e || null;
-      asked = { ok, no };
+      Object.assign(kinds.sound, { take: t, ended: e || null, asked: { ok, no } });
       post('sound:on');
     }),
-    stopSound: () => { take = ended = null; post('sound:off'); },
+    stopSound: () => { kinds.sound.take = kinds.sound.ended = null; post('sound:off'); },
+    startMic: (t, e) => new Promise((ok, no) => {
+      Object.assign(kinds.mic, { take: t, ended: e || null, asked: { ok, no } });
+      post('mic:on');
+    }),
+    stopMic: () => { kinds.mic.take = kinds.mic.ended = null; post('mic:off'); },
   });
 })();";
 

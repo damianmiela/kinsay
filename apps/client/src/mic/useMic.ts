@@ -134,18 +134,51 @@ async function systemSound(): Promise<MediaStream> {
   return new MediaStream(audio);
 }
 
+/**
+ * Both sides of a call: the microphone. In the Windows app, Windows' own echo canceller (the call's
+ * sound taken out of it, even while you talk); else, or if it can't run, the browser's microphone
+ * with its own echo cancelling (which knows only what the browser plays).
+ */
+async function sideMic(): Promise<MediaStream> {
+  const shell = (window as { liveShell?: SoundShell }).liveShell;
+  if (shell?.startMic) {
+    try {
+      return await shellSound(shell, 'mic');
+    } catch {
+      /* (the browser's microphone then) */
+    }
+  }
+  return navigator.mediaDevices.getUserMedia({
+    audio: {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+  });
+}
+
 /** The small Windows app (desktop/win): Windows' loopback, 16 kHz samples handed to the page. */
 interface SoundShell {
   /** Resolves once Windows' capture runs, rejects without a sound device; `ended`: it stopped later. */
   startSound?(take: (samples: Float32Array) => void, ended: () => void): Promise<void>;
   stopSound?(): void;
+  /** The microphone with the call's sound taken out by Windows (both sides of a call). */
+  startMic?(take: (samples: Float32Array) => void, ended: () => void): Promise<void>;
+  stopMic?(): void;
 }
 
 /**
  * The app's sound as a stream like any other: its samples played into the page's own sound graph
  * (silence while Windows sends none, when nothing plays). Stopping the track stops the capture.
  */
-async function shellSound(shell: SoundShell): Promise<MediaStream> {
+async function shellSound(
+  shell: SoundShell,
+  kind: 'sound' | 'mic' = 'sound',
+): Promise<MediaStream> {
+  const begin = (take: (samples: Float32Array) => void, ended: () => void) =>
+    kind === 'mic' ? shell.startMic?.(take, ended) : shell.startSound?.(take, ended);
+  const end = () => (kind === 'mic' ? shell.stopMic?.() : shell.stopSound?.());
   const ctx = new AudioContext({ sampleRate: 16000 });
   await ctx.resume();
   // (2 chunks ahead before playing; more than 5 waiting: back to 2, so the delay never grows)
@@ -171,7 +204,7 @@ async function shellSound(shell: SoundShell): Promise<MediaStream> {
   node.connect(out);
   const tracks = out.stream.getAudioTracks();
   try {
-    await shell.startSound?.(
+    await begin(
       (samples) => node.port.postMessage(samples, [samples.buffer]),
       // (the sound device went and none came back: the page shows its "input stopped")
       () => {
@@ -190,7 +223,7 @@ async function shellSound(shell: SoundShell): Promise<MediaStream> {
   for (const track of tracks) {
     const stop = track.stop.bind(track);
     track.stop = () => {
-      shell.stopSound?.();
+      end();
       void ctx.close();
       stop();
     };
@@ -264,15 +297,7 @@ export function useMic({ voice = false, side = false } = {}): Mic {
         sourceRef.current === 'system' && !side
           ? await systemSound()
           : side
-            ? await navigator.mediaDevices.getUserMedia({
-                audio: {
-                  ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-                  channelCount: 1,
-                  echoCancellation: true,
-                  noiseSuppression: true,
-                  autoGainControl: true,
-                },
-              })
+            ? await sideMic()
             : await navigator.mediaDevices.getUserMedia({
                 audio: voice
                   ? { channelCount: 1 }
