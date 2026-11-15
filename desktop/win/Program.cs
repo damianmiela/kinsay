@@ -89,12 +89,32 @@ namespace TranslateApp
                 AppDomain.CurrentDomain.UnhandledException += (s, e) => Failed(e.ExceptionObject as Exception);
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
+                Updater.Tidy();
                 Application.Run(new SubtitlesForm(PageAddress()));
+            }
+            // (Restart after an update: the new exe, once this one has let go of the one-window lock)
+            if (RestartAfter)
+            {
+                try { Process.Start(Application.ExecutablePath); }
+                catch (Exception) { /* (the person starts it) */ }
             }
         }
 
+        public static bool RestartAfter;
+
         public static readonly string Folder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Translate");
+
+        /// A problem worth a line in errors.txt, never a message (an update that didn't come).
+        public static void Note(Exception e)
+        {
+            try
+            {
+                Directory.CreateDirectory(Folder);
+                File.AppendAllText(Path.Combine(Folder, "errors.txt"), DateTime.Now.ToString("s") + " update: " + e.Message + "\r\n");
+            }
+            catch (Exception) { /* (not noted) */ }
+        }
 
         public static void Failed(Exception e)
         {
@@ -296,12 +316,34 @@ namespace TranslateApp
                 Asked(m ?? "");
             };
             core.Navigate(page.AbsoluteUri);
+            if (!test) _ = UpdateLoop();
         }
 
         bool Ours(string uri)
         {
             try { return new Uri(uri).GetLeftPart(UriPartial.Authority) == origin; }
             catch (Exception) { return false; }
+        }
+
+        bool updated;
+
+        /// Updates: at the start, then every 6 hours, until one is in place (never in a test).
+        async System.Threading.Tasks.Task UpdateLoop()
+        {
+            for (;;)
+            {
+                try
+                {
+                    if (await Updater.TryUpdate(origin))
+                    {
+                        updated = true;
+                        web.CoreWebView2?.PostWebMessageAsString("update:ready");
+                        return;
+                    }
+                }
+                catch (Exception e) { Program.Note(e); }
+                await System.Threading.Tasks.Task.Delay(TimeSpan.FromHours(6));
+            }
         }
 
         void OpenInBrowser(string uri)
@@ -338,6 +380,15 @@ namespace TranslateApp
                     else StopSound();
                     break;
                 case "close":
+                    Close();
+                    break;
+                case "update":
+                    // (the page asks once it loads: a reload never loses the news)
+                    if (updated) web.CoreWebView2?.PostWebMessageAsString("update:ready");
+                    break;
+                case "restart":
+                    if (!updated) break;
+                    Program.RestartAfter = true;
                     Close();
                     break;
             }
@@ -433,6 +484,11 @@ namespace TranslateApp
       if (a) m === 'sound:ok' ? a.ok() : a.no(new Error('no sound device'));
       return;
     }
+    if (m === 'update:ready') {
+      updated = true;
+      if (onUpdated) onUpdated();
+      return;
+    }
     if (m === 'sound:ended') {
       const end = ended;
       take = ended = null;
@@ -449,7 +505,11 @@ namespace TranslateApp
     }
     take(f);
   });
+  let updated = false, onUpdated = null;
+  post('update');
   window.liveShell = Object.freeze({
+    onUpdated: (fn) => { onUpdated = fn; if (updated) fn(); },
+    restart: () => post('restart'),
     setOpacity: (v) => post('opacity:' + Number(v)),
     setClickThrough: (on) => post('click:' + (on ? 1 : 0)),
     resizeBy: (dx, dy, edge) => post('resize:' + Math.round(dx) + ',' + Math.round(dy) + ',' + (edge === 'left' ? 'left' : 'right')),

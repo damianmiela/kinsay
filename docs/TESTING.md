@@ -266,3 +266,11 @@ No new download: only the page changed, not the app.
 - [ ] A reader with the code sees the same colours.
 - [ ] ⚙ → "Both sides of the call" off while it runs: only the call's sound again, after a second's pause.
 - [ ] Account: the session costs about twice as much while both sides run.
+
+## 27. The Windows app updates itself (2026-11-15)
+
+Download Kinsay.exe once more (the first version that can update itself).
+
+- [ ] Start it, then deploy a newer build (`node desktop/pack-win.mjs`, commit, deploy). Within 6 hours, or at the next start, the strip says "Kinsay was updated" with Restart.
+- [ ] Restart while captions run asks first; after it, the app opens again, still signed in.
+- [ ] Never restarted: closing and starting it again runs the new version; no Kinsay.exe.old stays next to it.

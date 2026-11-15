@@ -32,6 +32,10 @@ interface LiveShell {
   resizeBy(dx: number, dy: number, edge: 'left' | 'right'): void;
   resized?(): void;
   close(): void;
+  /** A new version is in place (the app's own updates): called at once if it already is. */
+  onUpdated?(fn: () => void): void;
+  /** Closes and starts the new version. */
+  restart?(): void;
 }
 const shell = (window as { liveShell?: LiveShell }).liveShell;
 /** This page's own random token as a guest (a reconnected page takes its place back). */
@@ -194,6 +198,12 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   const [problem, setProblem] = useState<string | null>(null);
   // (✕ while the captions run asks first: closing would stop them)
   const [closing, setClosing] = useState(false);
+  // the app updated itself: a quiet note and Restart (asks first while captions run)
+  const [updated, setUpdated] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  useEffect(() => {
+    shell?.onUpdated?.(() => setUpdated(true));
+  }, []);
   // (a page that came by the code, the host letting it caption its own side: it chose to only read)
   const [justRead, setJustRead] = useState(false);
   // a guest's captions carry on after a break in her internet (audit 35, M2): she was a guest, her
@@ -408,9 +418,17 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     >
       {/* (a small "Live" that stays while the strip hides: the captions are on) */}
       {view.running && online && <span className="lw-live">{t.live}</span>}
-      {!locked && !closing && (
+      {!locked && !closing && !restarting && (
         <div className="lw-ctl">
           <span className="lw-grip" aria-hidden="true" />
+          {updated && (
+            <span className="lw-upd">
+              {tw.updated}
+              <button onClick={() => (mic.sending ? setRestarting(true) : shell?.restart?.())}>
+                {tw.restart}
+              </button>
+            </span>
+          )}
           {/* the phone's bar: Stop (or Start) · the language · Settings; then the window's own */}
           {runs && view.running && (
             <button className="stop" onClick={() => void stop()}>
@@ -463,6 +481,16 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
             {tw.stopAndClose}
           </button>
           <button onClick={() => setClosing(false)}>{tw.keepThem}</button>
+        </div>
+      )}
+
+      {restarting && (
+        <div className="lw-ask">
+          <b>{tw.restartAsk}</b>
+          <button className="stop" onClick={() => void stop().then(() => shell?.restart?.())}>
+            {tw.restartNow}
+          </button>
+          <button onClick={() => setRestarting(false)}>{tw.keepThem}</button>
         </div>
       )}
 

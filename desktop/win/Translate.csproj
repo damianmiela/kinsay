@@ -31,6 +31,7 @@
     </ItemGroup>
   </Target>
   <ItemGroup>
+    <Reference Include="System.Net.Http" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
     <PackageReference Include="NAudio.Wasapi" Version="2.4.0" />
   </ItemGroup>

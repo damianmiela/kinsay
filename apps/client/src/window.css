@@ -596,3 +596,12 @@ html:has(.lw) body {
 .lw-sides .call::before {
   background: var(--spk-dark-1);
 }
+
+/* the app updated itself (2026-11-15): one quiet line in the strip, its Restart */
+.lw-upd {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+}
