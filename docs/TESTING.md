@@ -326,3 +326,8 @@ The app updates itself (a new build).
 - [ ] Someone's email changed in the admin: a sign-in link mailed to the old address before no longer signs in.
 - [ ] Locked, captions stopped by the server: the window unlocks; starting again from the phone doesn't lock it again.
 - [ ] A host renamed in the admin while readers watch: their pages show the new name.
+
+## 34. Stop goes home (2026-11-15)
+
+- [ ] Phone or browser: Start, then Stop: the home screen (Just me / Face to face, the language, Start).
+- [ ] Captions stopped by the server (the balance used up, 4 hours, a long silence): home too, with a note saying why; used up: "Ask for more" in the note.

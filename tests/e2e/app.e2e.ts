@@ -55,10 +55,11 @@ test('face to face, two-way: each half in its person’s language, the bar betwe
     true,
   );
   expect((await smallestText(page)).px).toBeGreaterThanOrEqual(16);
-  // Stop: the words stay, the same button says Start
+  // Stop: back home (Damian, 2026-11-15), Start there
   await page.getByRole('button', { name: 'Stop' }).click();
+  await expect(page.getByText('Start live captions')).toBeVisible();
+  await expect(page.locator('.cap-line')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
-  await expect(page.locator('.cap-line').first()).toBeVisible();
 });
 
 test('the language list: no keyboard first; Other languages has the search and A to Z', async ({
@@ -311,14 +312,12 @@ test('the credits: used as the audio goes; at zero the session stops and says so
   try {
     await page.reload();
     await page.getByRole('button', { name: 'Start', exact: true }).click();
-    // stopped: the bar says why, its first button says Start again
-    await expect(page.locator('.cbar .strip', { hasText: 'The balance is used up' })).toBeVisible();
+    // stopped: home, which says why, with Ask for more and Start
+    await expect(page.locator('.note.bad', { hasText: 'The balance is used up' })).toBeVisible();
+    await expect(
+      page.locator('.note.bad').getByRole('link', { name: 'Ask for more' }),
+    ).toHaveAttribute('href', '/account#ask');
     await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
-    // Ask for more opens Account over the captions (never a page)
-    await page.locator('.cbar').getByRole('button', { name: 'Ask for more' }).click();
-    await expect(page.locator('.sheet .acct-bal')).toHaveText('€0.00');
-    await expect(page.locator('.cbar .strip', { hasText: 'used up' })).toBeAttached();
-    await page.keyboard.press('Escape');
   } finally {
     await admin.post('/admin/api/settings', { pricePerHour: 200_000 });
   }

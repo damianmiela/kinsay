@@ -72,6 +72,7 @@ export function HostPage() {
   const [lowSeen, setLowSeen] = useState(false);
   // (this visit started captions: after Stop it stays on them, the same button then says Start)
   const [here, setHere] = useState(false);
+  const [wasRunning, setWasRunning] = useState(false);
   // (the microphone is opening, perhaps asking: "the microphone is off" would be wrong meanwhile)
   const [opening, setOpening] = useState(false);
   // (what the blocked sheet carries on with once the microphone is allowed)
@@ -158,8 +159,10 @@ export function HostPage() {
       blockedSheet('start');
     }
   };
+  // Stop takes the page home (Damian, 2026-11-15: there was no way back to it)
   const stop = async () => {
     mic.stopSending();
+    setHere(false);
     await ask('session:stop');
   };
   const resumeMic = async () => {
@@ -298,6 +301,12 @@ export function HostPage() {
     </>
   );
 
+  // captions the server ended (no credits, the hours, the quiet): home too, which says why
+  if (wasRunning !== view.running) {
+    setWasRunning(view.running);
+    if (!view.running) setHere(false);
+  }
+
   // ---------- Home ----------
   if (!view.running && !here) {
     const stopped = view.stopped && view.stopped !== 'ended' ? stopText(view.stopped) : null;
@@ -355,7 +364,12 @@ export function HostPage() {
             </div>
           )}
           {(problem || stopped) && (
-            <HomeNote problem={problem} stopped={stopped} mic={mic.problem} />
+            <HomeNote
+              problem={problem}
+              stopped={stopped}
+              credits={problem === 'credits' || view.stopped === 'credits'}
+              mic={mic.problem}
+            />
           )}
           {view.balance !== undefined && view.balance < LOW_BALANCE && view.balance > 0 && (
             <div className="note warn">
@@ -515,10 +529,13 @@ export function HostPage() {
 function HomeNote({
   problem,
   stopped,
+  credits,
   mic,
 }: {
   problem: string | null;
   stopped: readonly [string, string] | null;
+  /** The balance ran out: Ask for more with it. */
+  credits: boolean;
   mic: string | null;
 }) {
   if (problem === 'mic') {
@@ -537,7 +554,7 @@ function HomeNote({
     <div className="note bad">
       <b>{s[0]}</b>
       {s[1]}
-      {problem === 'credits' && (
+      {credits && (
         <a className="link" href="/account#ask">
           {t.askForMore}
         </a>
