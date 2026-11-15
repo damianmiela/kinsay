@@ -314,6 +314,8 @@ export const pl: Texts = {
     restart: 'Uruchom ponownie',
     restartAsk: 'Uruchomić ponownie teraz? Napisy zatrzymają się na kilka sekund.',
     restartNow: 'Uruchom ponownie teraz',
+    both: 'Oba',
+    bothHint: 'rozmowa i Ty, podwójny koszt',
     listenTo: 'Słuchaj',
     system: 'Dźwięku z komputera',
     systemHint: 'rozmowa',

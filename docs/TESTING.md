@@ -260,11 +260,11 @@ Download the Windows app again (/download): it is Kinsay.exe now.
 
 No new download: only the page changed, not the app.
 
-- [ ] The window, "This computer's sound": the start panel has "Both sides of the call"; on, Start captions your microphone too.
+- [ ] The window's start panel: Listen to → Both (the host's only); Start captions this computer's sound and your microphone. ⚙ has it as a third choice too.
 - [ ] A call with a headset: the other person's lines with an amber edge, yours cyan, in the order said; the key "You / The call" above them.
 - [ ] Without a headset (speakers on): how many of the call's lines show twice in cyan? (Tell me: it decides step 3, Windows' own echo canceller.)
 - [ ] A reader with the code sees the same colours.
-- [ ] ⚙ → "Both sides of the call" off while it runs: only the call's sound again, after a second's pause.
+- [ ] ⚙ → This computer's sound while Both runs: only the call's sound again, after a second's pause.
 - [ ] Account: the session costs about twice as much while both sides run.
 
 ## 27. The Windows app updates itself (2026-11-15)

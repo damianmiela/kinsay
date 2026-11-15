@@ -338,6 +338,8 @@ const tw_en = {
   restart: 'Restart',
   restartAsk: 'Restart now? The captions stop for a few seconds.',
   restartNow: 'Restart now',
+  both: 'Both',
+  bothHint: 'the call and you, twice the cost',
   listenTo: 'Listen to',
   system: 'This computer’s sound',
   systemHint: 'a call',

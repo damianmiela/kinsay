@@ -326,6 +326,8 @@ export const de: Texts = {
     restart: 'Neu starten',
     restartAsk: 'Jetzt neu starten? Die Untertitel stoppen für ein paar Sekunden.',
     restartNow: 'Jetzt neu starten',
+    both: 'Beides',
+    bothHint: 'der Anruf und du, doppelte Kosten',
     listenTo: 'Hören auf',
     system: 'Den Ton des Computers',
     systemHint: 'ein Anruf',

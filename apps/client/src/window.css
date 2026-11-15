@@ -605,3 +605,12 @@ html:has(.lw) body {
   font-size: 16px;
   color: rgba(255, 255, 255, 0.8);
 }
+
+/* who said what and both sides: the window hides the lines' own mark, never the colour edge */
+.lw .cap-line.spk {
+  padding-left: 16px;
+  text-align: left;
+}
+.lw .cap-line.spk::before {
+  display: block;
+}

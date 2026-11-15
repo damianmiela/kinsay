@@ -317,6 +317,8 @@ export const es: Texts = {
     restart: 'Reiniciar',
     restartAsk: '¿Reiniciar ahora? Los subtítulos se detienen unos segundos.',
     restartNow: 'Reiniciar ahora',
+    both: 'Ambos',
+    bothHint: 'la llamada y tú, el doble de coste',
     listenTo: 'Escuchar',
     system: 'El sonido del ordenador',
     systemHint: 'una llamada',

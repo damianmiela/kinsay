@@ -321,6 +321,8 @@ export const ca: Texts = {
     restart: 'Reinicia',
     restartAsk: 'Reiniciar ara? Els subtítols s’aturen uns segons.',
     restartNow: 'Reinicia ara',
+    both: 'Tots dos',
+    bothHint: 'la trucada i tu, el doble de cost',
     listenTo: 'Escolta',
     system: 'El so de l’ordinador',
     systemHint: 'una trucada',

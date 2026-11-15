@@ -609,6 +609,12 @@ test('who said what: the host’s switch, a colour per person on each line, read
   await expect(page.locator('.cap-line.spk1').first()).toBeVisible({ timeout: 10_000 });
   // no names: colours only (Damian, batch 8)
   await expect(page.getByText(/Person \d/)).toHaveCount(0);
+  // the subtitles window draws the colour edge too (its own styles hid it once, 2026-11-15)
+  const win = await page.context().newPage();
+  await win.goto('/window');
+  const line = win.locator('.lw .cap-line.spk').first();
+  await expect(line).toBeVisible({ timeout: 10_000 });
+  expect(await line.evaluate((el) => getComputedStyle(el, '::before').display)).toBe('block');
 });
 
 test('installable as an app: its manifest and icons; on an iPhone, Safari’s steps in Settings', async ({
