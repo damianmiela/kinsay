@@ -127,6 +127,8 @@ export interface SessionView {
   hostRunning?: boolean;
   /** Who said what is shown (a colour per person, mockups batch 8): the host's switch. */
   speakers?: boolean;
+  /** Both sides of a call: the window's microphone in its own colour (mockups batch 9). */
+  bothSides?: boolean;
 }
 
 /** A device as people name it: "your phone", "your tablet", "your computer". */
@@ -152,6 +154,8 @@ export interface AudioMeta {
   /** Its number in the page's stream of audio (confirmed with `captions:ack`). */
   seq: number;
   stream: string;
+  /** Both sides of a call: this chunk is the window's microphone (the session's own sound otherwise). */
+  side?: 'you';
 }
 
 export interface ClientToServerEvents {
@@ -167,6 +171,8 @@ export interface ClientToServerEvents {
   'session:stopGuest': Action;
   /** The host: who said what on or off (the session's streams start again). */
   'session:speakers': Action<{ on: boolean }>;
+  /** The host: both sides of a call on or off (the microphone's own streams). */
+  'session:bothSides': Action<{ on: boolean }>;
   /** A page that came by the code: captions of its own sound, on the host's balance. */
   /** `token`: the page's own random token (its reconnected page takes its place back). */
   'guest:start': Action<{ lang: Target | null; token: string }>;
@@ -180,7 +186,8 @@ export interface ClientToServerEvents {
 export interface ServerToClientEvents {
   'state:session': (s: SessionView) => void;
   captions: (u: CaptionsUpdate) => void;
-  'captions:ack': (seq: number) => void;
+  /** A chunk came (`stream`: which of the page's audio streams: both sides send two). */
+  'captions:ack': (seq: number, stream?: string) => void;
 }
 
 /** What a signed-in person sees of their account. */

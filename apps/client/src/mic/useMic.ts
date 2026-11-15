@@ -202,7 +202,11 @@ async function shellSound(shell: SoundShell): Promise<MediaStream> {
  * `voice`: a phone in the middle of the table (/live), not the mixer's line: its default
  * microphone with the browser's usual voice filters (they suit a phone's own microphone).
  */
-export function useMic({ voice = false } = {}): Mic {
+/**
+ * `side`: both sides of a call (batch 9): this one is the window's microphone, always, with the
+ * browser's echo cancelling (no headset: the call's sound out of it), its audio marked as yours.
+ */
+export function useMic({ voice = false, side = false } = {}): Mic {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState(() => load(DEVICE_KEY));
   const [open, setOpen] = useState(false);
@@ -257,20 +261,30 @@ export function useMic({ voice = false } = {}): Mic {
     let ctx: AudioContext | undefined;
     try {
       stream =
-        sourceRef.current === 'system'
+        sourceRef.current === 'system' && !side
           ? await systemSound()
-          : await navigator.mediaDevices.getUserMedia({
-              audio: voice
-                ? { channelCount: 1 }
-                : {
-                    ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-                    channelCount: 1,
-                    // a mixer's line signal is clean already; the browser's "phone call" filters harm it
-                    echoCancellation: false,
-                    noiseSuppression: false,
-                    autoGainControl: false,
-                  },
-            });
+          : side
+            ? await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+                  channelCount: 1,
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                },
+              })
+            : await navigator.mediaDevices.getUserMedia({
+                audio: voice
+                  ? { channelCount: 1 }
+                  : {
+                      ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+                      channelCount: 1,
+                      // a mixer's line signal is clean already; the browser's "phone call" filters harm it
+                      echoCancellation: false,
+                      noiseSuppression: false,
+                      autoGainControl: false,
+                    },
+              });
       if (sourceRef.current === 'mic') listDevices(); // with permission, the inputs have names now
       ctx = new AudioContext();
       await ctx.resume(); // (created after an await: some browsers start it suspended)
@@ -286,7 +300,10 @@ export function useMic({ voice = false } = {}): Mic {
       const audioStream = `mic-${randomId()}`;
       const box = new AudioOutbox(voice ? VOICE_KEEP_MS : KEEP_MAX_MS);
       let shown = 0;
-      const onAck = (seq: number) => box.confirm(seq);
+      // (both sides send two streams: each confirms only its own chunks)
+      const onAck = (seq: number, stream?: string) => {
+        if (!stream || stream === audioStream) box.confirm(seq);
+      };
       // (a new connection: what the server didn't confirm goes again; it drops what it has)
       const onConnect = () => box.resend();
       socket.on('captions:ack', onAck);
@@ -302,6 +319,7 @@ export function useMic({ voice = false } = {}): Mic {
                 age: Date.now() - c.at,
                 seq: c.seq,
                 stream: audioStream,
+                ...(side ? { side: 'you' } : {}),
               });
             }
           }

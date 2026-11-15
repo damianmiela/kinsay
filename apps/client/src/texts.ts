@@ -330,6 +330,10 @@ export function duration(seconds: number): string {
 /** The subtitles window (/window: the desktop app, or a browser tab; mockups batch 1 and part 7). */
 const tw_en = {
   title: 'Kinsay',
+  bothSides: 'Both sides of the call',
+  bothSidesSmall: 'your microphone too, in its own colour: twice the cost',
+  sideYou: 'You',
+  sideCall: 'The call',
   listenTo: 'Listen to',
   system: 'This computer’s sound',
   systemHint: 'a call',

@@ -32,7 +32,8 @@ import {
   type TrustProxy,
 } from './auth';
 import type { Person, Store } from './db';
-import { Engine, StreamPool, type SpeechConnect } from '@translate/engine';
+import { Engine, LINES_SENT, StreamPool, type SpeechConnect } from '@translate/engine';
+import { Sides } from './sides';
 
 /** A day: a reader's code works this long from the session's first Start. */
 export const CODE_MS = 24 * 3_600_000;
@@ -114,6 +115,10 @@ interface Channel {
   guestAllowed: boolean;
   /** The host's switch: who said what (a colour per person; its streams with speakers). */
   speakers: boolean;
+  /** The host's switch: both sides of a call (the window's microphone in its own engine, batch 9). */
+  bothSides: boolean;
+  /** Both sides on: the microphone's engine, the merged lists, its audio's chunk numbers. */
+  side?: { engine: Engine; sides: Sides; seqs: Map<string, number> };
   /** A guest's captions (one at a time): its own engine and streams, on this balance. */
   guest?: {
     socket: string;
@@ -218,6 +223,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       kept: new Map(),
       guestAllowed: false,
       speakers: false,
+      bothSides: false,
       guestLangs: new Set(),
       engine: undefined as unknown as Engine,
     };
@@ -228,6 +234,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       },
       onStatus: () => stateAll(ch),
       onSent: (ms, streams) => sent(ch, ms, streams),
+      onLine: (t, line) => ch.side?.sides.line('call', t, line),
       now,
       warn,
       pool,
@@ -265,7 +272,50 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     for (const l of before) if (!read.includes(l)) c.kept.set(l, now());
     for (const l of read) c.kept.delete(l);
     c.engine.setLangs(langsOf(c));
+    c.side?.engine.setLangs(langsOf(c));
     fullChanged(c, before);
+  }
+
+  /** The captions a host's or reader's page gets: with both sides, the two engines' lines merged. */
+  function captionsOf(c: Channel, lang: Target | null, all: boolean, other?: Target | null) {
+    const u = c.engine.update(lang, all, other);
+    if (!c.side) return u;
+    const y = c.side.engine.update(lang, all, other);
+    const n = all ? Infinity : LINES_SENT;
+    for (const t of Object.keys(u.texts)) {
+      u.texts[t] = c.side.sides.view(t, u.texts[t], y.texts[t], n);
+    }
+    // (the heard languages are numbered by one engine's lines: left out while both sides run)
+    delete u.heardLangs;
+    if (!u.speaking && y.speaking) u.speaking = y.speaking;
+    return u;
+  }
+
+  /** Both sides on or off: the microphone's own engine, reading the session's languages. */
+  function setSide(c: Channel, on: boolean) {
+    c.bothSides = on;
+    if (on && !c.side) {
+      const sides = new Sides(now, () => textSoon(c));
+      const engine = new Engine(o.speech, {
+        onText: () => {
+          c.wordsAt = now();
+          textSoon(c);
+        },
+        onStatus: () => stateAll(c),
+        onSent: (ms, streams) => sent(c, ms, streams),
+        onLine: (t, line) => sides.line('you', t, line),
+        now,
+        warn,
+        pool,
+        langs: langsOf(c),
+      });
+      c.side = { engine, sides, seqs: new Map() };
+    } else if (!on && c.side) {
+      c.side.sides.close();
+      c.side.engine.discard();
+      c.side.engine.close();
+      c.side = undefined;
+    }
   }
 
   /** Full, or no longer: the pages' language lists say which three (running or not, audit 33). */
@@ -308,6 +358,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     if (read.length >= CHANNEL_LANGS_MAX) v.full = read;
     if (c.guestAllowed) v.guestAllowed = true;
     if (c.speakers) v.speakers = true;
+    if (c.bothSides) v.bothSides = true;
     if (s.data.role === 'host') {
       if (c.guest) v.guestRunning = true;
       v.code = c.code;
@@ -330,7 +381,13 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         // (a guest's page gets its own engine's captions only, while they run)
         const e =
           s.data.role !== 'guest' ? c.engine : c.guest?.socket === s.id ? c.guest.engine : null;
-        if (e) s.emit('captions', e.update(s.data.lang, false, s.data.other));
+        if (!e) continue;
+        s.emit(
+          'captions',
+          e === c.engine
+            ? captionsOf(c, s.data.lang, false, s.data.other)
+            : e.update(s.data.lang, false, s.data.other),
+        );
       }
     }, TEXT_EVERY_MS);
   }
@@ -411,7 +468,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       s.data.role = 'reader';
       s.data.lang = c.hostLang;
       readersChanged(c, before);
-      s.emit('captions', c.engine.update(s.data.lang, true));
+      s.emit('captions', captionsOf(c, s.data.lang, true));
     }
     stateAll(c);
   }
@@ -433,6 +490,8 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     c.micSocket = undefined;
     asked.delete(c);
     c.engine.discard();
+    c.side?.engine.discard();
+    c.side?.sides.clear();
     c.idleSince = now();
     stateAll(c);
     textSoon(c);
@@ -443,6 +502,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     stop(c, 'blocked', false);
     asked.delete(c);
     for (const s of [...c.sockets]) s.disconnect(true);
+    setSide(c, false);
     c.engine.close();
     byPerson.delete(c.personId);
     byCode.delete(c.code);
@@ -491,7 +551,10 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         c.kept.delete(l);
         dropped = true;
       }
-      if (dropped) c.engine.setLangs(langsOf(c));
+      if (dropped) {
+        c.engine.setLangs(langsOf(c));
+        c.side?.engine.setLangs(langsOf(c));
+      }
       // (the listening page went quiet: nobody listens, every page says so)
       if (c.micSocket && t - c.micAt >= MIC_GONE_MS) {
         c.micSocket = undefined;
@@ -578,7 +641,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
     s.data.lang = c.hostLang;
     if (s.data.role === 'host' && c.hostOther) s.data.other = c.hostOther;
     s.emit('state:session', view(s));
-    s.emit('captions', c.engine.update(s.data.lang, true, s.data.other));
+    s.emit('captions', captionsOf(c, s.data.lang, true, s.data.other));
 
     const reply = (cb: unknown, r: Ack) => {
       if (typeof cb === 'function') (cb as (r: Ack) => void)(r);
@@ -629,10 +692,14 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       }
       // (a page sees a language new to the channel from now on: its history starts there; a kept
       // one comes back with its lines)
-      for (const l of added) c.engine.clearText(l);
+      for (const l of added) {
+        c.engine.clearText(l);
+        c.side?.engine.clearText(l);
+        c.side?.sides.clearText(l);
+      }
       readersChanged(c, before);
       s.emit('state:session', view(s));
-      s.emit('captions', c.engine.update(next, true, s.data.other));
+      s.emit('captions', captionsOf(c, next, true, s.data.other));
       return { ok: true };
     }
 
@@ -707,6 +774,22 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       c.speakers = typeof p === 'object' && p !== null && (p as { on?: unknown }).on === true;
       c.engine.setSpeakers(c.speakers);
       stateAll(c);
+      reply(cb, { ok: true });
+    });
+
+    s.on('session:bothSides', (p, cb) => {
+      if (!host()) return reply(cb, { ok: false, error: 'not-host' });
+      const on = typeof p === 'object' && p !== null && (p as { on?: unknown }).on === true;
+      if (on === c.bothSides) return reply(cb, { ok: true });
+      if (!speakerSwitches.take(String(c.personId), now())) {
+        return reply(cb, { ok: false, error: 'too-many' });
+      }
+      if (on && c.running && !c.engine.canAdd(langsOf(c).length)) {
+        return reply(cb, { ok: false, error: 'service-full' });
+      }
+      setSide(c, on);
+      stateAll(c);
+      textSoon(c);
       reply(cb, { ok: true });
     });
 
@@ -812,11 +895,21 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       if (!host() && !guest) return;
       const m = (typeof meta === 'object' && meta ? meta : {}) as Record<string, unknown>;
       const seq = Number.isSafeInteger(m.seq) ? (m.seq as number) : 0;
-      // a guest's audio goes to its own engine, the host's to the session's
-      const engine = guest ? (c.guest?.socket === s.id ? c.guest.engine : null) : c.engine;
+      // a guest's audio goes to its own engine, the host's to the session's (its microphone, both
+      // sides on, to the side's: only from the page that sends the session's sound)
+      const side = !guest && m.side === 'you';
+      const engine = guest
+        ? c.guest?.socket === s.id
+          ? c.guest.engine
+          : null
+        : side
+          ? c.micSocket === s.id
+            ? (c.side?.engine ?? null)
+            : null
+          : c.engine;
       // (stopped: confirmed all the same, so the page never sends it again)
       if (!c.running || !engine) {
-        if (seq) s.emit('captions:ack', seq);
+        if (seq) s.emit('captions:ack', seq, typeof m.stream === 'string' ? m.stream : undefined);
         return;
       }
       if (!(chunk instanceof Buffer || chunk instanceof ArrayBuffer)) return;
@@ -828,7 +921,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
           : 0;
       // one microphone at a time: another page takes over once the first has been quiet a while
       // (one chosen by Start or "Use this one" waits for its own audio, up to MIC_GONE_MS, audit 33)
-      if (!guest) {
+      if (!guest && !side) {
         const quiet = c.micChosen ? MIC_GONE_MS : MIC_QUIET_MS;
         if (c.micSocket !== s.id && now() - c.micAt < quiet) return;
         if (c.micSocket !== s.id) listenHere(false);
@@ -836,9 +929,9 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         c.micAt = now();
       }
       if (seq) {
-        s.emit('captions:ack', seq);
-        // (a guest's numbers apart: they never push the host's out of the map)
-        const seqs = guest && c.guest ? c.guest.seqs : c.seqs;
+        s.emit('captions:ack', seq, stream);
+        // (a guest's numbers apart: they never push the host's out of the map; the side's too)
+        const seqs = guest && c.guest ? c.guest.seqs : side && c.side ? c.side.seqs : c.seqs;
         if (seq <= (seqs.get(stream) ?? 0)) return; // (sent again after a break: it came already)
         seqs.delete(stream);
         seqs.set(stream, seq);
@@ -891,6 +984,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         if (c.running) flush(c, false);
         c.engine.close();
         c.guest?.engine.close();
+        setSide(c, false);
       }
       io.engine.close();
     },

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { io as connect, type Socket } from 'socket.io-client';
-import { EUR, HEARD, type Ack, type SessionView } from '@translate/shared';
+import { EUR, HEARD, type Ack, type CaptionsUpdate, type SessionView } from '@translate/shared';
 import { createServer, type Config } from './server';
 import type { SpeechConnect, SpeechEvents, SpeechStream } from '@translate/engine';
 import type { UsageSource } from './usage';
@@ -376,6 +376,48 @@ describe('audit 30', () => {
     await expect(new Promise((_, rej) => late.on('connect_error', rej))).rejects.toThrow(
       'too-many',
     );
+  });
+});
+
+describe('both sides of a call (batch 9)', () => {
+  it('the microphone in its own streams; the two sides merged, each line with its side', async () => {
+    const { person, sock, speech, t } = await start();
+    const host = sock({ cookie: (await person('Marta')).cookie });
+    await next<SessionView>(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'en' });
+    expect(await ask(host, 'session:bothSides', { on: true })).toEqual({ ok: true });
+    const audio = (seq: number, side?: 'you') =>
+      host.emit('host:audio', new Uint8Array(3200).buffer, {
+        age: 0,
+        seq,
+        stream: side ? 'mic-bbbbbbbb' : 'mic-aaaaaaaa',
+        ...(side ? { side } : {}),
+      });
+    audio(1);
+    await next(host, 'captions:ack');
+    audio(1, 'you');
+    await next(host, 'captions:ack');
+    const [call, you] = speech.open();
+    expect(speech.open().map((x) => x.target)).toEqual(['en', 'en']);
+    call!.events.tokens([
+      { text: ' How was the trip?', translation_status: 'none' },
+      { text: '<end>' },
+    ]);
+    you!.events.tokens([
+      { text: ' Long, but fine.', translation_status: 'none' },
+      { text: '<end>' },
+    ]);
+    t.now += 3_000; // (yours waits a moment for an echo of the call's)
+    const u = await next<CaptionsUpdate>(
+      host,
+      'captions',
+      (x) => (x.texts.en?.lines.length ?? 0) >= 2,
+    );
+    expect(u.texts.en!.lines).toEqual(['How was the trip?', 'Long, but fine.']);
+    expect(u.texts.en!.speakers).toEqual({ 0: '2', 1: '1' });
+    // off: the microphone's streams end
+    expect(await ask(host, 'session:bothSides', { on: false })).toEqual({ ok: true });
+    expect(speech.open()).toHaveLength(1);
   });
 });
 

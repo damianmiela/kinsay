@@ -255,3 +255,14 @@ Download the Windows app again (/download): it is Kinsay.exe now.
 - [ ] A sign-in mail says Kinsay in its subject and button (and its sender's name, if the VPS's MAIL_FROM_NAME says Kinsay).
 - [ ] Installed on a phone (remove the old Translate icon first): the Kinsay icon and name on the home screen.
 - [ ] Kinsay.exe: the file, the taskbar and the window show the logo; it opens still signed in (its data folder is the old one).
+
+## 26. Both sides of a call (2026-11-15)
+
+No new download: only the page changed, not the app.
+
+- [ ] The window, "This computer's sound": the start panel has "Both sides of the call"; on, Start captions your microphone too.
+- [ ] A call with a headset: the other person's lines with an amber edge, yours cyan, in the order said; the key "You / The call" above them.
+- [ ] Without a headset (speakers on): how many of the call's lines show twice in cyan? (Tell me: it decides step 3, Windows' own echo canceller.)
+- [ ] A reader with the code sees the same colours.
+- [ ] ⚙ → "Both sides of the call" off while it runs: only the call's sound again, after a second's pause.
+- [ ] Account: the session costs about twice as much while both sides run.

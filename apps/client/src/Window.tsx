@@ -180,6 +180,8 @@ function SignIn({ onCode }: { onCode: (code: string) => void }) {
 function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   const { view, update, error, online } = useSession(code);
   const mic = useMic({ voice: true });
+  // both sides of a call (batch 9): the microphone too, while this computer's sound is captioned
+  const sideMic = useMic({ voice: true, side: true });
   const [lang, setLang] = useStored<string | null>('tr-window-lang', null);
   const [source, setSource] = useStored<'system' | 'mic'>('tr-window-source', 'system');
   const [size, setSize] = useStored('tr-window-size', 1);
@@ -220,6 +222,13 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     const runs = view.role === 'host' || view.role === 'guest';
     if (!runs || !view.running) mic.stopSending();
   }, [view, mic]);
+  const both = view?.role === 'host' && source === 'system' && !!view.bothSides;
+  // the microphone side follows the session's sound: on with it, off with it or with the switch
+  useEffect(() => {
+    if (mic.sending && both && !sideMic.sending && !sideMic.open) {
+      void sideMic.startSending().then((r) => r === 'failed' && setProblem('sound'));
+    } else if ((!mic.sending || !both) && sideMic.sending) sideMic.stopSending();
+  }, [mic.sending, both, sideMic]);
   const { chooseSource } = mic;
   // another of the host's devices took the microphone: the window stops sending
   const elsewhere = !!view?.mic && !view.mic.here;
@@ -484,6 +493,19 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
                   {source === src && <span aria-hidden="true">✓</span>}
                 </button>
               ))}
+              {host && source === 'system' && (
+                <button
+                  className={`r${view.bothSides ? ' sel' : ''}`}
+                  role="switch"
+                  aria-checked={!!view.bothSides}
+                  onClick={() =>
+                    void ask('session:bothSides', { on: !view.bothSides }).then(setProblem)
+                  }
+                >
+                  {tw.bothSides}
+                  {view.bothSides && <span aria-hidden="true">✓</span>}
+                </button>
+              )}
             </>
           )}
           {shell && (
@@ -562,6 +584,22 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
               </div>
             </div>
           )}
+          {panel && host && source === 'system' && (
+            <button
+              className="lw-guest"
+              role="switch"
+              aria-checked={!!view.bothSides}
+              onClick={() =>
+                void ask('session:bothSides', { on: !view.bothSides }).then(setProblem)
+              }
+            >
+              <span>
+                {tw.bothSides}
+                <small>{tw.bothSidesSmall}</small>
+              </span>
+              <span className={`lw-tog${view.bothSides ? ' on' : ''}`} aria-hidden="true" />
+            </button>
+          )}
           <div className="lw-row">
             <span className="k">{tw.translateInto}</span>
             {/* (the language and Start side by side: the window's default height holds both rows) */}
@@ -591,6 +629,12 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
       {/* the whole history, scrolling, following the newest line: the website's own list (Damian) */}
       {!panel && (
         <div className="lw-caps" lang={shown ?? undefined}>
+          {view.bothSides && (
+            <p className="lw-sides">
+              <span className="you">{tw.sideYou}</span>
+              <span className="call">{tw.sideCall}</span>
+            </p>
+          )}
           <CaptionsList
             text={text}
             labels={labels}

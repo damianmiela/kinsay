@@ -574,3 +574,25 @@ html:has(.lw) body {
   color: var(--lw-soft);
   cursor: default;
 }
+
+/* both sides of a call (batch 9): the key, in the line edges' colours (you "1", the call "2") */
+.lw-sides {
+  display: flex;
+  gap: 16px;
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.75);
+}
+.lw-sides span::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 7px;
+  border-radius: 3px;
+  vertical-align: -1px;
+  background: var(--spk-dark-0);
+}
+.lw-sides .call::before {
+  background: var(--spk-dark-1);
+}

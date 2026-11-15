@@ -318,6 +318,10 @@ export const de: Texts = {
   },
   tw: {
     title: 'Kinsay',
+    bothSides: 'Beide Seiten des Anrufs',
+    bothSidesSmall: 'auch dein Mikrofon, in eigener Farbe: doppelte Kosten',
+    sideYou: 'Du',
+    sideCall: 'Der Anruf',
     listenTo: 'Hören auf',
     system: 'Den Ton des Computers',
     systemHint: 'ein Anruf',

@@ -313,6 +313,10 @@ export const ca: Texts = {
   },
   tw: {
     title: 'Kinsay',
+    bothSides: 'Les dues parts de la trucada',
+    bothSidesSmall: 'també el teu micròfon, en el seu propi color: el doble de cost',
+    sideYou: 'Tu',
+    sideCall: 'La trucada',
     listenTo: 'Escolta',
     system: 'El so de l’ordinador',
     systemHint: 'una trucada',

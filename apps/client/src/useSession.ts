@@ -71,7 +71,7 @@ export function ask(
   payload: { lang: string | null; other?: string | null; token?: string },
 ): Promise<string | null>;
 export function ask(
-  event: 'session:guestAllow' | 'session:speakers',
+  event: 'session:guestAllow' | 'session:speakers' | 'session:bothSides',
   payload: { on: boolean },
 ): Promise<string | null>;
 export function ask(

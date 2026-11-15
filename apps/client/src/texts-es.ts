@@ -309,6 +309,10 @@ export const es: Texts = {
   },
   tw: {
     title: 'Kinsay',
+    bothSides: 'Las dos partes de la llamada',
+    bothSidesSmall: 'también tu micrófono, en su propio color: el doble de coste',
+    sideYou: 'Tú',
+    sideCall: 'La llamada',
     listenTo: 'Escuchar',
     system: 'El sonido del ordenador',
     systemHint: 'una llamada',

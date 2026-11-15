@@ -306,6 +306,10 @@ export const pl: Texts = {
   },
   tw: {
     title: 'Kinsay',
+    bothSides: 'Obie strony rozmowy',
+    bothSidesSmall: 'także Twój mikrofon, w osobnym kolorze: podwójny koszt',
+    sideYou: 'Ty',
+    sideCall: 'Rozmowa',
     listenTo: 'Słuchaj',
     system: 'Dźwięku z komputera',
     systemHint: 'rozmowa',
