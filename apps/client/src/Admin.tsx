@@ -97,6 +97,8 @@ function Admin() {
   const [s, setS] = useState<State | null>(null);
   const [tab, setTab] = useState<Tab>('requests');
   const [open, setOpen] = useState<number | null>(null);
+  // (the person whose name and email are being corrected)
+  const [editing, setEditing] = useState<{ id: number; name: string; email: string } | null>(null);
   const [code, setCode] = useState<{
     name: string;
     digits: string;
@@ -125,7 +127,13 @@ function Admin() {
         ? null
         : r.error === 'request-answered'
           ? 'That request was answered already.'
-          : `That didn't work (${r.error}).`,
+          : r.error === 'email-taken'
+            ? 'Someone else has that email already.'
+            : r.error === 'bad-email'
+              ? 'That is not an email address.'
+              : r.error === 'bad-name'
+                ? 'A name is needed.'
+                : `That didn't work (${r.error}).`,
     );
     setTick((n) => n + 1);
     return r.ok;
@@ -325,6 +333,12 @@ function Admin() {
                     </button>
                     <button
                       className="btn sm"
+                      onClick={() => setEditing({ id: p.id, name: p.name, email: p.email ?? '' })}
+                    >
+                      Edit name and email
+                    </button>
+                    <button
+                      className="btn sm"
                       style={{ color: 'var(--bad)' }}
                       onClick={() => {
                         if (
@@ -339,7 +353,68 @@ function Admin() {
                     >
                       {p.blocked ? 'Unblock' : 'Block'}
                     </button>
+                    <button
+                      className="btn sm"
+                      style={{ color: 'var(--bad)' }}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Remove ${p.name} for good? Their account, devices and ${euros(p.balance)} balance go, their captions stop. This can't be undone.`,
+                          )
+                        ) {
+                          void act('/admin/api/person/delete', { id: p.id }).then(
+                            (ok) => ok && setOpen(null),
+                          );
+                        }
+                      }}
+                    >
+                      Remove
+                    </button>
                   </div>
+                  {editing?.id === p.id && (
+                    <form
+                      className="person-edit"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void act('/admin/api/person', {
+                          id: p.id,
+                          name: editing.name,
+                          email: editing.email.trim() || null,
+                        }).then((ok) => ok && setEditing(null));
+                      }}
+                    >
+                      <label>
+                        Name
+                        <input
+                          className="input"
+                          autoFocus
+                          required
+                          maxLength={80}
+                          value={editing.name}
+                          onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                        />
+                      </label>
+                      <label>
+                        Email
+                        <input
+                          className="input"
+                          type="email"
+                          maxLength={254}
+                          placeholder="none: you sign their devices in"
+                          value={editing.email}
+                          onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+                        />
+                      </label>
+                      <button className="btn sm main">Save</button>
+                      <button type="button" className="btn sm" onClick={() => setEditing(null)}>
+                        Cancel
+                      </button>
+                      <p className="s">
+                        The email is how they sign in by themselves (a link by mail, or Google with
+                        this address). Devices already signed in stay signed in.
+                      </p>
+                    </form>
+                  )}
                 </div>
               ))}
           </>

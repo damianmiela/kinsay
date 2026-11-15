@@ -379,6 +379,58 @@ describe('audit 30', () => {
   });
 });
 
+describe('the admin corrects and removes people', () => {
+  it('a name and an email are changed (checked, one person each, cleared with null); a name is never emptied', async () => {
+    const { post, get, admin, person } = await start();
+    const a = await person('Marta');
+    await post('/admin/api/invite', { name: 'Piotr', email: 'piotr@example.com' }, admin);
+    const edit = (body: object) => post('/admin/api/person', { id: a.id, ...body }, admin);
+    expect((await edit({ name: 'Marta Nowak', email: 'Marta@Example.com' })).status).toBe(200);
+    const row = async () =>
+      (
+        (await get('/admin/api/state', admin)).json.people as {
+          id: number;
+          name: string;
+          email: string | null;
+        }[]
+      ).find((p) => p.id === a.id)!;
+    expect(await row()).toMatchObject({ name: 'Marta Nowak', email: 'Marta@Example.com' });
+    expect((await edit({ email: 'PIOTR@example.com' })).json.error).toBe('email-taken');
+    expect((await edit({ email: 'not an email' })).json.error).toBe('bad-email');
+    expect((await edit({ name: '  ' })).json.error).toBe('bad-name');
+    // (her own address again, in other letters: hers already, fine)
+    expect((await edit({ email: 'marta@example.com' })).status).toBe(200);
+    expect((await edit({ email: null })).status).toBe(200);
+    expect(await row()).toMatchObject({ name: 'Marta Nowak', email: null });
+    // (not the admin: refused)
+    expect((await post('/admin/api/person', { id: a.id, name: 'X' }, a.cookie)).status).toBe(401);
+  });
+
+  it('removed for good: their captions stop, their pages close, they are gone; what they used stays in the totals', async () => {
+    const { post, get, admin, person, sock, speech } = await start();
+    const a = await person('Marta');
+    const host = sock({ cookie: a.cookie });
+    await next<SessionView>(host, 'state:session');
+    await ask(host, 'session:start', { lang: 'en' });
+    host.emit('host:audio', new Uint8Array(32000).buffer, {
+      age: 0,
+      seq: 1,
+      stream: 'mic-aaaaaaaa',
+    });
+    await next(host, 'captions:ack');
+    const closed = new Promise((res) => host.on('disconnect', res));
+    expect((await post('/admin/api/person/delete', { id: a.id }, a.cookie)).status).toBe(401);
+    expect((await post('/admin/api/person/delete', { id: a.id }, admin)).status).toBe(200);
+    await closed;
+    expect(speech.open()).toHaveLength(0);
+    const state = (await get('/admin/api/state', admin)).json;
+    expect((state.people as { id: number }[]).some((p) => p.id === a.id)).toBe(false);
+    // her device no longer signs in; a second removal finds nobody
+    expect((await get('/api/me', a.cookie)).status).toBe(401);
+    expect((await post('/admin/api/person/delete', { id: a.id }, admin)).status).toBe(404);
+  });
+});
+
 describe('both sides of a call (batch 9)', () => {
   it('the microphone in its own streams; the two sides merged, each line with its side', async () => {
     const { person, sock, speech } = await start();

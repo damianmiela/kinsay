@@ -783,3 +783,37 @@ test('the subtitles window in the app (a stand-in for its shell): the drawer bes
   await expect(win.locator('.lw-bar')).toHaveCount(1);
   await ctx.close();
 });
+
+test('the admin corrects a name and an email, and removes someone for good', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  await admin.post('/admin/api/invite', { name: 'Edit Me Example' });
+  const ctx = await browser.newContext({ baseURL, viewport: { width: 1100, height: 760 } });
+  const page = await ctx.newPage();
+  await page.goto('/admin');
+  await page.getByLabel('Password').fill((await import('./playwright.config')).PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'People' }).click();
+  await page.getByRole('cell', { name: 'Edit Me Example' }).click();
+  await page.getByRole('button', { name: 'Edit name and email' }).click();
+  const form = page.locator('.person-edit');
+  await form.getByLabel('Name').fill('Edited Example');
+  await form.getByLabel('Email').fill('edited@example.com');
+  await form.getByRole('button', { name: 'Save' }).click();
+  await expect(form).toHaveCount(0);
+  const row = page.getByRole('row', { name: /Edited Example/ });
+  await expect(row).toContainText('edited@example.com');
+  // removed only after the question is answered yes
+  page.once('dialog', (d) => void d.dismiss());
+  await page.getByRole('button', { name: 'Remove' }).click();
+  await expect(row).toHaveCount(1);
+  page.once('dialog', (d) => {
+    expect(d.message()).toContain('Remove Edited Example for good?');
+    void d.accept();
+  });
+  await page.getByRole('button', { name: 'Remove' }).click();
+  await expect(row).toHaveCount(0);
+  await ctx.close();
+});

@@ -314,3 +314,9 @@ The app updates itself (a new build).
 - [ ] A click on the captions while Settings is open closes it; a click on Start (or "Latest") while it is open does that too, in one click.
 - [ ] After an update: "Kinsay was updated" shows only while the mouse is on the window.
 - [ ] German and Catalan: nothing cut off in Settings or the start row.
+
+## 32. The admin corrects and removes people (2026-11-15)
+
+- [ ] Admin → People → someone → "Edit name and email": change both, Save: the list shows them; their next sign-in mail goes to the new address.
+- [ ] An email someone else has, or one that isn't an address: it says so, nothing changes. The email emptied: saved as none.
+- [ ] "Remove": it asks first (with their balance); after yes they are gone from the list, their devices are signed out, their captions stop.

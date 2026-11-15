@@ -530,16 +530,42 @@ export function routes(app: FastifyInstance, o: HttpOptions) {
     ) {
       return fail(reply, 400, 'bad-limit');
     }
+    // the admin corrects a name or an email (2026-11-15): a name is never emptied; an email may be
+    // (null or ""), is checked like an invitation's and belongs to one person only
+    if (b.name !== undefined && !text(b.name, 80)) return fail(reply, 400, 'bad-name');
+    let email: string | null | undefined;
+    if (b.email !== undefined) {
+      const e = b.email === null ? '' : text(b.email, 254);
+      if (b.email !== null && typeof b.email !== 'string') return fail(reply, 400, 'bad-email');
+      if (e && !EMAIL.test(e)) return fail(reply, 400, 'bad-email');
+      const other = e ? store.byEmail(e) : undefined;
+      if (other && other.id !== id) return fail(reply, 409, 'email-taken');
+      email = e || null;
+    }
     store.setPerson(id, {
       ...(typeof b.blocked === 'boolean' ? { blocked: b.blocked } : {}),
       ...(limit !== undefined ? { monthlyLimit: limit } : {}),
       ...(text(b.name, 80) ? { name: text(b.name, 80) } : {}),
+      ...(email !== undefined ? { email } : {}),
     });
     if (b.signOutAll === true) {
       store.signOutAll(id);
       o.realtime().signedOut({ personId: id });
     }
     o.realtime().personChanged(id);
+    return { ok: true };
+  });
+
+  // The admin removes someone for good (2026-11-15): as their own "delete my account". Blocked
+  // first, so their captions stop and what they used so far is written (the ledger keeps it without
+  // a name, for the monthly totals), their pages close; then the person, their devices, codes and
+  // requests go.
+  app.post('/admin/api/person/delete', async (req, reply) => {
+    const id = Number(body(req).id);
+    if (!store.person(id)) return fail(reply, 404, 'no-person');
+    store.setPerson(id, { blocked: true });
+    o.realtime().personChanged(id);
+    store.deletePerson(id);
     return { ok: true };
   });
 

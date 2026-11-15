@@ -181,7 +181,12 @@ export class Store {
 
   setPerson(
     id: number,
-    change: { blocked?: boolean; monthlyLimit?: number | null; name?: string },
+    change: {
+      blocked?: boolean;
+      monthlyLimit?: number | null;
+      name?: string;
+      email?: string | null;
+    },
   ) {
     if (change.blocked !== undefined) {
       this.db.prepare('update people set blocked = ? where id = ?').run(change.blocked ? 1 : 0, id);
@@ -194,6 +199,10 @@ export class Store {
     }
     if (change.name)
       this.db.prepare('update people set name = ? where id = ?').run(change.name.trim(), id);
+    // (null: no email, the admin signs their devices in; unique, checked by the caller)
+    if (change.email !== undefined) {
+      this.db.prepare('update people set email = ? where id = ?').run(change.email, id);
+    }
   }
 
   deletePerson(id: number) {

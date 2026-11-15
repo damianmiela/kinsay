@@ -403,3 +403,25 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* a person's name and email, corrected in their card (2026-11-15) */
+.person-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.person-edit label {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 220px;
+  font-size: 16px;
+  color: var(--text-soft);
+}
+.person-edit p {
+  flex-basis: 100%;
+  margin: 0;
+}
