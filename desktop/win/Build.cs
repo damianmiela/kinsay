@@ -3,6 +3,6 @@ namespace TranslateApp
 {
     static class BuildInfo
     {
-        public const long Build = 202611151009;
+        public const long Build = 202611151022;
     }
 }

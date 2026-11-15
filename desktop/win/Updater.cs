@@ -29,11 +29,25 @@ namespace TranslateApp
             }
         }
 
+        /// The app's own folder takes new files (not under Program Files, say): else no update is tried.
+        public static bool CanWrite()
+        {
+            try
+            {
+                var probe = Exe + ".probe";
+                File.WriteAllBytes(probe, new byte[0]);
+                File.Delete(probe);
+                return true;
+            }
+            catch (Exception) { return false; }
+        }
+
         /// True once a newer, signed build is in place (the next start runs it). Throws on a network
         /// or disk problem (the caller notes it and tries again later).
         public static async Task<bool> TryUpdate(string origin)
         {
-            using (var http = new HttpClient { Timeout = TimeSpan.FromMinutes(3) })
+            // (at most 50 MB: a broken or hostile server never fills the memory, audit 37)
+            using (var http = new HttpClient { Timeout = TimeSpan.FromMinutes(3), MaxResponseContentBufferSize = 50_000_000 })
             {
                 http.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue { NoCache = true };
                 var json = await http.GetStringAsync(origin + "/download/version.json");

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Kinsay's desktop app (2026-11-12, from the wedding app's small subtitles app): a window of
-       Windows' own browser engine (WebView2) round translate.dendigital.de/window, and this computer's
+       Windows' own browser engine (WebView2) round kinsay.dendigital.de/window, and this computer's
        sound from Windows' audio loopback. .NET Framework 4.8 is part of Windows 10 and 11: nothing else
        to install. Build: dotnet build -c Release (desktop\win); pack: node desktop\pack-win.mjs -->
   <PropertyGroup>

@@ -188,7 +188,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   const sideMic = useMic({ voice: true, side: true });
   const [lang, setLang] = useStored<string | null>('tr-window-lang', null);
   // what it listens to: this computer, the microphone, or both sides of a call (the host's only)
-  const [stored, setSource] = useStored<'system' | 'mic' | 'both'>('tr-window-source', 'system');
+  const [stored, setStored] = useStored<'system' | 'mic' | 'both'>('tr-window-source', 'system');
   const [size, setSize] = useStored('tr-window-size', 1);
   const [opacity, setOpacity] = useStored('tr-window-opacity', 0.85);
   const [menu, setMenu] = useState(false);
@@ -234,19 +234,36 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     if (!runs || !view.running) mic.stopSending();
   }, [view, mic]);
   const source = stored === 'both' && view?.role !== 'host' ? 'system' : stored;
+  // (only the window chosen here or the one listening sets the server's switch: audit 37, L6)
+  const chose = useRef(false);
+  const setSource = (next: 'system' | 'mic' | 'both') => {
+    chose.current = true;
+    setStored(next);
+  };
   // (both: the session's sound is this computer's, the microphone goes as its own side)
   const micSource = source === 'mic' ? 'mic' : 'system';
   const both = view?.role === 'host' && source === 'both' && !!view.bothSides;
   // the server's switch follows the choice (its streams for the microphone side)
   const wantBoth = view?.role === 'host' ? source === 'both' : undefined;
+  const here = !!view?.mic?.here;
   useEffect(() => {
     if (wantBoth === undefined || !!view?.bothSides === wantBoth) return;
+    if (!chose.current && !here) return;
     void ask('session:bothSides', { on: wantBoth }).then((err) => err && setProblem(err));
-  }, [wantBoth, view?.bothSides]);
+  }, [wantBoth, view?.bothSides, here]);
   // the microphone side follows the session's sound: on with it, off with it or with the switch
+  // (a failed start is not tried again until the choice or the sound changes: audit 37, M1)
+  const sideFailed = useRef(false);
   useEffect(() => {
-    if (mic.sending && both && !sideMic.sending && !sideMic.open) {
-      void sideMic.startSending().then((r) => r === 'failed' && setProblem('sound'));
+    if (!mic.sending || !both) sideFailed.current = false;
+  }, [mic.sending, both]);
+  useEffect(() => {
+    if (mic.sending && both && !sideMic.sending && !sideMic.open && !sideFailed.current) {
+      sideFailed.current = true;
+      void sideMic.startSending().then((r) => {
+        if (r === 'failed') setProblem('sound');
+        else sideFailed.current = false;
+      });
     } else if ((!mic.sending || !both) && sideMic.sending) sideMic.stopSending();
   }, [mic.sending, both, sideMic]);
   const { chooseSource } = mic;

@@ -172,6 +172,11 @@ namespace TranslateApp
             FormBorderStyle = FormBorderStyle.None;
             TopMost = true;
             ShowInTaskbar = true;
+            // (other on-top windows, a call's or full-screen video, climb above it: it climbs back,
+            // when it loses the focus and every 2 s, never taking the focus itself)
+            Deactivate += (s, e) => KeepOnTop();
+            onTopTimer.Tick += (s, e) => KeepOnTop();
+            onTopTimer.Start();
             StartPosition = FormStartPosition.Manual;
             BackColor = Color.FromArgb(18, 16, 22);
             Opacity = 0.92;
@@ -336,6 +341,8 @@ namespace TranslateApp
         /// Updates: at the start, then every 6 hours, until one is in place (never in a test).
         async System.Threading.Tasks.Task UpdateLoop()
         {
+            // (a folder it can't write to: never downloads in vain every 6 hours, audit 37)
+            if (!Updater.CanWrite()) return;
             for (;;)
             {
                 try
@@ -570,6 +577,15 @@ namespace TranslateApp
 })();";
 
         [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr h, int attr, ref int value, int size);
+        [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+
+        readonly System.Windows.Forms.Timer onTopTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+
+        void KeepOnTop()
+        {
+            // HWND_TOPMOST; SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOOWNERZORDER
+            if (IsHandleCreated && Visible) SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 | 0x0200);
+        }
     }
 
     /// What this computer plays (Windows' audio loopback of the default output), as 16 kHz 16-bit mono

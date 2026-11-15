@@ -282,3 +282,9 @@ The app updates itself to this build (or download it once more if it doesn't yet
 - [ ] A call on speakers, Listen to → Both: talk while the other person talks. Their words show in amber only, not again in cyan (at most now and then).
 - [ ] Your own words still come through clearly in cyan, also while the call talks.
 - [ ] The same in a browser tab (no app): it still works, with the browser's weaker echo cancelling.
+
+## 29. On top; audit 37 (2026-11-15)
+
+- [ ] A call app's on-top mini window, or the taskbar clicked: Kinsay comes back in front within 2 s, and typing in the other app keeps working.
+- [ ] Both, a short "Yes" or "Okay" from you while the call talks: it stays.
+- [ ] Two Kinsay windows (or the window and a browser tab) with different Listen to choices: the switch doesn't flicker.

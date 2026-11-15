@@ -302,7 +302,7 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
           textSoon(c);
         },
         onStatus: () => stateAll(c),
-        onSent: (ms, streams) => sent(c, ms, streams),
+        onSent: (ms, streams) => sent(c, ms, streams, false),
         onLine: (t, line) => sides.line('you', t, line),
         now,
         warn,
@@ -392,11 +392,12 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
   }
 
   /** Audio went to the speech service: its cost counts now, written every FLUSH_MS. Never throws. */
-  function sent(c: Channel, ms: number, streams: number) {
+  /** `time`: false for the microphone side (the session's time is counted once, audit 37). */
+  function sent(c: Channel, ms: number, streams: number, time = true) {
     try {
       const price = o.store.settings().pricePerHour;
       c.cost += (ms * streams * price) / 3_600_000;
-      c.seconds += ms / 1000;
+      if (time) c.seconds += ms / 1000;
       c.streamSeconds += (ms * streams) / 1000;
       // (written every FLUSH_MS, and at once when the credits run out: never minutes past zero)
       if (now() - c.flushedAt >= FLUSH_MS || c.balanceAt - (c.cost - c.written) <= 0) flush(c);
@@ -712,6 +713,10 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
         stateAll(c);
         return reply(cb, { ok: false, error: why });
       }
+      // (both sides on already: twice the streams; refused as full, never an engine error: audit 37)
+      if (c.side && !c.engine.canAdd(2 * langsOf(c).length)) {
+        return reply(cb, { ok: false, error: 'service-full' });
+      }
       const r = setLang(p);
       if (!r.ok) return reply(cb, r);
       // (a new session: no language left over from pages gone since)
@@ -788,7 +793,12 @@ export function attachRealtime(http: HttpServer, o: RealtimeOptions) {
       }
       setSide(c, on);
       stateAll(c);
-      textSoon(c);
+      // (the lists change numbering: every page gets its whole list again, audit 37)
+      for (const x of c.sockets) {
+        if (x.data.role !== 'guest') {
+          x.emit('captions', captionsOf(c, x.data.lang, true, x.data.other));
+        }
+      }
       reply(cb, { ok: true });
     });
 

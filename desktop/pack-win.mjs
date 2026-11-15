@@ -24,8 +24,12 @@ if (!existsSync(KEY_FILE)) {
   );
   process.exit(1);
 }
-// (a number that only grows: the date and time of the build, UTC)
-const build = new Date().toISOString().replace(/\D/g, '').slice(0, 12);
+// (a number that only grows: the date and time of the build, UTC, to the minute; a second build in
+// the same minute waits for the next one: the apps take only a higher number, audit 37)
+const stamp = () => new Date().toISOString().replace(/\D/g, '').slice(0, 12);
+const last = /Build = (\d+)/.exec(readFileSync(join(here, 'win/Build.cs'), 'utf8'))?.[1];
+while (stamp() === last) await new Promise((r) => setTimeout(r, 1000));
+const build = stamp();
 writeFileSync(
   join(here, 'win/Build.cs'),
   `// Written by desktop/pack-win.mjs: this build's number (an update is a higher one).\nnamespace TranslateApp\n{\n    static class BuildInfo\n    {\n        public const long Build = ${build};\n    }\n}\n`,

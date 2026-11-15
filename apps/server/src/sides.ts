@@ -7,8 +7,10 @@ import type { CaptionText, Target } from '@translate/shared';
 
 export type Side = 'you' | 'call';
 export const SIDE_MARK: Record<Side, string> = { you: '1', call: '2' };
-/** A call line counts as the echo's source this long. */
-const ECHO_MS = 10_000;
+/** A call line counts as the echo's source this long (the echo's own delay, audit 37). */
+const ECHO_MS = 3_000;
+/** An echo has at least this many words, mostly the same (short replies are never one: audit 37). */
+const ECHO_WORDS = 4;
 const KEPT = 200;
 
 const words = (s: string) =>
@@ -25,10 +27,10 @@ const words = (s: string) =>
 export function sameWords(a: string, b: string): boolean {
   const x = words(a);
   const y = words(b);
-  if (!x.size || !y.size) return false;
+  if (x.size < ECHO_WORDS || y.size < ECHO_WORDS) return false;
   let both = 0;
   for (const w of x) if (y.has(w)) both++;
-  return both / Math.max(x.size, y.size) >= 0.6;
+  return both / Math.max(x.size, y.size) >= 0.8;
 }
 
 interface List {
