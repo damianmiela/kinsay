@@ -116,6 +116,7 @@ export function CaptionsList({
   // shown (the first view, a reconnect's history) starts afresh, at the newest line
   const shown = useRef<{ first: number; count: number; n: number; top: number } | null>(null);
   const carry = useRef(0);
+  const font = useRef('');
   useLayoutEffect(() => {
     const b = box.current;
     const l = lines.current;
@@ -131,7 +132,12 @@ export function CaptionsList({
       }
     }
     if (l) {
-      if (!goesOn) l.style.minHeight = '';
+      // (a new text size: the height kept for the old one no longer holds, or the lines would
+      // stand apart after making the text smaller, audit 38)
+      const line = l.firstElementChild;
+      const size = line ? getComputedStyle(line).fontSize : '';
+      if (!goesOn || size !== font.current) l.style.minHeight = '';
+      font.current = size;
       l.style.minHeight = `${l.getBoundingClientRect().height}px`;
       if (!goesOn && following.current) catchUp(true);
     }

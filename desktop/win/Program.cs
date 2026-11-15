@@ -171,6 +171,7 @@ namespace TranslateApp
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             FormBorderStyle = FormBorderStyle.None;
             TopMost = true;
+            MaximizeBox = false;
             ShowInTaskbar = true;
             // (other on-top windows, a call's or full-screen video, climb above it: it climbs back,
             // when it loses the focus and every 2 s, never taking the focus itself)

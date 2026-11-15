@@ -690,3 +690,96 @@ test('a phone that can’t keep its screen on by itself is asked to, while it li
   await expect(page.getByText('Keep the screen on while it listens')).toBeVisible();
   await page.getByRole('button', { name: 'Stop' }).click();
 });
+
+test('the subtitles window in the app (a stand-in for its shell): the drawer beside the captions, the text size, the update, the questions, the lock', async ({
+  browser,
+  baseURL,
+}) => {
+  const admin = await adminApi(browser, baseURL!);
+  const { ctx } = await signedInPhone(browser, baseURL!, admin, {
+    viewport: { width: 1280, height: 340 },
+    isMobile: false,
+    hasTouch: false,
+  });
+  // (what desktop/win's bridge gives the page: here it only feeds silence and remembers the calls)
+  await ctx.addInitScript(() => {
+    if (location.pathname !== '/window') return;
+    const w = window as unknown as Record<string, unknown>;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    w.liveShell = {
+      setOpacity() {},
+      setClickThrough() {},
+      resizeBy() {},
+      close() {},
+      restart() {},
+      onUpdated(fn: () => void) {
+        w.updated = fn;
+      },
+      startSound(take: (s: Float32Array) => void) {
+        timer = setInterval(() => take(new Float32Array(1600)), 100);
+        return Promise.resolve();
+      },
+      stopSound() {
+        clearInterval(timer);
+      },
+    };
+  });
+  const win = await ctx.newPage();
+  await win.goto('/window');
+  await win.getByRole('button', { name: 'Start' }).click();
+  await expect(win.locator('.lw .cap-line').first()).toContainText('Sentence', { timeout: 10_000 });
+  const lineHeight = () =>
+    win
+      .locator('.lw .cap-line')
+      .last()
+      .evaluate((el) => el.getBoundingClientRect().height);
+
+  // Settings: a drawer beside the captions (never over them at this width), nothing scrolls,
+  // every text 16 px or more
+  await win.mouse.move(400, 200);
+  await win.getByRole('button', { name: 'Settings' }).click();
+  const caps = (await win.locator('.lw-caps').boundingBox())!;
+  const drawer = (await win.locator('.lw-drawer').boundingBox())!;
+  expect(caps.x + caps.width).toBeLessThanOrEqual(drawer.x + 1);
+  expect(drawer.y + drawer.height).toBeLessThanOrEqual(340);
+  expect(await win.locator('.lw-dbody').evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(
+    true,
+  );
+  expect((await smallestText(win)).px).toBeGreaterThanOrEqual(16);
+  // the text size on the running captions: bigger, then smaller again, the lines one line high
+  // (the list never keeps the height of the bigger text, audit 38)
+  const size = win.getByRole('slider').first();
+  await size.press('End');
+  await expect.poll(lineHeight, { timeout: 10_000 }).toBeGreaterThan(50);
+  await size.press('Home');
+  await expect.poll(lineHeight, { timeout: 10_000 }).toBeLessThan(40);
+  // Escape closes the drawer from anywhere; the focus is back on Settings
+  await win.keyboard.press('Escape');
+  await expect(win.locator('.lw-drawer')).toHaveCount(0);
+  await expect(win.getByRole('button', { name: 'Settings' })).toBeFocused();
+
+  // the app updated itself: the pill while the bar shows; Restart asks first while it listens
+  await win.evaluate(() => (window as unknown as { updated: () => void }).updated());
+  await win.mouse.move(400, 200);
+  await win.getByRole('button', { name: 'Restart', exact: true }).click();
+  await expect(win.getByRole('dialog')).toContainText('Restart now?');
+  await expect(win.getByRole('button', { name: 'Keep them' })).toBeFocused();
+  await win.keyboard.press('Escape');
+  await expect(win.getByRole('dialog')).toHaveCount(0);
+  // ✕ while the captions run asks too
+  await win.mouse.move(400, 200);
+  await win.getByRole('button', { name: 'Close the window' }).click();
+  await expect(win.getByRole('dialog')).toContainText('stop the captions');
+  await win.getByRole('button', { name: 'Keep them' }).click();
+
+  // locked: no bar, the badge inside the 150 x 44 px the app takes clicks in; it unlocks
+  await win.mouse.move(400, 200);
+  await win.getByRole('button', { name: 'Lock in place' }).click();
+  await expect(win.locator('.lw-bar')).toHaveCount(0);
+  const badge = (await win.locator('.lw-lock').boundingBox())!;
+  expect(badge.x).toBeGreaterThanOrEqual(1280 - 150);
+  expect(badge.y + badge.height).toBeLessThanOrEqual(44);
+  await win.locator('.lw-lock').click();
+  await expect(win.locator('.lw-bar')).toHaveCount(1);
+  await ctx.close();
+});

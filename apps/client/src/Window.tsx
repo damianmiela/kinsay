@@ -10,6 +10,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
@@ -125,6 +126,19 @@ function Icon({ name }: { name: IconName }) {
   );
 }
 const SOURCE_ICON = { system: 'pc', mic: 'mic', both: 'both' } as const;
+
+/** A window too narrow for a drawer beside the captions: it covers them (window.css, 760 px). */
+const NARROW = '(max-width: 760px)';
+function useNarrow(): boolean {
+  return useSyncExternalStore(
+    (changed) => {
+      const m = window.matchMedia(NARROW);
+      m.addEventListener('change', changed);
+      return () => m.removeEventListener('change', changed);
+    },
+    () => window.matchMedia(NARROW).matches,
+  );
+}
 /** This page's own random token as a guest (a reconnected page takes its place back). */
 function guestToken(): string {
   try {
@@ -158,10 +172,7 @@ export function WindowPage() {
 /** The glass with its bar and nothing else yet (while the page finds out who it is, signing in). */
 function Glass({ children }: { children?: ReactNode }) {
   return (
-    <div
-      className={`lw show-bar${shell ? ' in-app' : ''}`}
-      style={{ ['--lw-glass' as string]: 0.9 }}
-    >
+    <div className="lw show-bar" style={{ ['--lw-glass' as string]: 0.9 }}>
       <div className="lw-bar">
         <span className="lw-brand">
           <img src="/icons/icon.svg" alt="" />
@@ -321,7 +332,9 @@ function Langs({ value, onPick }: { value: string | null; onPick: (lang: string 
           <>
             {first.map((c) => row(c))}
             {row(null, true)}
-            <div className="lw-lhead">{t.otherLangs}</div>
+            <div className="lw-lhead" role="presentation">
+              {t.otherLangs}
+            </div>
           </>
         )}
         {(query ? list : list.filter((c) => !first.includes(c))).map((c) => row(c))}
@@ -344,16 +357,15 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   const [opacity, setOpacity] = useStored('tr-window-opacity', 0.85);
   // (settings, the languages and invite: one drawer on the right, beside the captions)
   const [drawer, setDrawer] = useState<'settings' | 'lang' | 'invite' | null>(null);
-  // (Escape closes it wherever the focus is: the button that opened it lies under the drawer)
+  const narrow = useNarrow();
+  // (the drawer closed: the focus back on Settings, where a keyboard left off, audit 38)
+  const gear = useRef<HTMLButtonElement>(null);
+  const hadDrawer = useRef(false);
   useEffect(() => {
-    if (!drawer) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDrawer(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    if (hadDrawer.current && !drawer) gear.current?.focus();
+    hadDrawer.current = !!drawer;
   }, [drawer]);
-  const [locked, setLocked] = useState(false);
+  const [lockAsked, setLocked] = useState(false);
   const [quiet, setQuiet] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   // (✕ while the captions run asks first: closing would stop them)
@@ -364,6 +376,24 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   useEffect(() => {
     shell?.onUpdated?.(() => setUpdated(true));
   }, []);
+  // Escape, wherever the focus is: a question is answered "no", else the drawer closes
+  const asking = closing || restarting;
+  useEffect(() => {
+    if (!drawer && !asking) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (asking) {
+        setClosing(false);
+        setRestarting(false);
+      } else setDrawer(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawer, asking]);
+  // the captions ended while it was locked (a stop of the server's): unlocked, so Start is there
+  // and can be clicked (a locked window lets every click through, audit 38)
+  const ended = !!view && (view.role === 'host' || view.role === 'guest') && !view.running;
+  const locked = lockAsked && !ended;
   // (a page that came by the code, the host letting it caption its own side: it chose to only read)
   const [justRead, setJustRead] = useState(false);
   // a guest's captions carry on after a break in her internet (audit 35, M2): she was a guest, her
@@ -490,6 +520,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
 
   const start = async () => {
     setProblem(null);
+    setLocked(false);
     const err = await (host
       ? ask('session:start', { lang })
       : ask('guest:start', { lang: guestLang, token: guestToken() }));
@@ -636,18 +667,38 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     head: ReactNode;
     body?: ReactNode;
     action?: { label: string; run: () => void };
+    /** Its place in the queue (the lowest first) and its name (its pill stays the same pill). */
+    rank: number;
+    key: string;
+    /** Taken away by its own ✕ (a problem that stays until the next action). */
+    close?: () => void;
+    /** Only while the bar shows (news that can wait, never over a call for hours). */
+    quiet?: boolean;
   }
   const notices: Notice[] = [];
   if (!online) {
     notices.push({
+      rank: 0,
+      key: 'offline',
       cls: 'warn',
       head: t.noInternet,
       body: host && mic.sending ? t.offlineKept : t.comeBack,
     });
   }
-  if (note) notices.push({ cls: note.cls as Notice['cls'], head: note.head, body: note.body });
+  if (note) {
+    notices.push({
+      rank: note.cls === 'bad' ? 1 : note.cls === 'warn' ? 5 : 7,
+      key: 'note',
+      cls: note.cls as Notice['cls'],
+      head: note.head,
+      body: note.body,
+      ...(problem && problem !== 'host-not-running' ? { close: () => setProblem(null) } : {}),
+    });
+  }
   if (runs && view.running && !mic.sending && !where) {
     notices.push({
+      rank: 3,
+      key: 'mic-off',
       cls: 'warn',
       head: t.micIsOff,
       action: { label: t.turnItOn, run: () => void resume() },
@@ -655,6 +706,8 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   }
   if (host && view.running && !mic.sending && where) {
     notices.push({
+      rank: 4,
+      key: 'elsewhere',
       cls: '',
       head: (
         <span className="plain">
@@ -668,6 +721,8 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   }
   if (host && view.stopsAt) {
     notices.push({
+      rank: 2,
+      key: 'still',
       cls: 'warn',
       head: t.stillListening(clock(view.stopsAt)),
       action: { label: t.keepGoing, run: () => void ask('session:keepGoing') },
@@ -675,6 +730,8 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   }
   if (host && view.guestRunning) {
     notices.push({
+      rank: 6,
+      key: 'guest',
       cls: '',
       head: <span className="plain">{t.guestRunsToo}</span>,
       action: { label: t.stopTheirs, run: () => void ask('session:stopGuest') },
@@ -682,6 +739,9 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
   }
   if (updated) {
     notices.push({
+      rank: 8,
+      key: 'updated',
+      quiet: true,
       cls: 'good',
       head: tw.updated,
       action: {
@@ -691,16 +751,34 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
     });
   }
 
+  notices.sort((a, b) => a.rank - b.rank);
+  const pills = notices.slice(0, 2);
+  // what a drawer covers (a narrow window) or a question stands over takes no click, no key
+  const under = asking || (!!drawer && narrow);
+
   return (
     <div
-      className={`lw${locked ? ' locked' : ''}${shell ? ' in-app' : ''}${panel || drawer ? ' show-bar' : ''}${drawer ? ' has-drawer' : ''}`}
-      style={{ ['--lw-size' as string]: size, ['--lw-glass' as string]: shell ? 0.8 : 0.92 }}
+      className={`lw${locked ? ' locked' : ''}${panel || drawer ? ' show-bar' : ''}${drawer ? ' has-drawer' : ''}`}
+      style={{
+        ['--lw-size' as string]: size,
+        ['--lw-glass' as string]: shell ? 0.8 : 0.92,
+        ['--lw-pills' as string]: pills.filter((n) => !n.quiet).length,
+      }}
+      // (a click beside the drawer closes it; one on a button there does its own thing first)
+      onClick={(e) => {
+        const on = e.target as Element;
+        if (drawer && !on.closest('.lw-drawer, button, .lw-notices')) setDrawer(null);
+      }}
     >
       {/* (a small "Live" that stays while the bar hides: the captions are on) */}
-      {view.running && online && <span className="lw-live">{t.live}</span>}
+      {view.running && online && (
+        <span className="lw-live" aria-hidden="true">
+          {t.live}
+        </span>
+      )}
 
       {!locked && (
-        <div className="lw-bar">
+        <div className="lw-bar" inert={asking}>
           <span className="lw-brand">
             <img src="/icons/icon.svg" alt="" />
             <span>{tw.title}</span>
@@ -735,6 +813,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
           )}
           {!drawer && (
             <button
+              ref={gear}
               className="lw-btn ic"
               aria-label={tw.menu}
               onClick={() => setDrawer('settings')}
@@ -765,12 +844,13 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
         </div>
       )}
 
-      {notices.length > 0 && !locked && (
-        <div className="lw-notices">
-          {notices.slice(0, 2).map((n, i) => (
+      {/* (locked too: why the words stopped must show; no click reaches them then) */}
+      {pills.length > 0 && (
+        <div className="lw-notices" inert={asking}>
+          {pills.map((n) => (
             <div
-              key={i}
-              className={`lw-notice ${n.cls}`}
+              key={n.key}
+              className={`lw-notice ${n.cls}${n.quiet ? ' quiet' : ''}`}
               role={n.cls === 'bad' ? 'alert' : 'status'}
             >
               <Icon name={n.cls === 'good' ? 'up' : n.cls ? 'warn' : 'info'} />
@@ -783,6 +863,11 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
                   {n.action.label}
                 </button>
               )}
+              {n.close && (
+                <button className="lw-btn sm ic ghost" aria-label={t.close} onClick={n.close}>
+                  <Icon name="x" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -790,7 +875,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
 
       {/* before Start: one centred row (what to listen to, the language, Start) */}
       {panel && !locked && (
-        <div className="lw-start" onPointerDown={() => drawer && setDrawer(null)}>
+        <div className="lw-start" inert={under}>
           {!host && (
             <p className="lw-who">
               <b>{t.hostsCaptions(view.hostName)}</b> · {t.onBalance(view.hostName)}
@@ -806,7 +891,6 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
               <button
                 className="lw-pick"
                 aria-label={`${tw.translateInto}: ${langLabel}`}
-                onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => setDrawer(drawer === 'lang' ? null : 'lang')}
               >
                 <Icon name="globe" />
@@ -836,11 +920,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
 
       {/* the whole history, scrolling, following the newest line: the website's own list (Damian) */}
       {!panel && (
-        <div
-          className="lw-caps"
-          lang={shown ?? undefined}
-          onPointerDown={() => drawer && setDrawer(null)}
-        >
+        <div className="lw-caps" lang={shown ?? undefined} inert={under}>
           <CaptionsList
             text={text}
             labels={labels}
@@ -851,7 +931,8 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
       )}
 
       {drawer && !locked && (
-        <aside className="lw-drawer" aria-label={drawerTitle(drawer)}>
+        // (keyed: Settings to Invite is a new drawer, its ✕ takes the focus again)
+        <aside key={drawer} className="lw-drawer" aria-label={drawerTitle(drawer)} inert={asking}>
           <div className="lw-dhead">
             <h3>{drawerTitle(drawer)}</h3>
             <button
@@ -909,17 +990,21 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
                             onChange={(e) => setOpacity(Number(e.target.value))}
                           />
                         </label>
-                        <button
-                          className="lw-btn"
-                          title={tw.lockHint}
-                          onClick={() => {
-                            setDrawer(null);
-                            setLocked(true);
-                          }}
-                        >
-                          <Icon name="lock" />
-                          {tw.lock}
-                        </button>
+                        {/* (not before Start: a locked window lets every click through) */}
+                        {!panel && (
+                          <button
+                            className="lw-btn"
+                            title={`${tw.lock}: ${tw.lockHint}`}
+                            aria-label={tw.lock}
+                            onClick={() => {
+                              setDrawer(null);
+                              setLocked(true);
+                            }}
+                          >
+                            <Icon name="lock" />
+                            {tw.lockShort}
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
@@ -964,8 +1049,8 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
                 </div>
                 <div>
                   <b>{tw.readAlong}</b>
-                  <p>{tw.readAlongType}</p>
-                  <div className="lw-code" aria-label={view.code}>
+                  <p>{tw.readAlongType(window.location.host)}</p>
+                  <div className="lw-code" role="img" aria-label={view.code}>
                     {[...view.code].map((c, i) => (
                       <b key={i} aria-hidden="true">
                         {c}
@@ -991,8 +1076,13 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
         </aside>
       )}
 
-      {(closing || restarting) && (
-        <div className="lw-ask" role="dialog" aria-label={closing ? tw.closeAsk : tw.restartAsk}>
+      {asking && (
+        <div
+          className="lw-ask"
+          role="dialog"
+          aria-modal="true"
+          aria-label={closing ? tw.closeAsk : tw.restartAsk}
+        >
           <div>
             <b>{closing ? tw.closeAsk : tw.restartAsk}</b>
             <button
@@ -1005,6 +1095,7 @@ function Captions({ code, onLeave }: { code?: string; onLeave?: () => void }) {
             </button>
             <button
               className="lw-btn"
+              autoFocus
               onClick={() => {
                 setClosing(false);
                 setRestarting(false);

@@ -26,7 +26,7 @@ html:has(.lw) body {
   --lw-go: #0b6e79;
   --lw-hi: #7fd6de;
   --lw-tint: rgba(127, 214, 222, 0.12);
-  --lw-stop: #e5584b;
+  --lw-stop: #c53d32;
   --lw-warn: #f0b26b;
   --lw-bad: #ff8a7e;
   --lw-drawer: min(520px, 100%);
@@ -97,17 +97,12 @@ html:has(.lw) body {
   padding: 0;
   justify-content: center;
 }
-.lw-btn.on {
-  border-color: rgba(127, 214, 222, 0.55);
-  background: var(--lw-raise-hi);
-  color: var(--lw-hi);
-}
 .lw-btn.stop {
   border-color: transparent;
   background: var(--lw-stop);
 }
 .lw-btn.stop:hover {
-  background: #ee6a5e;
+  background: #d34a3e;
 }
 .lw-btn.go {
   border-color: rgba(127, 214, 222, 0.35);
@@ -136,6 +131,10 @@ html:has(.lw) body {
   padding: 0 12px;
   border-radius: 14px;
 }
+.lw-btn.sm.ic {
+  width: 28px;
+  padding: 0;
+}
 .lw-btn .thin,
 .lw-opt .thin {
   font-weight: 400;
@@ -158,17 +157,26 @@ html:has(.lw) body {
     rgba(6, 12, 15, 0) 100%
   );
   opacity: 0;
+  /* (unseen, it takes no click: a tap on a touch screen never lands on a Stop nobody saw) */
+  pointer-events: none;
   transition: opacity 0.2s;
 }
 .lw:hover .lw-bar,
-.lw:focus-within .lw-bar,
+.lw:has(:focus-visible) .lw-bar,
 .lw.show-bar .lw-bar {
   opacity: 1;
+  pointer-events: auto;
 }
 @media (hover: none) {
   .lw-bar {
     opacity: 1;
+    pointer-events: auto;
   }
+}
+/* (a drawer open: the bar ends where it begins, so the drawer's ✕ never lies on the part of the
+   bar the window is dragged by: the app would move the window instead of closing it, audit 38) */
+.lw.has-drawer .lw-bar {
+  right: var(--lw-drawer);
 }
 /* (the window moves by its name and by the empty middle of the bar) */
 .lw-brand,
@@ -206,6 +214,7 @@ html:has(.lw) body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  white-space: nowrap;
   color: var(--lw-hi);
   font-weight: 700;
 }
@@ -227,7 +236,7 @@ html:has(.lw) body {
   pointer-events: none;
 }
 .lw:hover .lw-live,
-.lw:focus-within .lw-live,
+.lw:has(:focus-visible) .lw-live,
 .lw.show-bar .lw-live {
   opacity: 0;
 }
@@ -241,6 +250,13 @@ html:has(.lw) body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  white-space: nowrap;
+}
+/* (a long language name never pushes Close past the edge) */
+.lw-btn.lang span {
+  max-width: 20ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lw-key::before {
   content: '';
@@ -347,7 +363,7 @@ html:has(.lw) body {
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  padding: 58px 24px 16px;
+  padding: calc(58px + var(--lw-pills, 0) * 46px) 24px 16px;
   overflow-y: auto;
 }
 .lw-start > :first-child {
@@ -438,6 +454,14 @@ html:has(.lw) body {
 }
 
 /* ---------- the drawer: settings, the languages, invite ---------- */
+.lw-drawer,
+.lw-notices,
+.lw-ask,
+.lw-lock,
+.lw-btn {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
 .lw-drawer {
   position: absolute;
   inset: 0 0 0 auto;
@@ -477,12 +501,9 @@ html:has(.lw) body {
   width: 100%;
 }
 .lw-set .lw-seg button {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   justify-content: center;
-  min-width: 0;
   padding: 0 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .lw-sethint {
   margin: 6px 2px 0;
@@ -500,7 +521,6 @@ html:has(.lw) body {
 .lw-two .lw-range {
   flex: 1;
   min-width: 140px;
-  margin-bottom: 0;
 }
 .lw-dbody h4 {
   margin: 0 0 7px;
@@ -537,19 +557,8 @@ html:has(.lw) body {
   line-height: 1.2;
   color: var(--lw-soft);
 }
-.lw-opt > .lw-i:first-child {
-  color: var(--lw-soft);
-}
-.lw-opt.sel {
-  border-color: var(--lw-hi);
-  background: var(--lw-tint);
-}
-.lw-opt.sel .lw-i {
-  color: var(--lw-hi);
-}
 .lw-range {
   display: block;
-  margin-bottom: 14px;
 }
 .lw-range span {
   display: flex;
@@ -616,6 +625,10 @@ html:has(.lw) body {
   border: 1px solid rgba(127, 214, 222, 0.5);
   background: var(--lw-raise);
   color: var(--lw-faint);
+}
+.lw-search:focus-within {
+  outline: 2px solid var(--lw-hi);
+  outline-offset: 1px;
 }
 .lw-search input {
   all: unset;
@@ -761,9 +774,33 @@ html:has(.lw) body {
   pointer-events: none;
 }
 .lw:hover .lw-notices,
-.lw:focus-within .lw-notices,
+.lw:has(:focus-visible) .lw-notices,
 .lw.show-bar .lw-notices {
   top: 58px;
+}
+@media (hover: none) {
+  .lw-notices {
+    top: 58px;
+  }
+}
+/* (locked: the pills show why the words stopped, clear of the unlock badge at the top right) */
+.lw.locked .lw-notices {
+  top: 10px;
+  max-width: calc(100% - 330px);
+}
+/* (news that can wait, "Kinsay was updated": only while the bar shows, never over a call) */
+.lw-notice.quiet {
+  display: none;
+}
+.lw:hover .lw-notice.quiet,
+.lw:has(:focus-visible) .lw-notice.quiet,
+.lw.show-bar .lw-notice.quiet {
+  display: flex;
+}
+@media (hover: none) {
+  .lw-notice.quiet {
+    display: flex;
+  }
 }
 .lw.has-drawer .lw-notices {
   left: calc((100% - var(--lw-drawer)) / 2);
@@ -852,10 +889,6 @@ html:has(.lw) body {
   font-size: 32px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  color: var(--lw-hi);
-}
-.lw-card p.lw-digits {
-  font-size: 32px;
   color: var(--lw-hi);
 }
 .lw-codeform {
@@ -993,6 +1026,13 @@ html:has(.lw) body {
   }
   .lw .cap-scroll {
     padding-inline: 16px;
+  }
+  .lw-btn.lang span {
+    max-width: 11ch;
+  }
+  .lw-start .lw-seg button {
+    gap: 6px;
+    padding: 0 9px;
   }
 }
 /* (no room for a drawer beside the captions: it covers the window, its messages wait) */

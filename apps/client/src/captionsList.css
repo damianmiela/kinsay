@@ -175,9 +175,6 @@ html:has(.cap-page) body {
   --spk: var(--spk-5);
 }
 /* (the dark window: lighter colours; its lines left-aligned so the edges line up) */
-.lw .cap-line.spk {
-  text-align: left;
-}
 .lw .cap-line.spk0 {
   --spk: var(--spk-dark-0);
 }

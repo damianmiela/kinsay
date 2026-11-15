@@ -302,3 +302,15 @@ The app updates itself (a new build for its backing colour); the look itself com
 - [ ] Lock: the badge top right unlocks; ✕ while captions run asks in a card in the middle.
 - [ ] The window made as small as it goes: the name and Lock fold away, a drawer covers the window; made wide again, the lines look as before.
 - [ ] All five languages: nothing cut off in the bar, the start row or Settings (tell me where it is).
+
+## 31. Audit 38's fixes (2026-11-15)
+
+The app updates itself (a new build).
+
+- [ ] **In the app, with the mouse:** open Settings, click its ✕: it closes and the window doesn't move. The same for the language list and Invite. (The one thing no test could click for real.)
+- [ ] The window still drags by "Kinsay" and by the bar's empty middle; a double click there doesn't maximise it.
+- [ ] Locked, then the internet off (or the microphone unplugged): a message shows at the top; unlocking still works. Captions stopped while locked: the window unlocks and shows Start.
+- [ ] Settings → text size up, then down again on running captions: the lines keep their normal spacing.
+- [ ] A click on the captions while Settings is open closes it; a click on Start (or "Latest") while it is open does that too, in one click.
+- [ ] After an update: "Kinsay was updated" shows only while the mouse is on the window.
+- [ ] German and Catalan: nothing cut off in Settings or the start row.
