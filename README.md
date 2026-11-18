@@ -6,7 +6,7 @@ language, a second or two behind the speaker. It works face to face, for a small
 audience reading on their own phones, and on a Windows PC as a subtitles window over
 a video call.
 
-**Live:** https://translate.dendigital.de. Kinsay is invite-only: anyone can ask for an
+**Live:** https://kinsay.dendigital.de. Kinsay is invite-only: anyone can ask for an
 invitation on the start page, and credits are granted by hand. The pages are in English,
 Polish, Spanish, Catalan and German.
 
@@ -41,7 +41,7 @@ exact copy of it. A test there refuses an edited copy, so fixes are made in one 
 - **A subtitles window for Windows.** A small always-on-top window captions what plays
   on the PC (a call, a video) or what its microphone hears. It can be locked so clicks
   go through it, and it updates itself with signed releases.
-  [Download it](https://translate.dendigital.de/download) (Windows 10 and 11).
+  [Download it](https://kinsay.dendigital.de/download) (Windows 10 and 11).
 - **Who said what.** With speakers on, each person gets a colour on the edge of their
   lines.
 - **Credits in euros.** Every stream is charged as the audio goes, at a price per hour
